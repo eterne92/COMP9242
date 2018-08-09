@@ -46,6 +46,7 @@
  * distinguish interrupt sources */
 #define IRQ_BADGE_NETWORK_IRQ  BIT(0)
 #define IRQ_BADGE_NETWORK_TICK BIT(1)
+#define IRQ_BADGE_TIMER        BIT(2)
 
 #define TTY_NAME             "tty_test"
 #define TTY_PRIORITY         (0)
@@ -55,6 +56,10 @@
  * A dummy starting syscall
  */
 #define SOS_SYSCALL0 0
+/* 
+ * our new syscall
+ */
+#define SOS_SYSCALLMSG 100
 
 /* The linker will link this symbol to the start address  *
  * of an archive of attached applications.                */
@@ -65,6 +70,9 @@ extern void (__register_frame)(void *);
 
 /* root tasks cspace */
 static cspace_t cspace;
+
+/* serial */
+static struct serial *serial;
 
 /* the one process we start */
 static struct {
@@ -86,6 +94,7 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
 {
 
     /* allocate a slot for the reply cap */
+    seL4_MessageInfo_t reply_msg;
     seL4_CPtr reply = cspace_alloc_slot(&cspace);
     /* get the first word of the message, which in the SOS protocol is the number
      * of the SOS "syscall". */
@@ -106,7 +115,7 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
     case SOS_SYSCALL0:
         ZF_LOGV("syscall: thread example made syscall 0!\n");
         /* construct a reply message of length 1 */
-        seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+        reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
         /* Set the first (and only) word in the message to 0 */
         seL4_SetMR(0, 0);
         /* Send the reply to the saved reply capability. */
@@ -115,7 +124,33 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
          * capability was consumed by the send. */
         cspace_free_slot(&cspace, reply);
         break;
+    case SOS_SYSCALLMSG:
+        printf("syscall: sos_write syscall is called.\n");
+        /* MSG size each time should be less then 120 */
+        char data[120];
+        /* get datasize */
+        int len = seL4_GetMR(1);
+        /* get realdata */
+        for (int i = 0; i < len; i++)
+        {
+            data[i] = seL4_GetMR(i + 2);
+        }
+        /* magic */
+        for (int i = 0; i < 7500000; i++)
+            ;
+        /* send them to serial */
+        serial_send(serial, data, len);
 
+        /* construct a reply message of length 1 */
+        reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+        /* Set the first (and only) word in the message to 0 */
+        seL4_SetMR(0, 0);
+        /* Send the reply to the saved reply capability. */
+        seL4_Send(reply, reply_msg);
+        /* Free the slot we allocated for the reply - it is now empty, as the reply
+         * capability was consumed by the send. */
+        cspace_free_slot(&cspace, reply);
+        break;
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
@@ -144,6 +179,9 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             if (badge & IRQ_BADGE_NETWORK_TICK) {
                 /* It's an interrupt from the watchdog keeping our TCP/IP stack alive */
                 network_tick();
+            }
+            if (badge & IRQ_BADGE_TIMER) {
+                timer_interrupt(F);
             }
         } else if (label == seL4_Fault_NullFault) {
             /* It's not a fault or an interrupt, it must be an IPC
@@ -496,6 +534,21 @@ void init_muslc(void)
     muslcsys_install_syscall(__NR_madvise, sys_madvise);
 }
 
+void anotherdummycallback(uint64_t id, void *data) {
+    (void) data;
+    uint64_t now = timestamp_us(timestamp_get_freq());
+    printf("timstamp = %ld;\t id = %ld; diff = %ld\n",now, id, now - id);
+}
+
+void dummycallback(uint64_t id, void *data){
+    (void) data;
+    uint64_t now = timestamp_us(timestamp_get_freq());
+    printf("timstamp = %ld;\t id = %ld; diff = %ld\n",now, id, now - id);
+    register_timer(500000, &anotherdummycallback, NULL, F, ONE_SHOT);
+    register_timer(1000000, &anotherdummycallback, NULL, F, ONE_SHOT);
+}
+
+
 NORETURN void *main_continued(UNUSED void *arg)
 {
     /* Initialise other system compenents here */
@@ -517,6 +570,23 @@ NORETURN void *main_continued(UNUSED void *arg)
                  badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
                  timer_vaddr);
 
+    start_timer(&cspace, 
+                 badge_irq_ntfn(ntfn, IRQ_BADGE_TIMER),
+                 timer_vaddr,
+                 F);
+
+    /* Initialise libserial */
+    serial = serial_init();
+
+    {
+        uint64_t freq = timestamp_get_freq();
+        uint64_t delay = 70000;
+        uint64_t nowtime = timestamp_us(freq);
+        register_timer(delay, &dummycallback, NULL, F, ONE_SHOT);
+        printf("registed a timer at timestamp %ld with delay %ld, should\
+        been fire on time %ld\n", nowtime, delay, nowtime + delay);
+        
+    }
     /* Start the user application */
     printf("Start first process\n");
     bool success = start_first_process(TTY_NAME, ipc_ep);

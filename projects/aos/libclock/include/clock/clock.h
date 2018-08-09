@@ -15,6 +15,7 @@
 #include <sel4/sel4.h>
 #include <clock/device.h>
 #include <clock/timestamp.h>
+#include <cspace/cspace.h>
 
 /*
  * Return codes for driver functions
@@ -25,8 +26,9 @@
 #define CLOCK_R_FAIL (-3)       /* operation failed for other reason */
 
 typedef uint64_t timestamp_t;
-typedef void (*timer_callback_t)(uint32_t id, void *data);
-
+typedef void (*timer_callback_t)(uint64_t id, void *data);
+enum TIMER_TYPE { ONE_SHOT, PERIODIC };
+enum TIMER_TAG { F, G, H, I};
 
 /*
  * Initialise driver. Performs implicit stop_timer() if already initialised.
@@ -35,35 +37,36 @@ typedef void (*timer_callback_t)(uint32_t id, void *data);
  *
  * Returns CLOCK_R_OK iff successful.
  */
-int start_timer(seL4_CPtr ntfn, seL4_CPtr irqhandler, void *device_vaddr);
+int start_timer(cspace_t *cspace, seL4_CPtr ntfn, void *timer_vaddr, enum TIMER_TAG tag);
 
 /*
  * Register a callback to be called after a given delay
  *    delay:  Delay time in microseconds before callback is invoked
  *    callback: Function to be called
  *    data: Custom data to be passed to callback function
+ *    type: periodic or one-shot
  *
  * Returns 0 on failure, otherwise an unique ID for this timeout
  */
-uint32_t register_timer(uint64_t delay, timer_callback_t callback, void *data);
+uint64_t register_timer(uint64_t delay, timer_callback_t callback, void *data, enum TIMER_TAG tag, enum TIMER_TYPE type);
 
 /*
  * Remove a previously registered callback by its ID
  *    id: Unique ID returned by register_time
  * Returns CLOCK_R_OK iff successful.
  */
-int remove_timer(uint32_t id);
+int remove_timer(enum TIMER_TAG tag, uint64_t id);
 
 /*
  * Handle an interrupt message sent to 'interrupt_ep' from start_timer
  *
  * Returns CLOCK_R_OK iff successful
  */
-int timer_interrupt(void);
+int timer_interrupt(enum TIMER_TAG tag);
 
 /*
  * Stop clock driver operation.
  *
  * Returns CLOCK_R_OK iff successful.
  */
-int stop_timer(void);
+int stop_timer(enum TIMER_TAG tag);

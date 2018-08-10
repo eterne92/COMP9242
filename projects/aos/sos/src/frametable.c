@@ -98,10 +98,12 @@ int frame_alloc(seL4_Word *vaddr)
     seL4_CPtr frame_cap;
     *vaddr = 0;
     if(page == -1) {
+        // out of memory
         return -1;
     }
     ut_t *ut = alloc_retype(&frame_cap, seL4_ARM_SmallPageObject);
     if (ut == NULL) {
+        // out of memory
         return -1;
     }
     *vaddr = page * PAGE_SIZE_4K + FRAME_BASE;

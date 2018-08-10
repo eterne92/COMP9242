@@ -34,6 +34,7 @@
 #include "elfload.h"
 #include "syscalls.h"
 #include "tests.h"
+#include "frametable.h"
 
 #include <aos/vsyscall.h>
 
@@ -548,6 +549,68 @@ void dummycallback(uint64_t id, void *data){
     register_timer(1000000, &anotherdummycallback, NULL, F, ONE_SHOT);
 }
 
+void frametable_test()
+{
+    /* Allocate 10 pages and make sure you can touch them all */
+    for (int i = 0; i < 10; i++)
+    {
+        /* Allocate a page */
+        seL4_Word vaddr;
+        frame_alloc(&vaddr);
+        assert(vaddr);
+
+        /* Test you can touch the page */
+        *(int *)vaddr = 0x37;
+        assert(*(int *)vaddr == 0x37);
+
+        printf("Page #%d allocated at %p\n", i, (void *)vaddr);
+    }
+
+    printf("TEST 1 past\n");
+
+    /* Test that you never run out of memory if you always free frames. */
+    for (int i = 0; i < 10000; i++)
+    {
+        /* Allocate a page */
+        seL4_Word vaddr;
+        int page = frame_alloc(&vaddr);
+        assert(vaddr != 0);
+
+        /* Test you can touch the page */
+        *(int *)vaddr = 0x37;
+        assert(*(int *)vaddr == 0x37);
+
+        /* print every 1000 iterations */
+        if (i % 1000 == 0)
+        {
+            printf("Page #%d allocated at %p\n", i, (int *)vaddr);
+        }
+
+        frame_free(page);
+    }
+
+    printf("TEST 2 past\n");
+    /* Test that you eventually run out of memory gracefully,
+   and doesn't crash */
+    while (true)
+    {
+        /* Allocate a page */
+        seL4_Word vaddr;
+        frame_alloc(&vaddr);
+        if (!vaddr)
+        {
+            printf("Out of memory!\n");
+            break;
+        }
+
+        /* Test you can touch the page */
+        *(int *)vaddr = 0x37;
+        assert(*(int *)vaddr == 0x37);
+    }
+
+    printf("TEST 3 past\n");
+    /* finally clean up all the memory allocated above */
+}
 
 NORETURN void *main_continued(UNUSED void *arg)
 {
@@ -578,15 +641,7 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Initialise libserial */
     serial = serial_init();
 
-    {
-        uint64_t freq = timestamp_get_freq();
-        uint64_t delay = 70000;
-        uint64_t nowtime = timestamp_us(freq);
-        register_timer(delay, &dummycallback, NULL, F, ONE_SHOT);
-        printf("registed a timer at timestamp %ld with delay %ld, should\
-        been fire on time %ld\n", nowtime, delay, nowtime + delay);
-        
-    }
+    frametable_test();
     /* Start the user application */
     printf("Start first process\n");
     bool success = start_first_process(TTY_NAME, ipc_ep);
@@ -647,6 +702,9 @@ int main(void)
         ZF_LOGF_IFERR(err, "Failed to map stack");
         vaddr += PAGE_SIZE_4K;
     }
+
+    
+    initialize_frame_table(&cspace);
 
     utils_run_on_stack((void *) vaddr, main_continued, NULL);
 

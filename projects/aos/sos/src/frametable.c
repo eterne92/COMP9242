@@ -16,6 +16,7 @@ typedef struct frame_table_obj {
 typedef struct frame_table {
     int free;
     frame_table_obj *frames;
+    int length;
 } frame_table;
 
 static frame_table frame_table;
@@ -55,9 +56,10 @@ void initialize_frame_table(cspace_t *cspace, seL4_CPtr vspace, seL4_Word vaddr)
     seL4_Word vaddr = FRAME_BASE;
     frame_table.frames = (frame_table_obj *) FRAME_BASE;
     // the number of pages of all untyped memeory
-    size_t size = ut_size() / PAGE_SIZE_4K;
+    size_t n_frames = ut_size() / PAGE_SIZE_4K;
+    frame_table.length = (int) n_frames;
     // the number of pages consumed by frame table
-    size_t n_pages = size * sizoef(frame_table_obj) / PAGE_SIZE_4K;
+    size_t n_pages = n_frames * sizoef(frame_table_obj) / PAGE_SIZE_4K;
     frame_table.free = (uint32_t) n_pages;
     for(int i = 0; i < n_pages; ++i) {
         seL4_CPtr frame_cap;
@@ -74,12 +76,12 @@ void initialize_frame_table(cspace_t *cspace, seL4_CPtr vspace, seL4_Word vaddr)
         frame_table.frames[i].flag = USED_MEMORY;
         vaddr += PAGE_SIZE_4K;
     }
-    for(int i = n_pages; i < size; ++i) {
+    for(int i = n_pages; i < n_frames; ++i) {
         frame_table.frames[i].ut = NULL;
         frame_table.frames[i].next = i + 1;
         frame_table.frames[i].flag = UNTYPE_MEMEORY;
     }
-    frame_table.frames[size - 1].next = -1;
+    frame_table.frames[n_frames - 1].next = -1;
     root_cspace = cspace;
     return;
 }
@@ -113,5 +115,10 @@ int frame_alloc(seL4_Word *vaddr)
 
 void frame_free(int frame)
 {
-
+    if(frame < 0 || frame >= frame_table.length) return;
+    frame_table.frames[frame].next = frame_table.free;
+    frame_table.frames[frame].flag = UNTYPE_MEMEORY;
+    frame_table.free = frame;
+    ut_free(frame_table.frames[frame].ut, seL4_PageBits);
+    frame_table.frames[frame].ut = NULL;
 }

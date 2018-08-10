@@ -569,7 +569,7 @@ void frametable_test()
     printf("TEST 1 past\n");
 
     /* Test that you never run out of memory if you always free frames. */
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 1000000; i++)
     {
         /* Allocate a page */
         seL4_Word vaddr;
@@ -592,16 +592,19 @@ void frametable_test()
     printf("TEST 2 past\n");
     /* Test that you eventually run out of memory gracefully,
    and doesn't crash */
+   int cnt = 0;
     while (true)
     {
         /* Allocate a page */
         seL4_Word vaddr;
+        
         frame_alloc(&vaddr);
         if (!vaddr)
         {
             printf("Out of memory!\n");
             break;
         }
+        cnt++;
 
         /* Test you can touch the page */
         *(int *)vaddr = 0x37;
@@ -610,6 +613,11 @@ void frametable_test()
 
     printf("TEST 3 past\n");
     /* finally clean up all the memory allocated above */
+    /* try to free them all */
+    for(int i = 0;i< cnt;i++){
+        frame_free(3989 + i);
+    }
+    
 }
 
 NORETURN void *main_continued(UNUSED void *arg)

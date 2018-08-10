@@ -1,6 +1,7 @@
 #include "frametable.h"
 #include "ut.h"
 #include "mapping.h"
+#include <stdlib.h>
 
 #define FRAME_BASE 0xA000000000
 #define UNTYPE_MEMEORY 0x1
@@ -118,6 +119,8 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.frames[page].flag = USED_MEMORY;
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.free = frame_table.frames[page].next;
+
+    memset(vaddr, 0, PAGE_SIZE_4K);
     return page;
     
 }

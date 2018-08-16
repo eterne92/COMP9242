@@ -127,7 +127,7 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
         break;
     case SOS_SYSCALLMSG:
         printf("syscall: sos_write syscall is called.\n");
-        /* MSG size each time should be less then 120 */
+        /* MSG size each timdumpe should be less then 120 */
         char data[120];
         /* get datasize */
         int len = seL4_GetMR(1);
@@ -156,6 +156,12 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
     }
+}
+
+void handle_page_fault(seL4_Word vaddr)
+{
+    // need to figure out which process triggered the page fault
+    // right now, there is only one process (tty_test)
 }
 
 NORETURN void syscall_loop(seL4_CPtr ep)
@@ -189,6 +195,10 @@ NORETURN void syscall_loop(seL4_CPtr ep)
              * message from tty_test! */
             handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
         } else {
+            /* page fault handelr */
+            if (label == seL4_Fault_VMFault) {
+                handle_page_fault(seL4_GetMR(seL4_VMFault_SP));
+            }
             /* some kind of fault */
             debug_print_fault(message, TTY_NAME);
             /* dump registers too */

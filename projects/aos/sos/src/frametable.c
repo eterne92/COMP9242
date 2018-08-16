@@ -9,6 +9,8 @@
 #define USED_MEMORY 0x3
 #define MEMORY_TYPE_MASK 0x3
 
+/* TODO: frame reference count */
+
 #define MOST_FREE 500
 
 typedef struct frame_table_obj

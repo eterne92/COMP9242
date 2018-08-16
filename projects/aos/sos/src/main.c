@@ -35,6 +35,7 @@
 #include "syscalls.h"
 #include "tests.h"
 #include "frametable.h"
+#include "addrspace.h"
 
 #include <aos/vsyscall.h>
 
@@ -162,6 +163,7 @@ void handle_page_fault(seL4_Word vaddr)
 {
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
+    (void) vaddr;
 }
 
 NORETURN void syscall_loop(seL4_CPtr ep)
@@ -197,7 +199,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         } else {
             /* page fault handelr */
             if (label == seL4_Fault_VMFault) {
-                handle_page_fault(seL4_GetMR(seL4_VMFault_SP));
+                // handle_page_fault(seL4_GetMR(seL4_VMFault_SP));
             }
             /* some kind of fault */
             debug_print_fault(message, TTY_NAME);

@@ -199,8 +199,18 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         } else {
             /* page fault handelr */
             if (label == seL4_Fault_VMFault) {
-                // handle_page_fault(seL4_GetMR(seL4_VMFault_SP));
+                handle_page_fault(seL4_GetMR(seL4_VMFault_Addr));
+                /* construct a reply message of length 1 */
+                reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+                /* Set the first (and only) word in the message to 0 */
+                seL4_SetMR(0, 0);
+                /* Send the reply to the saved reply capability. */
+                seL4_Send(reply, reply_msg);
+                /* Free the slot we allocated for the reply - it is now empty, as the reply
+                * capability was consumed by the send. */
+                cspace_free_slot(&cspace, reply);
             }
+
             /* some kind of fault */
             debug_print_fault(message, TTY_NAME);
             /* dump registers too */

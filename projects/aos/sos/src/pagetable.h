@@ -16,3 +16,5 @@ typedef struct page_table_entry {
 void initialize_page_table();
 
 void destroy_page_table();
+
+int page_fault_handler(seL4_Word vaddr);

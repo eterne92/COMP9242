@@ -177,6 +177,8 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, seL4_CPtr loadee_vspace,
         ZF_LOGE("Invalid elf file");
         return -1;
     }
+    
+    /* create addrspace of the process  */
 
     int num_headers = elf_getNumProgramHeaders(elf_file);
     for (int i = 0; i < num_headers; i++) {
@@ -192,6 +194,8 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, seL4_CPtr loadee_vspace,
         size_t segment_size = elf_getProgramHeaderMemorySize(elf_file, i);
         uintptr_t vaddr = elf_getProgramHeaderVaddr(elf_file, i);
         seL4_Word flags = elf_getProgramHeaderFlags(elf_file, i);
+
+        /* create regions of the process iamge */
 
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *) vaddr, (void *)(vaddr + segment_size));

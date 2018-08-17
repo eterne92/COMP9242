@@ -77,7 +77,7 @@ static cspace_t cspace;
 static struct serial *serial;
 
 /* the one process we start */
-static struct {
+typedef struct proc {
     ut_t *tcb_ut;
     seL4_CPtr tcb;
     ut_t *vspace_ut;
@@ -87,15 +87,18 @@ static struct {
     seL4_CPtr ipc_buffer;
 
     cspace_t cspace;
-
+    addrspace *as;
+    page_table *pt;
+    
     ut_t *stack_ut;
     seL4_CPtr stack;
-} tty_test_process;
+} proc;
+static proc tty_test_process;
 
 void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
 {
 
-    /* allocate a slot for the reply cap */
+    /* allocate a slot for the reply tty_test_processcap */
     seL4_MessageInfo_t reply_msg;
     seL4_CPtr reply = cspace_alloc_slot(&cspace);
     /* get the first word of the message, which in the SOS protocol is the number
@@ -159,11 +162,34 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
     }
 }
 
-void handle_page_fault(seL4_Word vaddr)
+void handle_page_fault(seL4_Word badge, seL4_Word vaddr, seL4_Word fault_info)
 {
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
-    (void) vaddr;
+    (void) badge;
+    int frame;
+    seL4_CPtr vspace = tty_test_process.vspace;
+    as_region *region = tty_test_process.as->regions;
+    bool execute, read, write;
+    while (region) {
+        if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
+            execute = region->flags & RG_X;
+            read = region->flags & RG_R;
+            write = region->flags & RG_W;
+            // write to a read-only page
+            
+            // accessing a non-existing page
+
+            // allocate a frame 
+            frame = frame_alloc(NULL);
+            // sos_map_frame(&cspace, frame, vspace, vaddr, seL4_CapRights_new(execute, read, write) ,seL4_ARM_Default_VMAttributes);
+
+            break;
+        } else {
+            // illegal access
+        }
+        region = regions->next;
+    }
 }
 
 NORETURN void syscall_loop(seL4_CPtr ep)
@@ -199,7 +225,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         } else {
             /* page fault handelr */
             if (label == seL4_Fault_VMFault) {
-                handle_page_fault(seL4_GetMR(seL4_VMFault_Addr));
+                handle_page_fault(badge, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
                 /* construct a reply message of length 1 */
                 reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
                 /* Set the first (and only) word in the message to 0 */
@@ -383,6 +409,9 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
         ZF_LOGE("Failed to assign asid pool");
         return false;
     }
+
+    /* create addrspace of ttytest */
+    tty_test_process.as = addrspace_init();
 
     /* Create a simple 1 level CSpace */
     err = cspace_create_one_level(&cspace, &tty_test_process.cspace);

@@ -13,22 +13,7 @@
 
 #define MOST_FREE 500
 
-typedef struct frame_table_obj
-{
-    ut_t *ut;
-    int next;
-    seL4_CPtr frame_cap;
-    uint16_t flag;
-} frame_table_obj;
 
-typedef struct frame_table
-{
-    int free;
-    int untyped;
-    int num_frees;
-    frame_table_obj *frames;
-    int length;
-} frame_table_t;
 
 static frame_table_t frame_table;
 static cspace_t *root_cspace;

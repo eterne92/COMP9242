@@ -69,6 +69,23 @@ seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vsp
 seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
                      seL4_ARM_VMAttributes attr);
 
+/* Maps a page, allocating intermediate structures and cslots with the cspace provided.
+ *
+ * If you *know* you can map the vaddr without allocating any other paging structures, or that it is
+ * safe to allocate cslots, you can provide NULL as the cspace.
+ *
+ * @param cspace          CSpace which can be used to allocate slots for intermediate paging structures.
+ * @param frame           A handle to the frame to be mapped.
+ * @param vspace          A capability to the vspace (seL4_ARM_PageGlobalDirectoryObject).
+ * @param vaddr           The virtual address to map the frame.
+ * @param rights          The access rights for the mapping
+ * @param attr            The VM attributes to use for the mapping
+ *
+ * @return 0 on success
+ */
+seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
+                     seL4_ARM_VMAttributes attr);
+
 /*
  * Map a device and return the virtual address it is mapped to.
  *

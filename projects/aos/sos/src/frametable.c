@@ -138,7 +138,7 @@ int frame_alloc(seL4_Word *vaddr)
 int frame_n_alloc(seL4_Word *vaddr, int nframes)
 {
     int base_frame = frame_alloc(vaddr);
-    int frame = tmp = 0;
+    int frame = 0, tmp = 0;
     if (base_frame == -1) return -1;
     frame = base_frame;
     for (int i = 1; i < nframes; ++i) {
@@ -161,7 +161,7 @@ int frame_n_alloc(seL4_Word *vaddr, int nframes)
 void frame_n_free(int frames)
 {
     int frame = 0, tmp = frames;
-    while(tmp ! = -1) {
+    while(tmp != -1) {
         frame = frame_table->frames[tmp].next;
         frame_free(tmp);
         tmp = frame;

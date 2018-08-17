@@ -4,6 +4,7 @@
 #include <sel4/sel4.h>
 #include <cspace/cspace.h>
 
+#define FRAME_BASE 0xA000000000
 // declaration of frame table 
 extern frame_table_t frame_table;
 

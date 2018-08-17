@@ -16,6 +16,7 @@
 #include "ut.h"
 #include "vmem_layout.h"
 #include "frametable.h"
+#include "pagetable.h"
 
 
 /**
@@ -143,6 +144,30 @@ seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, se
                      seL4_CapRights_t rights, seL4_ARM_VMAttributes attr)
 {
     return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, NULL, NULL);
+}
+
+static inline page_table_cap *get_page_table_cap(seL4_Word page_table)
+{
+    int frame = (page_table - FRAME_BASE) / PAGE_SIZE_4K;
+    int cap_frame = frame_table->frames[frame].next;
+    return (page_table_cap *)(cap_frame * PAGE_SIZE_4K + FRAME_BASE);
+}
+
+/* n should be 2, 3, 4 */
+/* since we already got 1st level */
+static inline seL4_Word get_n_level_table(seL4_Word page_table, seL4_Word vaddr, int n)
+{
+    /* page_table is the 1st level, so we start from 2nd level */
+    seL4_Word mask = 0x7fc0000000;
+    page_table_t *pt = (page_table_t *)page_table;
+    for (int i = 1; i < n; i++)
+    {
+        int offset = (mask & vaddr) >> (48 - 9 * i);
+        pt = (page_table_t *)pt->page_obj_addr[offset];
+        mask = mask >> 9;
+    }
+
+    return (seL4_Word)pt;
 }
 
 seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,

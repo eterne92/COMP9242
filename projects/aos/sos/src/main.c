@@ -40,6 +40,8 @@
 
 #include <aos/vsyscall.h>
 
+#include "sys/execinfo.h"
+
 /* To differentiate between signals from notification objects and and IPC messages,
  * we assign a badge to the notification object. The badge that we receive will
  * be the bitwise 'OR' of the notification object badge and the badges
@@ -245,15 +247,22 @@ static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
 static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, char *elf_file)
 {
     /* Create a stack frame */
-    tty_test_process.stack_ut = alloc_retype(&tty_test_process.stack, seL4_ARM_SmallPageObject, seL4_PageBits);
-    if (tty_test_process.stack_ut == NULL) {
+    printf("init stack\n");
+    seL4_Error err;
+    int frame = frame_alloc(NULL);
+    err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
+    err = sos_map_frame(cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace,
+                  USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
+                  seL4_ARM_Default_VMAttributes);
+    // tty_test_process.stack_ut = alloc_retype(&tty_test_process.stack, seL4_ARM_SmallPageObject, seL4_PageBits);
+    if (err != seL4_NoError) {
         ZF_LOGE("Failed to allocate stack");
         return 0;
     }
 
     /* virtual addresses in the target process' address space */
-    uintptr_t stack_top = PROCESS_STACK_TOP;
-    uintptr_t stack_bottom = PROCESS_STACK_TOP - PAGE_SIZE_4K;
+    uintptr_t stack_top = USERSTACKTOP;
+    uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
     /* virtual addresses in the SOS's address space */
     void *local_stack_top  = (seL4_Word *) SOS_SCRATCH;
     uintptr_t local_stack_bottom = SOS_SCRATCH - PAGE_SIZE_4K;
@@ -266,12 +275,12 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     }
 
     /* Map in the stack frame for the user app */
-    seL4_Error err = map_frame(cspace, tty_test_process.stack, tty_test_process.vspace, stack_bottom,
-                               seL4_AllRights, seL4_ARM_Default_VMAttributes);
-    if (err != 0) {
-        ZF_LOGE("Unable to map stack for user app");
-        return 0;
-    }
+    // err = map_frame(cspace, tty_test_process.stack, tty_test_process.vspace, stack_bottom,
+    //                            seL4_AllRights, seL4_ARM_Default_VMAttributes);
+    // if (err != 0) {
+    //     ZF_LOGE("Unable to map stack for user app");
+    //     return 0;
+    // }
 
     /* allocate a slot to duplicate the stack frame cap so we can map it into our address space */
     seL4_CPtr local_stack_cptr = cspace_alloc_slot(cspace);
@@ -281,7 +290,8 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     }
 
     /* copy the stack frame cap into the slot */
-    err = cspace_copy(cspace, local_stack_cptr, cspace, tty_test_process.stack, seL4_AllRights);
+    err = cspace_copy(cspace, local_stack_cptr, cspace, 
+                      get_cap_from_vaddr(tty_test_process.pt, stack_bottom), seL4_AllRights);
     if (err != seL4_NoError) {
         cspace_free_slot(cspace, local_stack_cptr);
         ZF_LOGE("Failed to copy cap");
@@ -353,7 +363,9 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
  */
 bool start_first_process(char* app_name, seL4_CPtr ep)
 {
+    int frame;
     /* Create a VSpace */
+    printf("vspace\n");
     tty_test_process.vspace_ut = alloc_retype(&tty_test_process.vspace, seL4_ARM_PageGlobalDirectoryObject,
                                               seL4_PGDBits);
     if (tty_test_process.vspace_ut == NULL) {
@@ -368,18 +380,21 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* create addrspace of ttytest */
+    printf("as\n");
     tty_test_process.as = addrspace_init();
     if (!tty_test_process.as) {
         ZF_LOGE("Failed to create address space");
         return false;
     }
     /* initialize level 1 shadow page table */
+    printf("pt\n");
     tty_test_process.pt = initialize_page_table();
     if (!tty_test_process.pt) {
         ZF_LOGE("Failed to create shadow global page directory");
         return false;
     }
     /* Create a simple 1 level CSpace */
+    printf("cspace\n");
     err = cspace_create_one_level(&cspace, &tty_test_process.cspace);
     if (err != CSPACE_NOERROR) {
         ZF_LOGE("Failed to create cspace");
@@ -387,9 +402,15 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* Create an IPC buffer */
-    tty_test_process.ipc_buffer_ut = alloc_retype(&tty_test_process.ipc_buffer, seL4_ARM_SmallPageObject,
-                                                  seL4_PageBits);
-    if (tty_test_process.ipc_buffer_ut == NULL) {
+    printf("ipcbuffer\n");
+    as_define_ipcbuffer(tty_test_process.as);
+    frame = frame_alloc(NULL);
+    err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
+    err = sos_map_frame(&cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace, 
+                  USERIPCBUFFER, seL4_ReadWrite, seL4_ARM_Default_VMAttributes);
+    // tty_test_process.ipc_buffer_ut = alloc_retype(&tty_test_process.ipc_buffer, seL4_ARM_SmallPageObject,
+    //                                               seL4_PageBits);
+    if (err != seL4_NoError) {
         ZF_LOGE("Failed to alloc ipc buffer ut");
         return false;
     }
@@ -420,8 +441,8 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     /* Configure the TCB */
     err = seL4_TCB_Configure(tty_test_process.tcb, user_ep,
                              tty_test_process.cspace.root_cnode, seL4_NilData,
-                             tty_test_process.vspace, seL4_NilData, PROCESS_IPC_BUFFER,
-                             tty_test_process.ipc_buffer);
+                             tty_test_process.vspace, seL4_NilData, USERIPCBUFFER,
+                             get_cap_from_vaddr(tty_test_process.pt, USERIPCBUFFER));
     if (err != seL4_NoError) {
         ZF_LOGE("Unable to configure new TCB");
         return false;
@@ -447,6 +468,7 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* set up the stack */
+    as_define_stack(tty_test_process.pt);
     seL4_Word sp = init_process_stack(&cspace, seL4_CapInitThreadVSpace, elf_base);
 
     /* load the elf image from the cpio file */
@@ -457,8 +479,9 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* Map in the IPC buffer for the thread */
-    err = map_frame(&cspace, tty_test_process.ipc_buffer, tty_test_process.vspace, PROCESS_IPC_BUFFER,
-                    seL4_AllRights, seL4_ARM_Default_VMAttributes);
+    as_define_ipcbuffer(tty_test_process.pt);
+    // err = map_frame(&cspace, tty_test_process.ipc_buffer, tty_test_process.vspace, PROCESS_IPC_BUFFER,
+    //                 seL4_AllRights, seL4_ARM_Default_VMAttributes);
     if (err != 0) {
         ZF_LOGE("Unable to map IPC buffer for user app");
         return false;
@@ -666,7 +689,7 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Initialise libserial */
     serial = serial_init();
 
-    frametable_test();
+    // frametable_test();
     /* Start the user application */
     printf("Start first process\n");
     bool success = start_first_process(TTY_NAME, ipc_ep);

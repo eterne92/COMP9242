@@ -43,3 +43,5 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
  */
 seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry, int level, seL4_Word vaddr);
 
+seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr);
+

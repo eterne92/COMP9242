@@ -29,7 +29,7 @@
 
 #include <sel4/sel4.h>
 
-#define SOS_SYSCALLX 99
+#define SOS_SYSCALLX 100
 
 #define BUFFER_SIZE 64
 

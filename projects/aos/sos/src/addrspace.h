@@ -7,7 +7,7 @@
 #include "frametable.h"
 
 #define PAGE_FRAME 0xfffffffffffff000
-#define USERSPACETOP 0xffffffffffff
+#define USERSPACETOP 0x800000000000
 #define USERIPCBUFFER (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKTOP (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKSIZE (4096 * PAGE_SIZE_4K)
@@ -38,6 +38,7 @@ typedef struct addrspace
     as_region *regions;
     as_region *stack;
     as_region *heap;
+    as_region *ipcbuffer;
 } addrspace;
 
 addrspace *addrspace_init(void);

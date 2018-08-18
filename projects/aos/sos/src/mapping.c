@@ -199,7 +199,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             entry.table_addr = page_table_addr;
             entry.ut = ut;
             entry.frame = frame;
-            insert_page_table_entry((page_table_t *)page_table, *entry, 4, vaddr);
+            insert_page_table_entry((page_table_t *)page_table, &entry, 4, vaddr);
             break;
         case SEL4_MAPPING_LOOKUP_NO_PD:
             // level 3
@@ -214,7 +214,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             entry.table_addr = page_table_addr;
             entry.ut = ut;
             entry.frame = -1;
-            insert_page_table_entry((page_table_t *)page_table, *entry, 3, vaddr);
+            insert_page_table_entry((page_table_t *)page_table, &entry, 3, vaddr);
             break;
         case SEL4_MAPPING_LOOKUP_NO_PUD:
             // level 2
@@ -229,7 +229,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             entry.table_addr = page_table_addr;
             entry.ut = ut;
             entry.frame = -1;
-            insert_page_table_entry((page_table_t *)page_table, *entry, 2, vaddr);
+            insert_page_table_entry((page_table_t *)page_table, &entry, 2, vaddr);
             break;
         }
         if (!err) {

@@ -184,10 +184,11 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
 
         /* fill up the pt */
         page_table_entry entry;
-        int offset, page_frame;
+        int offset, page_frame, level;
         switch (failed) {
         case SEL4_MAPPING_LOOKUP_NO_PT:
             // level 4 
+            level = 4;
             err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
             /* only need one page in level 4 shadow page table */
             page_frame = frame_alloc(&page_table_addr);
@@ -195,43 +196,37 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             if (page_frame == -1) {
                 goto cleanup;
             }
-            entry.slot = slot;
-            entry.table_addr = page_table_addr;
-            entry.ut = ut;
             entry.frame = frame;
-            insert_page_table_entry((page_table_t *)page_table, &entry, 4, vaddr);
             break;
         case SEL4_MAPPING_LOOKUP_NO_PD:
             // level 3
+            level = 3;
             err = retype_map_pd(cspace, vspace, vaddr, ut->cap, slot);
             // allocate frame to keep track of level 3 shadow page table entry
-            page_frame = frame_n_alloc(&page_table_addr, 3);
+            page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
             frame_array[i] = page_frame;
             if (page_frame == -1) {
                 goto cleanup;
             }
-            entry.slot = slot;
-            entry.table_addr = page_table_addr;
-            entry.ut = ut;
             entry.frame = -1;
-            insert_page_table_entry((page_table_t *)page_table, &entry, 3, vaddr);
             break;
         case SEL4_MAPPING_LOOKUP_NO_PUD:
             // level 2
+            level = 2;
             err = retype_map_pud(cspace, vspace, vaddr, ut->cap, slot);
             // allocate frame to keep track of level 3 shadow page table entry
-            page_frame = frame_n_alloc(&page_table_addr, 3);
+            page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
             frame_array[i] = page_frame;
             if (page_frame == -1) {
                 goto cleanup;
             }
-            entry.slot = slot;
-            entry.table_addr = page_table_addr;
-            entry.ut = ut;
             entry.frame = -1;
-            insert_page_table_entry((page_table_t *)page_table, &entry, 2, vaddr);
             break;
         }
+        entry.slot = slot;
+        entry.table_addr = page_table_addr;
+        entry.ut = ut;
+        insert_page_table_entry((page_table_t *)page_table, &entry, level, vaddr);
         if (!err) {
             /* Try the mapping again */
             err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);

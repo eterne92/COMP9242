@@ -11,6 +11,7 @@
 */
 
 #define PAGE_TABLE_SIZE 512
+#define PAGE_TABLE_FRAME_SIZE 3
 
 typedef struct page_table page_table_t;
 

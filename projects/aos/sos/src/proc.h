@@ -4,6 +4,7 @@
 #include "pagetable.h"
 #include "addrspace.h"
 
+typedef struct page_table page_table_t;
 
 typedef struct proc {
     ut_t *tcb_ut;

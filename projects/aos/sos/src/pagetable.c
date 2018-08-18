@@ -2,7 +2,7 @@
 #include "pagetable.h"
 #include "mapping.h"
 
-struct page_table
+typedef struct page_table
 {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
@@ -65,18 +65,23 @@ page_table_t *initialize_page_table(void)
 
 seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry, int level, seL4_Word vaddr)
 {
+    int offset;
+    page_table_t *pt;
+    page_table_cap *pt_cap;
+    page_table_ut *pt_ut;
+
     switch(level) {
     case 4:
         /* save backend frame in level 4 shadow page table */
         offset = get_offset(vaddr, 4);
-        ((page_table_t *) entry->table_addr)[offset] = entry->frame;
+        ((page_table_t *) entry->table_addr)->page_obj_addr[offset] = entry->frame;
         /* deliberately omit break since level 4 still need to save its own info into level 3 shadow page table */
     case 2:
     case 3:
         /* save nth level hardware page table caps in nth-1 level shadow page table */
-        pt = (page_table_t *)get_n_level_table(table, vaddr, level - 1);
+        pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, level - 1);
         pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word) pt);
-        pt_ut = (page_table_ut *)get_page_table_cap((seL4_Word)pt);
+        pt_ut = (page_table_ut *)get_page_table_ut((seL4_Word)pt);
         offset = get_offset(vaddr, level - 1);
         pt->page_obj_addr[offset] = entry->table_addr;
         pt_cap->cap[offset] = entry->slot;

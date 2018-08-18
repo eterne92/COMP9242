@@ -12,28 +12,34 @@
 
 #define PAGE_TABLE_SIZE 512
 
-typedef struct page_table
-{
-    seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
-} page_table_t;
+typedef struct page_table page_table_t;
 
-typedef struct page_table_ut
-{
-    ut_t *ut[PAGE_TABLE_SIZE];
-} page_table_ut;
+typedef struct page_table_entry {
+    seL4_CPtr slot; 
+    seL4_Word table_addr; /* virtual address of the shadow page table */
+    ut_t *ut; /* capability of hardware page table object */
+    seL4_Word frame;
+} page_table_entry;
 
-typedef struct page_table_cap
-{
-    seL4_Word cap[PAGE_TABLE_SIZE];
-} page_table_cap;
-
+/*
+ * initialize a top level shadow page table
+ *  
+ * return the address of the page table NULL if out of memory
+ */
 page_table_t *initialize_page_table(void);
 
-void destroy_page_table();
+void destroy_page_table(page_table_t *table);
 
 void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
 
-page_table_cap *get_page_table_cap(seL4_Word page_table);
-page_table_ut *get_page_table_ut(seL4_Word page_table);
-int get_offset(seL4_Word vaddr, int n);
-seL4_Word get_n_level_table(seL4_Word page_table, seL4_Word vaddr, int n);
+/*
+ * insert an entry into shadow page table
+ * @param table        top level shadow page table
+ * @param entry        an page table entry to be inserted
+ * @param level        level of the page table (2, 3, 4 are the only valid values)
+ * @param vaddr        virtual address that triggered page fault
+ * 
+ * return 0 on success
+ */
+seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry, int level, seL4_Word vaddr);
+

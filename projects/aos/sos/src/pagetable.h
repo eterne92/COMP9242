@@ -14,9 +14,13 @@ typedef struct page_table {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
 
+typedef struct page_table_ut {
+    ut_t *ut[PAGE_TABLE_SIZE];
+} page_table_ut;
+
 typedef struct page_table_cap {
-    ut_t *caps[PAGE_TABLE_SIZE];
-} page_table_cap;
+    seL4_Word cap[PAGE_TABLE_SIZE];
+}page_table_cap;
 
 void initialize_page_table();
 

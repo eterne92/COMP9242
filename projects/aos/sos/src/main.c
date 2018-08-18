@@ -36,6 +36,7 @@
 #include "tests.h"
 #include "frametable.h"
 #include "addrspace.h"
+#include "pagetable.h"
 
 #include <aos/vsyscall.h>
 
@@ -88,7 +89,7 @@ typedef struct proc {
 
     cspace_t cspace;
     addrspace *as;
-    page_table *pt;
+    page_table_t *pt;
     
     ut_t *stack_ut;
     seL4_CPtr stack;
@@ -167,9 +168,11 @@ void handle_page_fault(seL4_Word badge, seL4_Word vaddr, seL4_Word fault_info)
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
     (void) badge;
+    (void) fault_info;
     int frame;
-    seL4_CPtr vspace = tty_test_process.vspace;
-    as_region *region = tty_test_process.as->regions;
+    proc *p = &tty_test_process;
+    seL4_CPtr vspace = p->vspace;
+    as_region *region = p->as->regions;
     bool execute, read, write;
     while (region) {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
@@ -182,13 +185,13 @@ void handle_page_fault(seL4_Word badge, seL4_Word vaddr, seL4_Word fault_info)
 
             // allocate a frame 
             frame = frame_alloc(NULL);
-            // sos_map_frame(&cspace, frame, vspace, vaddr, seL4_CapRights_new(execute, read, write) ,seL4_ARM_Default_VMAttributes);
+            sos_map_frame(&cspace, frame, (seL4_Word) p->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write) ,seL4_ARM_Default_VMAttributes);
 
             break;
         } else {
             // illegal access
         }
-        region = regions->next;
+        region = region->next;
     }
 }
 
@@ -227,7 +230,8 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             if (label == seL4_Fault_VMFault) {
                 handle_page_fault(badge, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
                 /* construct a reply message of length 1 */
-                reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+                seL4_CPtr reply = cspace_alloc_slot(&cspace);
+                seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
                 /* Set the first (and only) word in the message to 0 */
                 seL4_SetMR(0, 0);
                 /* Send the reply to the saved reply capability. */

@@ -3,10 +3,9 @@
 #include <stdint.h>
 #include <sel4/sel4.h>
 #include <cspace/cspace.h>
+#include "ut.h"
 
 #define FRAME_BASE 0xA000000000
-// declaration of frame table 
-extern frame_table_t frame_table;
 
 typedef struct frame_table_obj
 {
@@ -24,6 +23,9 @@ typedef struct frame_table
     frame_table_obj *frames;
     int length;
 } frame_table_t;
+
+// declaration of frame table 
+extern frame_table_t frame_table;
 
 void initialize_frame_table(cspace_t *cspace);
 

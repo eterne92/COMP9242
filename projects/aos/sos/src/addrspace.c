@@ -104,7 +104,7 @@ as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                      unsigned char flag)
 {
     int result;
-    struct region_entry *region;
+    as_region *region;
 
     // Should NEVER call this with a NULL as
 

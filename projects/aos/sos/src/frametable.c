@@ -1,5 +1,4 @@
 #include "frametable.h"
-#include "ut.h"
 #include "mapping.h"
 #include <stdlib.h>
 
@@ -15,7 +14,7 @@
 
 
 
-static frame_table_t frame_table;
+frame_table_t frame_table;
 static cspace_t *root_cspace;
 
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
@@ -103,7 +102,7 @@ int frame_alloc(seL4_Word *vaddr)
         frame_table.free = frame_table.frames[page].next;
         frame_table.num_frees--;
         memset((void *)*vaddr, 0, PAGE_SIZE_4K);
-        frame_table->frames[page].next = -1;
+        frame_table.frames[page].next = -1;
         return page;
     }
     /* otherwise we need to get one from untyped mem */
@@ -131,7 +130,7 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.untyped = frame_table.frames[page].next;
 
     memset((void *)*vaddr, 0, PAGE_SIZE_4K);
-    frame_table->frames[page].next = -1;
+    frame_table.frames[page].next = -1;
     return page;
 }
 
@@ -146,14 +145,14 @@ int frame_n_alloc(seL4_Word *vaddr, int nframes)
         if (frame_table.frames[frame].next == -1) {
             // out of memory need clean up all pre-allocated frames
             tmp = base_frame;
-            while(tmp ! = -1) {
-               frame = frame_table->frames[tmp].next;
+            while(tmp != -1) {
+               frame = frame_table.frames[tmp].next;
                frame_free(tmp);
                tmp = frame;
             }
             return -1;
         }
-        frame = frame_table.frames[frame].next 
+        frame = frame_table.frames[frame].next;
     }
     return base_frame;
 }
@@ -162,7 +161,7 @@ void frame_n_free(int frames)
 {
     int frame = 0, tmp = frames;
     while(tmp != -1) {
-        frame = frame_table->frames[tmp].next;
+        frame = frame_table.frames[tmp].next;
         frame_free(tmp);
         tmp = frame;
     }

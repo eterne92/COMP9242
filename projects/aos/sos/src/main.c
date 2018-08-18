@@ -369,7 +369,16 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
 
     /* create addrspace of ttytest */
     tty_test_process.as = addrspace_init();
-
+    if (!tty_test_process.as) {
+        ZF_LOGE("Failed to create address space");
+        return false;
+    }
+    /* initialize level 1 shadow page table */
+    tty_test_process.pt = initialize_page_table();
+    if (!tty_test_process.pt) {
+        ZF_LOGE("Failed to create shadow global page directory");
+        return false;
+    }
     /* Create a simple 1 level CSpace */
     err = cspace_create_one_level(&cspace, &tty_test_process.cspace);
     if (err != CSPACE_NOERROR) {

@@ -179,39 +179,49 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
         }
         seL4_Word page_table_addr; /* base addr of the shadow page table */ 
 
-        // allocate frame to keep track of shadow page table entry
-        int page_frame = frame_n_alloc(&page_table_addr, 3);
         slot_array[i] = slot;
         ut_array[i] = ut;
-        frame_array[i] = page_frame;
-        if (page_frame == -1) {
-            goto cleanup;
-        }
 
         /* fill up the pt */
         page_table_t *pt;
         page_table_cap *pt_cap;
         page_table_ut *pt_ut;
-        int offset;
+        int offset, page_frame;
         switch (failed) {
         case SEL4_MAPPING_LOOKUP_NO_PT:
             // level 4 
             err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
-            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 4);
-            // pt_cap = (page_table_cap *)get_page_table_cap(pt);
-            // pt_ut = (page_table_ut *)get_page_table_cap((seL4_Word)pt);
-            offset = get_offset(vaddr, 4);
+            /* only need one page in level 4 shadow page table */
+            page_frame = frame_alloc(&page_table_addr);
+            frame_array[i] = page_frame;
+            if (page_frame == -1) {
+                goto cleanup;
+            }
+            /* save level 4 hardware page table caps in level 3 shadow page table */
+            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 3);
+            offset = get_offset(vaddr, 3);
 
-            pt->page_obj_addr[offset] = (seL4_Word)frame;
+            pt->page_obj_addr[offset] = page_table_addr;
+            pt_cap->cap[offset] = slot;
+            pt_ut->ut[offset] = ut;
+            /* save backend frame in level 4 shadow page table */
+            offset = get_offset(vaddr, 4);
+            ((page_table_t *) page_table_addr)[offset] = (seL4_Word)frame;
             break;
         case SEL4_MAPPING_LOOKUP_NO_PD:
             // level 3
             err = retype_map_pd(cspace, vspace, vaddr, ut->cap, slot);
-
-            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 3);
+            // allocate frame to keep track of level 3 shadow page table entry
+            page_frame = frame_n_alloc(&page_table_addr, 3);
+            frame_array[i] = page_frame;
+            if (page_frame == -1) {
+                goto cleanup;
+            }
+            /* save level 3 hardware page table caps in level 2 shadow page table */
+            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 2);
             pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word) pt);
             pt_ut = (page_table_ut *)get_page_table_cap((seL4_Word)pt);
-            offset = get_offset(vaddr, 3);
+            offset = get_offset(vaddr, 2);
 
             pt->page_obj_addr[offset] = page_table_addr;
             pt_cap->cap[offset] = slot;
@@ -221,12 +231,17 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
         case SEL4_MAPPING_LOOKUP_NO_PUD:
             // level 2
             err = retype_map_pud(cspace, vspace, vaddr, ut->cap, slot);
-
-            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 2);
+            // allocate frame to keep track of level 3 shadow page table entry
+            page_frame = frame_n_alloc(&page_table_addr, 3);
+            frame_array[i] = page_frame;
+            if (page_frame == -1) {
+                goto cleanup;
+            }
+            /* save level 2 hardware page table caps in level 1 shadow page table */
+            pt = (page_table_t *)get_n_level_table(page_table, vaddr, 1);
             pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word) pt);
             pt_ut = (page_table_ut *)get_page_table_cap((seL4_Word) pt);
-            offset = get_offset(vaddr, 2);
-
+            offset = get_offset(vaddr, 1);
             pt->page_obj_addr[offset] = page_table_addr;
             pt_cap->cap[offset] = slot;
             pt_ut->ut[offset] = ut;

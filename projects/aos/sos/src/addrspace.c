@@ -5,6 +5,7 @@ addrspace *addrspace_init(void)
 {
     addrspace *as;
     as = malloc(sizeof(addrspace));
+    if(!as) return NULL;
     as->regions = NULL;
     as->heap = NULL;
     return as;

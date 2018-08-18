@@ -11,13 +11,10 @@ typedef struct proc {
     ut_t *vspace_ut;
     seL4_CPtr vspace;
     cspace_t cspace;
-    struct page_table *pt;
+    page_table_t *pt;
     addrspace *as;
-
     ut_t *ipc_buffer_ut;
     seL4_CPtr ipc_buffer;
-
-    
     ut_t *stack_ut;
     seL4_CPtr stack;
 } proc;

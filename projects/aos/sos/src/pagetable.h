@@ -27,7 +27,7 @@ typedef struct page_table_cap
     seL4_Word cap[PAGE_TABLE_SIZE];
 } page_table_cap;
 
-void initialize_page_table();
+page_table_t *initialize_page_table(void);
 
 void destroy_page_table();
 

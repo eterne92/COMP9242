@@ -36,6 +36,13 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
     }
 }
 
+page_table_t *initialize_page_table(void)
+{
+    seL4_Word page_table_addr;
+    int page_frame = frame_n_alloc(&page_table_addr, 3);
+    return page_frame != -1 ? (page_table_t *)page_table_addr : NULL;
+}
+
 /* find out the frame contains the ut / cap */
 page_table_ut *get_page_table_ut(seL4_Word page_table)
 {
@@ -52,16 +59,14 @@ page_table_cap *get_page_table_cap(seL4_Word page_table)
     return (page_table_cap *)(cap_frame * PAGE_SIZE_4K + FRAME_BASE);
 }
 
-/* n should be 2, 3, 4 */
-/* since we already got 1st level */
+
 int get_offset(seL4_Word vaddr, int n)
 {
     seL4_Word mask = 0x7fc0000000;
     int offset = (mask & vaddr) >> (48 - 9 * n);
     return offset;
 }
-/* n should be 2, 3, 4 */
-/* since we already got 1st level */
+
 seL4_Word get_n_level_table(seL4_Word page_table, seL4_Word vaddr, int n)
 {
     /* page_table is the 1st level, so we start from 2nd level */

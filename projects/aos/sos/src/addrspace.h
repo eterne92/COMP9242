@@ -8,6 +8,8 @@
 
 #define PAGE_FRAME 0xfffffffffffff000
 #define USERSPACETOP 0xffffffffffff
+#define USERIPCBUFFER (USERSPACETOP - 1024 * PAGE_SIZE_4K)
+#define USERSTACKTOP (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKSIZE (4096 * PAGE_SIZE_4K)
 #define USERHEAPSIZE (4096 * 2 * PAGE_SIZE_4K)
 
@@ -44,3 +46,4 @@ as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                      unsigned char flag);
 int as_define_stack(addrspace *as);
 int as_define_heap(addrspace *as);
+int as_define_ipcbuffer(addrspace *as)

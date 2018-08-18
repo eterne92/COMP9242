@@ -78,22 +78,6 @@ static cspace_t cspace;
 static struct serial *serial;
 
 /* the one process we start */
-typedef struct proc {
-    ut_t *tcb_ut;
-    seL4_CPtr tcb;
-    ut_t *vspace_ut;
-    seL4_CPtr vspace;
-
-    ut_t *ipc_buffer_ut;
-    seL4_CPtr ipc_buffer;
-
-    cspace_t cspace;
-    addrspace *as;
-    page_table_t *pt;
-    
-    ut_t *stack_ut;
-    seL4_CPtr stack;
-} proc;
 static proc tty_test_process;
 
 void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
@@ -160,38 +144,6 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
-    }
-}
-
-void handle_page_fault(seL4_Word badge, seL4_Word vaddr, seL4_Word fault_info)
-{
-    // need to figure out which process triggered the page fault
-    // right now, there is only one process (tty_test)
-    (void) badge;
-    (void) fault_info;
-    int frame;
-    proc *p = &tty_test_process;
-    seL4_CPtr vspace = p->vspace;
-    as_region *region = p->as->regions;
-    bool execute, read, write;
-    while (region) {
-        if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
-            execute = region->flags & RG_X;
-            read = region->flags & RG_R;
-            write = region->flags & RG_W;
-            // write to a read-only page
-            
-            // accessing a non-existing page
-
-            // allocate a frame 
-            frame = frame_alloc(NULL);
-            sos_map_frame(&cspace, frame, (seL4_Word) p->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write) ,seL4_ARM_Default_VMAttributes);
-
-            break;
-        } else {
-            // illegal access
-        }
-        region = region->next;
     }
 }
 

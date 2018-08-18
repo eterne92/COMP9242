@@ -129,8 +129,26 @@ int as_define_stack(addrspace *as)
     as_region *region;
     int stacksize = USERSTACKSIZE;    // 16M stack
     region = as_define_region(as,
-                              USERSPACETOP - stacksize,
+                              USERSTACKTOP - stacksize,
                               stacksize,
+                              RG_R | RG_W);
+    if (region == NULL)
+    {
+        return -1;
+    }
+
+    as->stack = region;
+
+    return 0; 
+}
+
+int as_define_stack(addrspace *as)
+{
+    /* Initial user-level stack pointer */
+    as_region *region;
+    region = as_define_region(as,
+                              USERIPCBUFFER,
+                              PAGE_SIZE_4K,
                               RG_R | RG_W);
     if (region == NULL)
     {
@@ -146,7 +164,6 @@ int as_define_heap(addrspace *as)
 {
     /* Initial user-level stack pointer */
     as_region *region;
-    int heapsize = USERHEAPSIZE;    // 32M heap 
     region = as_define_region(as,
                               as->stack->vaddr - USERHEAPSIZE,
                               0,

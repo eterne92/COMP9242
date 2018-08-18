@@ -4,13 +4,14 @@
 #include "pagetable.h"
 #include "addrspace.h"
 
+
 typedef struct proc {
     ut_t *tcb_ut;
     seL4_CPtr tcb;
     ut_t *vspace_ut;
     seL4_CPtr vspace;
     cspace_t cspace;
-    page_table_t *pt;
+    struct page_table *pt;
     addrspace *as;
 
     ut_t *ipc_buffer_ut;

@@ -46,4 +46,4 @@ as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                      unsigned char flag);
 int as_define_stack(addrspace *as);
 int as_define_heap(addrspace *as);
-int as_define_ipcbuffer(addrspace *as)
+int as_define_ipcbuffer(addrspace *as);

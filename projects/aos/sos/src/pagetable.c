@@ -1,5 +1,6 @@
 #include "frametable.h"
 #include "pagetable.h"
+#include "mapping.h"
 
 void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
 {
@@ -23,7 +24,7 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
 
             // allocate a frame
             frame = frame_alloc(NULL);
-            sos_map_frame(cur_proc->cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+            sos_map_frame(&cur_proc->cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
 
             break;
         }

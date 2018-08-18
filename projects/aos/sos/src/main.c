@@ -180,7 +180,8 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         } else {
             /* page fault handelr */
             if (label == seL4_Fault_VMFault) {
-                handle_page_fault(badge, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
+                proc *cur_proc = &tty_test_process;
+                handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
                 /* construct a reply message of length 1 */
                 seL4_CPtr reply = cspace_alloc_slot(&cspace);
                 seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);

@@ -142,7 +142,7 @@ int as_define_stack(addrspace *as)
     return 0; 
 }
 
-int as_define_stack(addrspace *as)
+int as_define_ipcbuffer(addrspace *as)
 {
     /* Initial user-level stack pointer */
     as_region *region;

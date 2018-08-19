@@ -180,15 +180,15 @@ NORETURN void syscall_loop(seL4_CPtr ep)
              * message from tty_test! */
             handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
         } else {
-            /* page fault handelr */
+            seL4_CPtr reply = cspace_alloc_slot(&cspace);
+            seL4_MessageInfo_t reply_msg;
+            seL4_Error err = cspace_save_reply_cap(&cspace, reply);
+            /* page fault handler */
             if (label == seL4_Fault_VMFault) {
-                printf("try to handle vm fault\n");
                 proc *cur_proc = &tty_test_process;
                 handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
-                printf("handler back\n");
                 /* construct a reply message of length 1 */
-                seL4_CPtr reply = cspace_alloc_slot(&cspace);
-                seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+                reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
                 /* Set the first (and only) word in the message to 0 */
                 seL4_SetMR(0, 0);
                 /* Send the reply to the saved reply capability. */
@@ -197,13 +197,14 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 * capability was consumed by the send. */
                 cspace_free_slot(&cspace, reply);
             }
+            else{
+                /* some kind of fault */
+                debug_print_fault(message, TTY_NAME);
+                /* dump registers too */
+                debug_dump_registers(tty_test_process.tcb);
 
-            /* some kind of fault */
-            debug_print_fault(message, TTY_NAME);
-            /* dump registers too */
-            debug_dump_registers(tty_test_process.tcb);
-
-            ZF_LOGF("The SOS skeleton does not know how to handle faults!");
+                ZF_LOGF("The SOS skeleton does not know how to handle faults!");
+            }
         }
     }
 }
@@ -249,7 +250,6 @@ static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
 static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, char *elf_file)
 {
     /* Create a stack frame */
-    printf("init stack\n");
     seL4_Error err;
     int frame = frame_alloc(NULL);
     err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
@@ -265,7 +265,6 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     /* virtual addresses in the target process' address space */
     uintptr_t stack_top = USERSTACKTOP;
     uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
-    printf("stacktop %p, stackbottom %p\n", stack_top, stack_bottom);
     /* virtual addresses in the SOS's address space */
     void *local_stack_top  = (seL4_Word *) SOS_SCRATCH;
     uintptr_t local_stack_bottom = SOS_SCRATCH - PAGE_SIZE_4K;
@@ -368,7 +367,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
 {
     int frame;
     /* Create a VSpace */
-    printf("vspace\n");
     tty_test_process.vspace_ut = alloc_retype(&tty_test_process.vspace, seL4_ARM_PageGlobalDirectoryObject,
                                               seL4_PGDBits);
     if (tty_test_process.vspace_ut == NULL) {
@@ -383,7 +381,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* create addrspace of ttytest */
-    printf("as\n");
     tty_test_process.as = addrspace_init();
     if (!tty_test_process.as) {
         ZF_LOGE("Failed to create address space");
@@ -397,7 +394,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
         return false;
     }
     /* Create a simple 1 level CSpace */
-    printf("cspace\n");
     err = cspace_create_one_level(&cspace, &tty_test_process.cspace);
     if (err != CSPACE_NOERROR) {
         ZF_LOGE("Failed to create cspace");
@@ -405,7 +401,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* Create an IPC buffer */
-    printf("ipcbuffer\n");
     as_define_ipcbuffer(tty_test_process.as);
     frame = frame_alloc(NULL);
     err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
@@ -472,7 +467,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
 
     /* set up the stack */
     as_define_stack(tty_test_process.as);
-    printf("stack vaddr %p, stack size %ld\n", tty_test_process.as->stack->vaddr, tty_test_process.as->stack->size);
     seL4_Word sp = init_process_stack(&cspace, seL4_CapInitThreadVSpace, elf_base);
 
     /* load the elf image from the cpio file */

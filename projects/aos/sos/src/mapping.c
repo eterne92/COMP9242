@@ -152,86 +152,94 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
     /* Attempt the mapping */
     seL4_CPtr frame_cap = frame_table.frames[frame].frame_cap;
     seL4_Error err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
-    /* keep track of all allocated resources in case that allocation failed in some intermediate steps */
-    ut_t *ut_array[MAPPING_SLOTS] = {0, 0, 0};
-    int frame_array[MAPPING_SLOTS] = {-1, -1, -1};
-    seL4_CPtr slot_array[MAPPING_SLOTS] = {0, 0, 0};
-    for (size_t i = 0; i < MAPPING_SLOTS && err == seL4_FailedLookup; i++) {
-        /* save this so nothing else trashes the message register value */
-        seL4_Word failed = seL4_MappingFailedLookupLevel();
+    if (!err) {
+        // no error means all 4 level page table objects exist
+        // only need to save the frame info in the 4th level page table
+        entry.frame = frame;
+        update_level_4_page_table_entry((page_table_t *)page_table, &entry, vaddr);
+    } else {
+        /* keep track of all allocated resources in case that allocation failed in some intermediate steps */
+        ut_t *ut_array[MAPPING_SLOTS] = {0, 0, 0};
+        int frame_array[MAPPING_SLOTS] = {-1, -1, -1};
+        seL4_CPtr slot_array[MAPPING_SLOTS] = {0, 0, 0};
+        for (size_t i = 0; i < MAPPING_SLOTS && err == seL4_FailedLookup; i++) {
+            /* save this so nothing else trashes the message register value */
+            seL4_Word failed = seL4_MappingFailedLookupLevel();
 
-        /* Assume the error was because we are missing a paging structure */
-        ut_t *ut = ut_alloc_4k_untyped(NULL);
-        if (ut == NULL) {
-            ZF_LOGE("Out of 4k untyped");
-            err = -1;
-            goto cleanup;
-            //return -1;
-        }
-
-        /* figure out which cptr to use to retype into*/
-        seL4_CPtr slot = cspace_alloc_slot(cspace);;
-        if (slot == seL4_CapNull) {
-            ZF_LOGE("No cptr to alloc paging structure");
-            err = -1;
-            goto cleanup;
-            //return -1;
-        }
-        seL4_Word page_table_addr; /* base addr of the shadow page table */ 
-
-        slot_array[i] = slot;
-        ut_array[i] = ut;
-
-        /* fill up the pt */
-        page_table_entry entry;
-        int offset, page_frame, level;
-        switch (failed) {
-        case SEL4_MAPPING_LOOKUP_NO_PT:
-            // level 4 
-            level = 4;
-            err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
-            /* only need one page in level 4 shadow page table */
-            page_frame = frame_alloc(&page_table_addr);
-            frame_array[i] = page_frame;
-            if (page_frame == -1) {
+            /* Assume the error was because we are missing a paging structure */
+            ut_t *ut = ut_alloc_4k_untyped(NULL);
+            if (ut == NULL) {
+                ZF_LOGE("Out of 4k untyped");
+                err = -1;
                 goto cleanup;
+                //return -1;
             }
-            entry.frame = frame;
-            break;
-        case SEL4_MAPPING_LOOKUP_NO_PD:
-            // level 3
-            level = 3;
-            err = retype_map_pd(cspace, vspace, vaddr, ut->cap, slot);
-            // allocate frame to keep track of level 3 shadow page table entry
-            page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
-            frame_array[i] = page_frame;
-            if (page_frame == -1) {
+
+            /* figure out which cptr to use to retype into*/
+            seL4_CPtr slot = cspace_alloc_slot(cspace);;
+            if (slot == seL4_CapNull) {
+                ZF_LOGE("No cptr to alloc paging structure");
+                err = -1;
                 goto cleanup;
+                //return -1;
             }
-            entry.frame = -1;
-            break;
-        case SEL4_MAPPING_LOOKUP_NO_PUD:
-            // level 2
-            level = 2;
-            err = retype_map_pud(cspace, vspace, vaddr, ut->cap, slot);
-            // allocate frame to keep track of level 3 shadow page table entry
-            page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
-            frame_array[i] = page_frame;
-            if (page_frame == -1) {
-                goto cleanup;
+            seL4_Word page_table_addr; /* base addr of the shadow page table */ 
+
+            slot_array[i] = slot;
+            ut_array[i] = ut;
+
+            /* fill up the pt */
+            page_table_entry entry;
+            int offset, page_frame, level;
+            switch (failed) {
+            case SEL4_MAPPING_LOOKUP_NO_PT:
+                // level 4 
+                level = 4;
+                err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
+                /* only need one page in level 4 shadow page table */
+                page_frame = frame_alloc(&page_table_addr);
+                frame_array[i] = page_frame;
+                if (page_frame == -1) {
+                    goto cleanup;
+                }
+                entry.frame = frame;
+                break;
+            case SEL4_MAPPING_LOOKUP_NO_PD:
+                // level 3
+                level = 3;
+                err = retype_map_pd(cspace, vspace, vaddr, ut->cap, slot);
+                // allocate frame to keep track of level 3 shadow page table entry
+                page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
+                frame_array[i] = page_frame;
+                if (page_frame == -1) {
+                    goto cleanup;
+                }
+                entry.frame = -1;
+                break;
+            case SEL4_MAPPING_LOOKUP_NO_PUD:
+                // level 2
+                level = 2;
+                err = retype_map_pud(cspace, vspace, vaddr, ut->cap, slot);
+                // allocate frame to keep track of level 3 shadow page table entry
+                page_frame = frame_n_alloc(&page_table_addr, PAGE_TABLE_FRAME_SIZE);
+                frame_array[i] = page_frame;
+                if (page_frame == -1) {
+                    goto cleanup;
+                }
+                entry.frame = -1;
+                break;
             }
-            entry.frame = -1;
-            break;
-        }
-        entry.slot = slot;
-        entry.table_addr = page_table_addr;
-        entry.ut = ut;
-        insert_page_table_entry((page_table_t *)page_table, &entry, level, vaddr);
-        if (!err) {
-            /* Try the mapping again */
-            err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+            entry.slot = slot;
+            entry.table_addr = page_table_addr;
+            entry.ut = ut;
+            insert_page_table_entry((page_table_t *)page_table, &entry, level, vaddr);
+            if (!err) {
+                /* Try the mapping again */
+                err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+            }
         }
     }
+    
     if (!err) return err;
 cleanup:
     /* clean up all the resouces */

@@ -145,7 +145,7 @@ int as_define_stack(addrspace *as)
 
 int as_define_ipcbuffer(addrspace *as)
 {
-    /* Initial user-level stack pointer */
+    /* Initial user-level ipcbuffer pointer */
     as_region *region;
     region = as_define_region(as,
                               USERIPCBUFFER,
@@ -156,7 +156,7 @@ int as_define_ipcbuffer(addrspace *as)
         return -1;
     }
 
-    as->stack = region;
+    as->ipc_buffer = region;
 
     return 0; 
 }

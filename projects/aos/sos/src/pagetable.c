@@ -123,3 +123,11 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
         region = region->next;
     }
 }
+
+void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entry, seL4_Word vaddr)
+{
+    /* save backend frame in level 4 shadow page table */
+    page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
+    offset = get_offset(vaddr, 4);
+    pt->page_obj_addr[offset] = entry->frame;
+}

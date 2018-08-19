@@ -178,7 +178,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
              * message from tty_test! */
             handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
         } else {
-            /* page fault handelr */
+            /* page fault handler */
             if (label == seL4_Fault_VMFault) {
                 proc *cur_proc = &tty_test_process;
                 handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));

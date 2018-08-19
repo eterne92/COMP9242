@@ -31,6 +31,13 @@ page_table_t *initialize_page_table(void);
 
 void destroy_page_table(page_table_t *table);
 
+/*
+ * page fault handler
+ * @param cur_proc     current process that triggered the page fault
+ * @param vaddr        virtual address that triggered page fault
+ * @param fault_info   fault information
+ * 
+ */
 void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
 
 /*
@@ -44,3 +51,14 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
  */
 seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry, int level, seL4_Word vaddr);
 
+/*
+ * update the 4th level page table entry
+ * when there is no error happened after calling seL4_ARM_Page_Map
+ * only need to save the frame into 4th level page table entry
+ * 
+ * @param table        top level shadow page table
+ * @param entry        an page table entry to be inserted
+ * @param vaddr        virtual address that triggered page fault
+ * 
+ */
+void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entry, seL4_Word vaddr);

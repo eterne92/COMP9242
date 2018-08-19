@@ -153,6 +153,10 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
     printf("start_mapping\n");
     seL4_CPtr frame_cap = frame_table.frames[frame].frame_cap;
     seL4_Error err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+    page_table_entry entry;
+    ut_t *ut_array[MAPPING_SLOTS] = {0, 0, 0};
+    int frame_array[MAPPING_SLOTS] = {-1, -1, -1};
+    seL4_CPtr slot_array[MAPPING_SLOTS] = {0, 0, 0};
     if (!err) {
         // no error means all 4 level page table objects exist
         // only need to save the frame info in the 4th level page table
@@ -160,9 +164,6 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
         update_level_4_page_table_entry((page_table_t *)page_table, &entry, vaddr);
     } else {
         /* keep track of all allocated resources in case that allocation failed in some intermediate steps */
-        ut_t *ut_array[MAPPING_SLOTS] = {0, 0, 0};
-        int frame_array[MAPPING_SLOTS] = {-1, -1, -1};
-        seL4_CPtr slot_array[MAPPING_SLOTS] = {0, 0, 0};
         for (size_t i = 0; i < MAPPING_SLOTS && err == seL4_FailedLookup; i++) {
             /* save this so nothing else trashes the message register value */
             seL4_Word failed = seL4_MappingFailedLookupLevel();
@@ -190,8 +191,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             ut_array[i] = ut;
 
             /* fill up the pt */
-            page_table_entry entry;
-            int offset, page_frame, level;
+            int page_frame, level;
             switch (failed) {
             case SEL4_MAPPING_LOOKUP_NO_PT:
                 // level 4 
@@ -240,7 +240,6 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             }
         }
     }
-    
     if (!err) return err;
 cleanup:
     /* clean up all the resouces */

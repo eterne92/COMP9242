@@ -134,7 +134,7 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
 {
     /* save backend frame in level 4 shadow page table */
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
-    offset = get_offset(vaddr, 4);
+    int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame;
 }
 

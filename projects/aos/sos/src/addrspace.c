@@ -133,7 +133,6 @@ int as_define_stack(addrspace *as)
                               USERSTACKTOP - stacksize,
                               stacksize,
                               RG_R | RG_W);
-    printf("after insert stack is at %p\n", region->vaddr);
     if (region == NULL)
     {
         return -1;
@@ -157,7 +156,7 @@ int as_define_ipcbuffer(addrspace *as)
         return -1;
     }
 
-    as->ipc_buffer = region;
+    as->ipcbuffer = region;
 
     return 0; 
 }

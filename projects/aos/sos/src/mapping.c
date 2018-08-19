@@ -150,6 +150,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
                      seL4_ARM_VMAttributes attr)
 {
     /* Attempt the mapping */
+    printf("start_mapping\n");
     seL4_CPtr frame_cap = frame_table.frames[frame].frame_cap;
     seL4_Error err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
     if (!err) {

@@ -95,20 +95,24 @@ void initialize_frame_table(cspace_t *cspace)
 
 int frame_alloc(seL4_Word *vaddr)
 {
+    seL4_Word _vaddr;
     int page = frame_table.free;
     if(page > 0){
         /* we got a free frame, just use it */
-        *vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
+        _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
         frame_table.free = frame_table.frames[page].next;
         frame_table.num_frees--;
-        memset((void *)*vaddr, 0, PAGE_SIZE_4K);
+        memset((void *)_vaddr, 0, PAGE_SIZE_4K);
         frame_table.frames[page].next = -1;
+        if(vaddr){
+            *vaddr = _vaddr;
+        }
         return page;
     }
     /* otherwise we need to get one from untyped mem */
     page = frame_table.untyped;
     seL4_CPtr frame_cap;
-    *vaddr = 0;
+    _vaddr = 0;
     /* always try to get mem from ut_table */
     ut_t *ut = alloc_retype(&frame_cap, seL4_ARM_SmallPageObject);
     if (ut == NULL)
@@ -116,9 +120,9 @@ int frame_alloc(seL4_Word *vaddr)
         // out of memory
         return -1;
     }
-    *vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
+    _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
     map_frame(root_cspace, frame_cap, seL4_CapInitThreadVSpace,
-              *vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
+              _vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
     /*
     if(err != seL4_NoError) {
         return -1;
@@ -129,13 +133,17 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.untyped = frame_table.frames[page].next;
 
-    memset((void *)*vaddr, 0, PAGE_SIZE_4K);
+    memset((void *)_vaddr, 0, PAGE_SIZE_4K);
     frame_table.frames[page].next = -1;
+    if(vaddr){
+        *vaddr = _vaddr;
+    }
     return page;
 }
 
 int frame_n_alloc(seL4_Word *vaddr, int nframes)
 {
+    printf("frame_alloc_n\n");
     int base_frame = frame_alloc(vaddr);
     int frame = 0, tmp = 0;
     if (base_frame == -1) return -1;

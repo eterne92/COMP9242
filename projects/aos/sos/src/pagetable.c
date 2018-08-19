@@ -37,7 +37,7 @@ static int get_offset(seL4_Word vaddr, int n)
 {
     seL4_Word mask = 0xff8000000000 >> (9 * (n - 1));
     seL4_Word offset = (mask & vaddr) >> (48 - 9 * n);
-    printf("level %d, mask %lx, vaddr %lx, offset %ld\n", n,mask, vaddr, offset);
+    // printf("level %d, mask %lx, vaddr %lx, offset %ld\n", n,mask, vaddr, offset);
     return (int)offset;
 }
 
@@ -84,7 +84,7 @@ seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
         pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word)pt);
         pt_ut = (page_table_ut *)get_page_table_ut((seL4_Word)pt);
         offset = get_offset(vaddr, level - 1);
-        printf("%d level,vaddr %lx, offset %d, pt %p, addr %p\n", level - 1,vaddr, offset, pt, entry->table_addr);
+        // printf("%d level,vaddr %lx, offset %d, pt %p, addr %p\n", level - 1,vaddr, offset, pt, entry->table_addr);
         pt->page_obj_addr[offset] = entry->table_addr;
         pt_cap->cap[offset] = entry->slot;
         pt_ut->ut[offset] = entry->ut;
@@ -105,6 +105,8 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
     seL4_CPtr vspace = cur_proc->vspace;
     as_region *region = cur_proc->as->regions;
     bool execute, read, write;
+  
+    region = cur_proc->as->regions;
     while (region)
     {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size)
@@ -117,7 +119,11 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
             // accessing a non-existing page
 
             // allocate a frame
+            printf("vaddr is %p\n", vaddr);
             frame = frame_alloc(NULL);
+            seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
+            vaddr = vaddr & PAGE_FRAME;
+            printf("vaddr is %p\n", vaddr);
             sos_map_frame(&cur_proc->cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
 
             break;

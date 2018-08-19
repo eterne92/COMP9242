@@ -60,7 +60,7 @@ static int insert_region(addrspace *as, as_region *region)
     }
     else
     {
-        struct as_region *tmp = as->regions;
+        as_region *tmp = as->regions;
         // check overlap
         while (1)
         {
@@ -133,6 +133,7 @@ int as_define_stack(addrspace *as)
                               USERSTACKTOP - stacksize,
                               stacksize,
                               RG_R | RG_W);
+    printf("after insert stack is at %p\n", region->vaddr);
     if (region == NULL)
     {
         return -1;
@@ -156,7 +157,7 @@ int as_define_ipcbuffer(addrspace *as)
         return -1;
     }
 
-    as->stack = region;
+    as->ipcbuffer = region;
 
     return 0; 
 }

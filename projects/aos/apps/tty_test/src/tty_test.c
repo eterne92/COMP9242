@@ -52,7 +52,10 @@ int main(void)
     /* initialise communication */
     ttyout_init();
 
+
     do {
+        int *p = 0x7fffffbfe300;
+        *p = 3;
         printf("task:\tHello world, I'm\ttty_test!\n");
         printf("task:\tHello world, I'm\ttty_test!\n");
         printf("task:\tHello world, I'm\ttty_test!\n");

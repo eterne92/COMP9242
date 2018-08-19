@@ -245,6 +245,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
         }
     }
+    printf("after mapping\n");
     if (err == 0) return err;
 
 cleanup:

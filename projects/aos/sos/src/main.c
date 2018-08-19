@@ -182,8 +182,10 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         } else {
             /* page fault handelr */
             if (label == seL4_Fault_VMFault) {
+                printf("try to handle vm fault\n");
                 proc *cur_proc = &tty_test_process;
                 handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
+                printf("handler back\n");
                 /* construct a reply message of length 1 */
                 seL4_CPtr reply = cspace_alloc_slot(&cspace);
                 seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
@@ -263,6 +265,7 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     /* virtual addresses in the target process' address space */
     uintptr_t stack_top = USERSTACKTOP;
     uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
+    printf("stacktop %p, stackbottom %p\n", stack_top, stack_bottom);
     /* virtual addresses in the SOS's address space */
     void *local_stack_top  = (seL4_Word *) SOS_SCRATCH;
     uintptr_t local_stack_bottom = SOS_SCRATCH - PAGE_SIZE_4K;
@@ -468,7 +471,8 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* set up the stack */
-    as_define_stack(tty_test_process.pt);
+    as_define_stack(tty_test_process.as);
+    printf("stack vaddr %p, stack size %ld\n", tty_test_process.as->stack->vaddr, tty_test_process.as->stack->size);
     seL4_Word sp = init_process_stack(&cspace, seL4_CapInitThreadVSpace, elf_base);
 
     /* load the elf image from the cpio file */
@@ -479,7 +483,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     }
 
     /* Map in the IPC buffer for the thread */
-    as_define_ipcbuffer(tty_test_process.pt);
     // err = map_frame(&cspace, tty_test_process.ipc_buffer, tty_test_process.vspace, PROCESS_IPC_BUFFER,
     //                 seL4_AllRights, seL4_ARM_Default_VMAttributes);
     if (err != 0) {

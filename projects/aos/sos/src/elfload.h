@@ -16,4 +16,6 @@
 #include <elf/elf.h>
 #include <elf.h>
 
-int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, seL4_CPtr loadee_vspace, char *elf_file);
+typedef struct proc proc;
+
+int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, char *elf_file);

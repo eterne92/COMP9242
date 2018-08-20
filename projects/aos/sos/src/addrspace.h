@@ -13,10 +13,10 @@
 #define USERSTACKSIZE (4096 * PAGE_SIZE_4K)
 #define USERHEAPSIZE (4096 * 2 * PAGE_SIZE_4K)
 
-#define RG_R 1 << 1
-#define RG_W 1 << 2
-#define RG_X 1 << 3
-#define RG_OLD 1 << 4
+#define RG_R (1 << 2)
+#define RG_W (1 << 1)
+#define RG_X (1 << 0)
+#define RG_OLD (1 << 4)
 
 typedef struct as_region
 {

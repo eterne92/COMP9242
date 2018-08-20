@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ut.h"
-#include "pagetable.h"
 #include "addrspace.h"
 
 typedef struct page_table page_table_t;

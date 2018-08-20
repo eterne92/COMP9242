@@ -21,7 +21,9 @@
 #include "ut.h"
 #include "mapping.h"
 #include "elfload.h"
-
+#include "addrspace.h"
+#include "frametable.h"
+#include "proc.h"
 /*
  * Convert ELF permissions into seL4 permissions.
  */
@@ -71,7 +73,7 @@ static inline seL4_CapRights_t get_sel4_rights_from_elf(unsigned long permission
  * @return
  *
  */
-static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, seL4_CPtr loadee,
+static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cur_proc,
                                     char *src, size_t segment_size,
                                     size_t file_size, uintptr_t dst, seL4_CapRights_t permissions)
 {
@@ -93,21 +95,25 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, seL4_CPt
 
         /* allocate the untyped for the loadees address space */
         ut_t *ut = ut_alloc_4k_untyped(NULL);
-        if (ut == NULL) {
-            ZF_LOGD("Failed to alloc untyped");
-            return -1;
-        }
+        int frame = frame_alloc(NULL);
+        // if (ut == NULL) {
+        //     ZF_LOGD("Failed to alloc untyped");
+        //     return -1;
+        // }
 
-        /* retype it */
-        err = cspace_untyped_retype(cspace, ut->cap, loadee_frame, seL4_ARM_SmallPageObject, seL4_PageBits);
-        if (err != seL4_NoError) {
-            ZF_LOGD("Failed to untyped reypte");
-            return -1;
-        }
+        // /* retype it */
+        // err = cspace_untyped_retype(cspace, ut->cap, loadee_frame, seL4_ARM_SmallPageObject, seL4_PageBits);
+        // if (err != seL4_NoError) {
+        //     ZF_LOGD("Failed to untyped reypte");
+        //     return -1;
+        // }
 
         /* map the frame into the loadee address space */
-        err = map_frame(cspace, loadee_frame, loadee, loadee_vaddr, permissions,
-                        seL4_ARM_Default_VMAttributes);
+        // err = map_frame(cspace, loadee_frame, loadee, loadee_vaddr, permissions,
+        //                 seL4_ARM_Default_VMAttributes);
+        seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
+        err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace, 
+                            loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
         /* A frame has already been mapped at this address. This occurs when segments overlap in
          * the same frame, which is permitted by the standard. That's fine as we
@@ -160,7 +166,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, seL4_CPt
 
         /* Flush the caches */
         seL4_ARM_PageGlobalDirectory_Unify_Instruction(loader, loader_vaddr, loader_vaddr + PAGE_SIZE_4K);
-        seL4_ARM_PageGlobalDirectory_Unify_Instruction(loadee, loadee_vaddr, loadee_vaddr + PAGE_SIZE_4K);
+        seL4_ARM_PageGlobalDirectory_Unify_Instruction(cur_proc->vspace, loadee_vaddr, loadee_vaddr + PAGE_SIZE_4K);
 
         pos += nbytes;
         dst += nbytes;
@@ -169,7 +175,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, seL4_CPt
     return 0;
 }
 
-int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, seL4_CPtr loadee_vspace, char *elf_file)
+int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, char *elf_file)
 {
 
     /* Ensure that the file is an elf file. */
@@ -196,10 +202,11 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, seL4_CPtr loadee_vspace,
         seL4_Word flags = elf_getProgramHeaderFlags(elf_file, i);
 
         /* create regions of the process iamge */
+        as_define_region(cur_proc->as, vaddr, segment_size, (unsigned char) flags);
 
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *) vaddr, (void *)(vaddr + segment_size));
-        int err = load_segment_into_vspace(cspace, loader_vspace, loadee_vspace,
+        int err = load_segment_into_vspace(cspace, loader_vspace, cur_proc,
                                            source_addr, segment_size, file_size, vaddr,
                                            get_sel4_rights_from_elf(flags));
         if (err) {

@@ -150,9 +150,18 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
                      seL4_ARM_VMAttributes attr)
 {
     /* Attempt the mapping */
-    printf("start_mapping\n");
+    // printf("start_mapping\n");
+    /* allign vaddr */
+    vaddr = vaddr & PAGE_FRAME;
     seL4_CPtr frame_cap = frame_table.frames[frame].frame_cap;
-    seL4_Error err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+    /* unmap page */
+    /* this will be change to copy a cap to the frame */
+    seL4_Error err = seL4_ARM_Page_Unmap(frame_cap);
+    if(err){
+        ZF_LOGE("FAILE TO UNMAP CAP, SOMETHING WRONG!");
+    }
+    err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+    // printf("err NO.%d\n", err);
     page_table_entry entry;
     ut_t *ut_array[MAPPING_SLOTS] = {0, 0, 0};
     int frame_array[MAPPING_SLOTS] = {-1, -1, -1};
@@ -194,6 +203,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             int page_frame, level;
             switch (failed) {
             case SEL4_MAPPING_LOOKUP_NO_PT:
+                // printf("level 4\n");
                 // level 4 
                 level = 4;
                 err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
@@ -206,6 +216,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
                 entry.frame = frame;
                 break;
             case SEL4_MAPPING_LOOKUP_NO_PD:
+                // printf("level 3\n");
                 // level 3
                 level = 3;
                 err = retype_map_pd(cspace, vspace, vaddr, ut->cap, slot);
@@ -218,6 +229,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
                 entry.frame = -1;
                 break;
             case SEL4_MAPPING_LOOKUP_NO_PUD:
+                // printf("level 2\n");
                 // level 2
                 level = 2;
                 err = retype_map_pud(cspace, vspace, vaddr, ut->cap, slot);
@@ -240,6 +252,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             }
         }
     }
+    // printf("mapping done\n");
     if (!err) return err;
 cleanup:
     /* clean up all the resouces */

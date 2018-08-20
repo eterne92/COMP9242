@@ -11,6 +11,7 @@
 #define USERIPCBUFFER (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKTOP (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKSIZE (4096 * PAGE_SIZE_4K)
+#define USERHEAPBASE 0x700000000000
 #define USERHEAPSIZE (4096 * 2 * PAGE_SIZE_4K)
 
 #define RG_R (1 << 2)
@@ -39,6 +40,7 @@ typedef struct addrspace
     as_region *stack;
     as_region *heap;
     as_region *ipcbuffer;
+    seL4_Word used_top;
 } addrspace;
 
 addrspace *addrspace_init(void);

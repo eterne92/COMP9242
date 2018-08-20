@@ -18,6 +18,11 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "sos.h"
+
+#define SOS_SYSCALLBRK 101
+#define SOS_SYSCALL_MMAP 102
+#define SOS_SYSCALL_MUNMAP 200
 /*
  * Statically allocated morecore area.
  *
@@ -42,13 +47,21 @@ long sys_brk(va_list ap)
     uintptr_t newbrk = va_arg(ap, uintptr_t);
 
     /*if the newbrk is 0, return the bottom of the heap*/
-    if (!newbrk) {
-        ret = morecore_base;
-    } else if (newbrk < morecore_top && newbrk > (uintptr_t)&morecore_area[0]) {
-        ret = morecore_base = newbrk;
-    } else {
-        ret = 0;
-    }
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(0, SOS_SYSCALLBRK);
+    seL4_SetMR(1, newbrk);
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+    ret = seL4_GetMR(0);
+
+    // if (!newbrk) {
+    //     ret = morecore_base;
+    // } else if (newbrk < morecore_top && newbrk > (uintptr_t)&morecore_area[0]) {
+    //     ret = morecore_base = newbrk;
+    // } else {
+    //     ret = 0;
+    // }
 
     return ret;
 }
@@ -64,15 +77,46 @@ long sys_mmap(va_list ap)
     int fd = va_arg(ap, int);
     off_t offset = va_arg(ap, off_t);
 
-    if (flags & MAP_ANONYMOUS) {
-        /* Check that we don't try and allocate more than exists */
-        if (length > morecore_top - morecore_base) {
-            return -ENOMEM;
-        }
-        /* Steal from the top */
-        morecore_top -= length;
-        return morecore_top;
+
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 7);
+    seL4_SetMR(0, SOS_SYSCALL_MMAP);
+    seL4_SetMR(1, addr);
+    seL4_SetMR(2, length);
+    seL4_SetMR(3, prot);
+    seL4_SetMR(4, flags);
+    seL4_SetMR(5, fd);
+    seL4_SetMR(6, offset);
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+
+    seL4_Word ret = seL4_GetMR(0);
+    if(ret != 0){
+        return ret;
     }
-    ZF_LOGF("not implemented");
-    return -ENOMEM;
+    else{
+        return -ENOMEM;
+    }
+
+}
+
+
+long sys_munmap(va_list ap){
+    char *base = va_arg(ap, char*);
+    size_t length = va_arg(ap, size_t);
+
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    seL4_SetMR(0, SOS_SYSCALL_MUNMAP);
+    seL4_SetMR(1, base);
+    seL4_SetMR(2, length);
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+    seL4_Word ret = seL4_GetMR(0);
+    if(ret == 0){
+        return ret;
+    }
+    else{
+        return -1;
+    }
 }

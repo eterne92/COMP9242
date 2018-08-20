@@ -166,7 +166,7 @@ int as_define_heap(addrspace *as)
     /* Initial user-level stack pointer */
     as_region *region;
     region = as_define_region(as,
-                              as->stack->vaddr - USERHEAPSIZE,
+                              USERHEAPBASE,
                               0,
                               RG_R | RG_W);
     if (region == NULL)

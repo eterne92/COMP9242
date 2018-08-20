@@ -86,32 +86,14 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
         uintptr_t loadee_vaddr = (ROUND_DOWN(dst, PAGE_SIZE_4K));
         uintptr_t loader_vaddr = ROUND_DOWN(SOS_ELF_VMEM + dst, PAGE_SIZE_4K);
 
-        /* create slot for the frame to load the data into */
-        seL4_CPtr loadee_frame = cspace_alloc_slot(cspace);
-        if (loadee_frame == seL4_CapNull) {
-            ZF_LOGD("Failed to alloc slot");
-            return -1;
-        }
-
         /* allocate the untyped for the loadees address space */
-        ut_t *ut = ut_alloc_4k_untyped(NULL);
         int frame = frame_alloc(NULL);
-        // if (ut == NULL) {
-        //     ZF_LOGD("Failed to alloc untyped");
-        //     return -1;
-        // }
+        if(frame == -1){
+            ZF_LOGE("fail to alloc frame in elf load");
+        }
+        seL4_CPtr loadee_frame = frame_table.frames[frame].frame_cap;
+        ut_t *ut = frame_table.frames[frame].ut;
 
-        // /* retype it */
-        // err = cspace_untyped_retype(cspace, ut->cap, loadee_frame, seL4_ARM_SmallPageObject, seL4_PageBits);
-        // if (err != seL4_NoError) {
-        //     ZF_LOGD("Failed to untyped reypte");
-        //     return -1;
-        // }
-
-        /* map the frame into the loadee address space */
-        // err = map_frame(cspace, loadee_frame, loadee, loadee_vaddr, permissions,
-        //                 seL4_ARM_Default_VMAttributes);
-        seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
         err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace, 
                             loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
@@ -202,7 +184,10 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, char *el
         seL4_Word flags = elf_getProgramHeaderFlags(elf_file, i);
 
         /* create regions of the process iamge */
-        as_define_region(cur_proc->as, vaddr, segment_size, (unsigned char) flags);
+        as_region *region = as_define_region(cur_proc->as, vaddr, segment_size, (unsigned char) flags);
+        if(region == NULL){
+            ZF_LOGE("elf loading region alloc failed!");
+        }
 
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *) vaddr, (void *)(vaddr + segment_size));

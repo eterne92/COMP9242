@@ -37,6 +37,7 @@
 #include "frametable.h"
 #include "addrspace.h"
 #include "pagetable.h"
+#include "proc.h"
 
 #include <aos/vsyscall.h>
 
@@ -65,6 +66,9 @@
  * our new syscall
  */
 #define SOS_SYSCALLMSG 100
+#define SOS_SYSCALLBRK 101
+#define SOS_SYSCALL_MMAP 102
+#define SOS_SYSCALL_MUNMAP 200
 
 /* The linker will link this symbol to the start address  *
  * of an archive of attached applications.                */
@@ -101,7 +105,8 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
      * slot is now empty. */
     seL4_Error err = cspace_save_reply_cap(&cspace, reply);
     ZF_LOGF_IFERR(err, "Failed to save reply");
-
+    as_region *region;
+    proc *cur_proc = &tty_test_process;
     /* Process system call */
     switch (syscall_number) {
     case SOS_SYSCALL0:
@@ -116,8 +121,9 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
          * capability was consumed by the send. */
         cspace_free_slot(&cspace, reply);
         break;
+
     case SOS_SYSCALLMSG:
-        printf("syscall: sos_write syscall is called.\n");
+        (void) err;
         /* MSG size each timdumpe should be less then 120 */
         char data[120];
         /* get datasize */
@@ -143,6 +149,88 @@ void handle_syscall(UNUSED seL4_Word badge, UNUSED int num_args)
          * capability was consumed by the send. */
         cspace_free_slot(&cspace, reply);
         break;
+
+    case SOS_SYSCALLBRK:
+        printf("brk comes here, and this is just a debug msg\n");
+        seL4_Word newbrk = seL4_GetMR(1);
+        printf("brk arg is %lx\n", newbrk);
+        /* we are just assume it's tty_test here */
+        reply_msg = seL4_MessageInfo_new(0,0,0,1);
+        if(cur_proc->as->heap == NULL){
+            err = as_define_heap(cur_proc->as);
+            if(err != 0){
+                /* this should be delete process for later stuff */
+                ZF_LOGE("region error");
+            }
+            cur_proc->as->used_top = cur_proc->as->heap->vaddr;
+        }
+        region = tty_test_process.as->heap;
+
+        printf("try real brk\n");
+
+        if(!newbrk){
+            printf("return %p\n", region->vaddr + region->size);
+        }
+        else if(newbrk < region->size + region->vaddr){
+            /* shouldn't shrink heap */
+            printf("brk shrink\n");
+        }
+        else{
+            region->size = newbrk - region->vaddr;
+            printf("return %ld\n", region->size);
+        }
+        printf("NOW heap vaddr is %p, heap top is %p\n", region->vaddr, region->vaddr + region->size);
+        seL4_SetMR(0, region->vaddr + region->size);
+        seL4_Send(reply, reply_msg);
+        /* Free the slot we allocated for the reply - it is now empty, as the reply
+         * capability was consumed by the send. */
+        cspace_free_slot(&cspace, reply);
+        break;
+
+    case SOS_SYSCALL_MMAP:
+        printf("mmap called\n");
+        (void) err;
+        if(cur_proc->as->heap == NULL){
+            err = as_define_heap(cur_proc->as);
+            if(err){
+                /* should not fail here */
+                ZF_LOGE("region error");
+            }
+            cur_proc->as->used_top = cur_proc->as->heap->vaddr;
+        }
+        seL4_Word size = seL4_GetMR(2);
+        seL4_Word vtop = cur_proc->as->used_top;
+        seL4_Word vbase = vtop - size;
+        region = as_define_region(cur_proc->as, vbase, size, RG_R | RG_W);
+        
+        seL4_SetMR(0, region->vaddr);
+        seL4_Send(reply, reply_msg);
+        /* Free the slot we allocated for the reply - it is now empty, as the reply
+         * capability was consumed by the send. */
+        cspace_free_slot(&cspace, reply);
+        break;
+    case SOS_SYSCALL_MUNMAP:
+        printf("munmap called\n");
+        region = cur_proc->as->regions;
+        seL4_Word base = seL4_GetMR(1);
+        while(region){
+            if(region->vaddr == base){
+                // should be as_destroy_region
+                // TODO: implement this
+                break;
+            }
+            region = region->next;
+        }
+        if(region == NULL){
+            seL4_SetMR(0, region->vaddr);
+        }
+        else{
+            seL4_SetMR(0, 0);
+        }
+        seL4_Send(reply, reply_msg);
+        cspace_free_slot(&cspace, reply);
+        break;
+
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
@@ -183,10 +271,15 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             seL4_CPtr reply = cspace_alloc_slot(&cspace);
             seL4_MessageInfo_t reply_msg;
             seL4_Error err = cspace_save_reply_cap(&cspace, reply);
+            ZF_LOGF_IFERR(err, "Failed to save reply");
             /* page fault handler */
             if (label == seL4_Fault_VMFault) {
                 proc *cur_proc = &tty_test_process;
-                handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
+                err = handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR), &cspace);
+                if(err){
+                    /* we will deal with this later */
+                    ZF_LOGF_IFERR(err, "Segment fault");
+                }
                 /* construct a reply message of length 1 */
                 reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
                 /* Set the first (and only) word in the message to 0 */
@@ -252,7 +345,6 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     /* Create a stack frame */
     seL4_Error err;
     int frame = frame_alloc(NULL);
-    err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
     err = sos_map_frame(cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace,
                   USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
                   seL4_ARM_Default_VMAttributes);
@@ -403,7 +495,6 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     /* Create an IPC buffer */
     as_define_ipcbuffer(tty_test_process.as);
     frame = frame_alloc(NULL);
-    err = seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
     err = sos_map_frame(&cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace, 
                   USERIPCBUFFER, seL4_ReadWrite, seL4_ARM_Default_VMAttributes);
     // tty_test_process.ipc_buffer_ut = alloc_retype(&tty_test_process.ipc_buffer, seL4_ARM_SmallPageObject,

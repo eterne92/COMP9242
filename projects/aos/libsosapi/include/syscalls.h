@@ -33,4 +33,6 @@ long sys_read(va_list ap);
 long sys_ioctl(va_list ap);
 long sys_brk(va_list ap);
 long sys_mmap(va_list ap);
+/* not sure */
+long sys_munmap(va_list ap);
 long sys_writev(va_list ap);

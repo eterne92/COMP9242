@@ -38,7 +38,8 @@ void destroy_page_table(page_table_t *table);
  * @param fault_info   fault information
  * 
  */
-void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
+// seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
+seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info, cspace_t *cspace);
 
 /*
  * insert an entry into shadow page table

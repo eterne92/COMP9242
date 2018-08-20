@@ -92,7 +92,7 @@ seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
     return seL4_NoError;
 }
 
-void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
+seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info, cspace_t *cspace)
 {
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
@@ -101,12 +101,16 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
     seL4_CPtr vspace = cur_proc->vspace;
     as_region *region = cur_proc->as->regions;
     bool execute, read, write;
+    seL4_Error err;
   
     region = cur_proc->as->regions;
     while (region)
     {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size)
         {
+            if(region == cur_proc->as->heap){
+                printf("heap here with vaddr %p\n", vaddr);
+            }
             execute = region->flags & RG_X;
             read = region->flags & RG_R;
             write = region->flags & RG_W;
@@ -116,18 +120,15 @@ void handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
 
             // allocate a frame
             frame = frame_alloc(NULL);
-            seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
-            vaddr = vaddr & PAGE_FRAME;
-            sos_map_frame(&cur_proc->cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+            // map it
+            err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
 
-            break;
-        }
-        else
-        {
-            // illegal access
+            return err;
         }
         region = region->next;
     }
+    /* failed */
+    return -1;
 }
 
 void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entry, seL4_Word vaddr)

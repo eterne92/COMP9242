@@ -143,7 +143,6 @@ int frame_alloc(seL4_Word *vaddr)
 
 int frame_n_alloc(seL4_Word *vaddr, int nframes)
 {
-    printf("frame_alloc_n\n");
     int base_frame = frame_alloc(vaddr);
     int frame = 0, tmp = 0;
     if (base_frame == -1) return -1;

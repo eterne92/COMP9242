@@ -12,6 +12,7 @@
 
 #define PAGE_TABLE_SIZE 512
 #define PAGE_TABLE_FRAME_SIZE 3
+#define PAGE_FRAME 0xfffffffffffff000
 
 typedef struct page_table page_table_t;
 
@@ -39,7 +40,7 @@ void destroy_page_table(page_table_t *table);
  * 
  */
 // seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
-seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info, cspace_t *cspace);
+seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info);
 
 /*
  * insert an entry into shadow page table
@@ -63,5 +64,8 @@ seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
  * 
  */
 void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entry, seL4_Word vaddr);
+
+/* some help functions to get slot / frame from vaddr */
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr);
+seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
 

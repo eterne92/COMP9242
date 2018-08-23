@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include "frametable.h"
 
-#define PAGE_FRAME 0xfffffffffffff000
 #define USERSPACETOP 0x800000000000
 #define USERIPCBUFFER (USERSPACETOP - 1024 * PAGE_SIZE_4K)
 #define USERSTACKTOP (USERSPACETOP - 1024 * PAGE_SIZE_4K)
@@ -47,6 +46,8 @@ addrspace *addrspace_init(void);
 void addrspace_destroy(addrspace *as);
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                      unsigned char flag);
+void as_destroy_region(addrspace *as, as_region *region);
 int as_define_stack(addrspace *as);
 int as_define_heap(addrspace *as);
 int as_define_ipcbuffer(addrspace *as);
+

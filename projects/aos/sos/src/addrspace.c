@@ -1,11 +1,16 @@
-#include "addrspace.h"
 #include <cspace/cspace.h>
 
+#include "addrspace.h"
+#include "pagetable.h"
+#include "proc.h"
+
+proc *cur_proc;
 addrspace *addrspace_init(void)
 {
     addrspace *as;
     as = malloc(sizeof(addrspace));
-    if(!as) return NULL;
+    if (!as)
+        return NULL;
     as->regions = NULL;
     as->heap = NULL;
     return as;
@@ -45,6 +50,68 @@ static int create_region(as_region *region,
     return 0;
 }
 
+/* destroying a region is just unmap all it's frame.
+ * need to be careful since one frame may contain more than one
+ * region.
+ */
+void as_destroy_region(addrspace *as, as_region *region)
+{
+    seL4_Word first_vaddr = region->vaddr & PAGE_FRAME;
+    seL4_Word last_vaddr = (region->vaddr + region->size) & PAGE_FRAME;
+    cur_proc = get_cur_proc();
+
+    /* check first frame */
+    as_region *tmp = as->regions;
+    while (tmp)
+    {
+        if (tmp->vaddr + tmp->size > first_vaddr)
+        {
+            if (tmp->vaddr < first_vaddr)
+            {
+                /* region overlapped */
+                /* start from second frame */
+                first_vaddr += PAGE_SIZE_4K;
+            }
+            break;
+        }
+        tmp = tmp->next;
+    }
+
+    /* check last frame */
+    if ((region->next->vaddr & PAGE_FRAME) == last_vaddr)
+    {
+        /* last frame overlap */
+        last_vaddr -= PAGE_SIZE_4K;
+    }
+    for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K)
+    {
+        seL4_Word frame = get_frame_from_vaddr(cur_proc->pt, i);
+        seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
+        if(frame != 0 && slot != 0){
+            seL4_ARM_Page_Unmap(slot);
+            frame_free(frame);
+        }
+    }
+    tmp = as->regions;
+
+    /* we are first region */
+    if(tmp == region){
+        as->regions = tmp->next;
+        free(region);
+        return;
+    }
+
+    /* we are not first */
+    while(tmp){
+        if(tmp->next == region){
+            tmp->next = region->next;
+            free(region);
+            return;
+        }
+        tmp = tmp->next;
+    }
+
+}
 /* make region list ordered by check each region
  * this also prevent regions from overlap with each other
  */
@@ -62,7 +129,7 @@ static int insert_region(addrspace *as, as_region *region)
     {
         as_region *tmp = as->regions;
         // check overlap
-        while (1)
+        while (tmp)
         {
             // overlap
             if (vaddr > tmp->vaddr &&
@@ -77,22 +144,32 @@ static int insert_region(addrspace *as, as_region *region)
                 tmp->next = region;
                 break;
             }
-            // not last region
-            else
+            // first region
+            else if (vaddr < tmp->vaddr)
             {
-                // we are in the right position
-                if (vaddr < tmp->next->vaddr)
+                // check overlap
+                if (vaddr + region->size > tmp->vaddr)
                 {
-                    // check overlap
-                    if (vaddr + region->size > tmp->next->vaddr)
-                    {
-                        free(region);
-                        return -1;
-                    }
-                    region->next = tmp->next;
-                    tmp->next = region;
-                    break;
+                    free(region);
+                    return -1;
                 }
+                region->next = tmp;
+                as->regions = region;
+                break;
+            }
+            // in the middle
+            // and we are in the right position
+            else if (vaddr < tmp->next->vaddr)
+            {
+                // check overlap
+                if (vaddr + region->size > tmp->next->vaddr)
+                {
+                    free(region);
+                    return -1;
+                }
+                region->next = tmp->next;
+                tmp->next = region;
+                break;
             }
             tmp = tmp->next;
         }
@@ -102,7 +179,7 @@ static int insert_region(addrspace *as, as_region *region)
 }
 
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
-                     unsigned char flag)
+                            unsigned char flag)
 {
     int result;
     as_region *region;
@@ -128,7 +205,7 @@ int as_define_stack(addrspace *as)
 {
     /* Initial user-level stack pointer */
     as_region *region;
-    int stacksize = USERSTACKSIZE;    // 16M stack
+    int stacksize = USERSTACKSIZE; // 16M stack
     region = as_define_region(as,
                               USERSTACKTOP - stacksize,
                               stacksize,
@@ -140,7 +217,7 @@ int as_define_stack(addrspace *as)
 
     as->stack = region;
 
-    return 0; 
+    return 0;
 }
 
 int as_define_ipcbuffer(addrspace *as)
@@ -158,7 +235,7 @@ int as_define_ipcbuffer(addrspace *as)
 
     as->ipcbuffer = region;
 
-    return 0; 
+    return 0;
 }
 
 int as_define_heap(addrspace *as)
@@ -176,5 +253,5 @@ int as_define_heap(addrspace *as)
 
     as->heap = region;
 
-    return 0; 
+    return 0;
 }

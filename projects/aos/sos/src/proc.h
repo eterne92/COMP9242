@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cspace/cspace.h>
+
 #include "ut.h"
-#include "addrspace.h"
 
 typedef struct page_table page_table_t;
+typedef struct addrspace addrspace;
 
 typedef struct proc {
     ut_t *tcb_ut;
@@ -18,3 +20,9 @@ typedef struct proc {
     ut_t *stack_ut;
     seL4_CPtr stack;
 } proc;
+
+extern cspace_t *global_cspace;
+extern proc *cur_proc;
+
+proc *set_cur_proc(proc *p);
+proc *get_cur_proc(void);

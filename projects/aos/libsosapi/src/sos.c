@@ -19,54 +19,97 @@
 
 int sos_sys_open(const char *path, fmode_t mode)
 {
-    assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    seL4_SetMR(1, (seL4_Word)path);
+    seL4_SetMR(2, (seL4_Word)mode);
     return -1;
 }
 
 int sos_sys_close(int file)  {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(1, (seL4_Word)file);
     return -1;
 }
 
 int sos_sys_read(int file, char *buf, size_t nbyte)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 4);
+    seL4_SetMR(1, (seL4_Word)file);
+    seL4_SetMR(2, (seL4_Word)buf);
+    seL4_SetMR(3, (seL4_Word)nbyte);
     return -1;
 }
 
 int sos_sys_write(int file, const char *buf, size_t nbyte)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 4);
+    seL4_SetMR(1, (seL4_Word)file);
+    seL4_SetMR(2, (seL4_Word)buf);
+    seL4_SetMR(3, (seL4_Word)nbyte);
+
     return -1;
 }
 
 int sos_getdirent(int pos, char *name, size_t nbyte)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 4);
+    seL4_SetMR(1, (seL4_Word)pos);
+    seL4_SetMR(2, (seL4_Word)name);
+    seL4_SetMR(3, (seL4_Word)nbyte);
     return -1;
 }
 
 int sos_stat(const char *path, sos_stat_t *buf)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    seL4_SetMR(1, (seL4_Word)path);
+    seL4_SetMR(2, (seL4_Word)buf);
     return -1;
 }
 
 pid_t sos_process_create(const char *path)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(1, (seL4_Word)path);
     return -1;
 }
 
 int sos_process_delete(pid_t pid)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(1, (seL4_Word)pid);
     return -1;
 }
 
 pid_t sos_my_id(void)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 1);
     return -1;
 
 }
@@ -74,12 +117,21 @@ pid_t sos_my_id(void)
 int sos_process_status(sos_process_t *processes, unsigned max)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    seL4_SetMR(1, (seL4_Word)processes);
+    seL4_SetMR(2, (seL4_Word)max);
     return -1;
 }
 
 pid_t sos_process_wait(pid_t pid)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(1, (seL4_Word)pid);
     return -1;
 
 }
@@ -87,10 +139,17 @@ pid_t sos_process_wait(pid_t pid)
 void sos_sys_usleep(int msec)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
+    seL4_SetMR(1, (seL4_Word)msec);
 }
 
 int64_t sos_sys_time_stamp(void)
 {
     assert(!"You need to implement this");
+    seL4_MessageInfo_t tag;
+    seL4_MessageInfo_t retmsg;
+    tag = seL4_MessageInfo_new(0, 0, 0, 1);
     return -1;
 }

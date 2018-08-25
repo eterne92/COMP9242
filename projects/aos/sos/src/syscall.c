@@ -91,20 +91,30 @@ void handle_syscall(seL4_Word badge, int num_args)
     as_region *region;
     /* Process system call */
     switch (syscall_number) {
-
-        // case SOS_SYSCALL0:
-        //     ZF_LOGV("syscall: thread example made syscall 0!\n");
-        //     /* construct a reply message of length 1 */
-        //     reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
-        //     /* Set the first (and only) word in the message to 0 */
-        //     seL4_SetMR(0, 0);
-        //     /* Send the reply to the saved reply capability. */
-        //     seL4_Send(reply, reply_msg);
-        //     /* Free the slot we allocated for the reply - it is now empty, as the reply
-        //      * capability was consumed by the send. */
-        //     cspace_free_slot(global_cspace, reply);
-        //     break;
-
+    // case SOS_SYSCALL0:
+    //     ZF_LOGV("syscall: thread example made syscall 0!\n");
+    //     /* construct a reply message of length 1 */
+    //     reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+    //     /* Set the first (and only) word in the message to 0 */
+    //     seL4_SetMR(0, 0);
+    //     /* Send the reply to the saved reply capability. */
+    //     seL4_Send(reply, reply_msg);
+    //     /* Free the slot we allocated for the reply - it is now empty, as the reply
+    //      * capability was consumed by the send. */
+    //     cspace_free_slot(global_cspace, reply);
+    //     break;
+    case SOS_SYS_READ:
+        break;
+    case SOS_SYS_WRITE:
+        break;
+    case SOS_SYS_OPEN:
+        break;
+    case SOS_SYS_CLOSE:
+        break;
+    case SOS_SYS_USLEEP:
+        break;
+    case SOS_SYS_STAT:
+        break;
     case SOS_SYSCALLMSG:
         (void)err;
         /* MSG size each timdumpe should be less then 120 */

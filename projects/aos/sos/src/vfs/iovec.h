@@ -36,33 +36,27 @@
  */
 
 struct iovec {
-	/*
-	 * For maximum type safety, when in the kernel, distinguish
-	 * user pointers from kernel pointers.
-	 *
-	 * (A pointer is a user pointer if it *came* from userspace,
-	 * not necessarily if it *points* to userspace. If a system
-	 * call passes 0xdeadbeef, it points to the kernel, but it's
-	 * still a user pointer.)
-	 *
-	 * In userspace, there are only user pointers; also, the name
-	 * iov_base is defined by POSIX.
-	 *
-	 * Note that to work properly (without extra unwanted fiddling
-	 * around) this scheme requires that void* and userptr_t have
-	 * the same machine representation. Machines where this isn't
-	 * true are theoretically possible under the C standard, but
-	 * do not exist in practice.
-	 */
-// #ifdef _KERNEL
-//         union {
-//                 userptr_t  iov_ubase;	#<{(| user-supplied pointer |)}>#
-//                 void      *iov_kbase;	#<{(| kernel-supplied pointer |)}>#
-//         };
-// #else
-	void *iov_base;			/* user-supplied pointer */
-// #endif
-        size_t iov_len;			/* Length of data */
+    /*
+   * For maximum type safety, when in the kernel, distinguish
+   * user pointers from kernel pointers.
+   *
+   * (A pointer is a user pointer if it *came* from userspace,
+   * not necessarily if it *points* to userspace. If a system
+   * call passes 0xdeadbeef, it points to the kernel, but it's
+   * still a user pointer.)
+   *
+   * In userspace, there are only user pointers; also, the name
+   * iov_base is defined by POSIX.
+   *
+   * Note that to work properly (without extra unwanted fiddling
+   * around) this scheme requires that void* and userptr_t have
+   * the same machine representation. Machines where this isn't
+   * true are theoretically possible under the C standard, but
+   * do not exist in practice.
+   */
+
+    void *iov_base; /* user-supplied pointer */
+    size_t iov_len; /* Length of data */
 };
 
 #endif /* _KERN_IOVEC_H_ */

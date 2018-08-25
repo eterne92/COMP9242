@@ -30,54 +30,51 @@
 /*
  * Basic vnode support functions.
  */
-#include "comm/comm.h"
-#include "vfs.h"
 #include "vnode.h"
 #include "assert.h"
+#include "comm/comm.h"
+#include "vfs.h"
 
 /*
  * Initialize an abstract vnode.
  */
-int
-vnode_init(struct vnode *vn, const struct vnode_ops *ops,
-	   struct fs *fs, void *fsdata)
+int vnode_init(struct vnode *vn,
+    const struct vnode_ops *ops,
+    struct fs *fs,
+    void *fsdata)
 {
-	assert(vn != NULL);
-	assert(ops != NULL);
+    assert(vn != NULL);
+    assert(ops != NULL);
 
-	vn->vn_ops = ops;
-	vn->vn_refcount = 1;
-	vn->vn_fs = fs;
-	vn->vn_data = fsdata;
-	return 0;
+    vn->vn_ops = ops;
+    vn->vn_refcount = 1;
+    vn->vn_fs = fs;
+    vn->vn_data = fsdata;
+    return 0;
 }
 
 /*
  * Destroy an abstract vnode.
  */
-void
-vnode_cleanup(struct vnode *vn)
+void vnode_cleanup(struct vnode *vn)
 {
-	assert(vn->vn_refcount == 1);
+    assert(vn->vn_refcount == 1);
 
-
-	vn->vn_ops = NULL;
-	vn->vn_refcount = 0;
-	vn->vn_fs = NULL;
-	vn->vn_data = NULL;
+    vn->vn_ops = NULL;
+    vn->vn_refcount = 0;
+    vn->vn_fs = NULL;
+    vn->vn_data = NULL;
 }
-
 
 /*
  * Increment refcount.
  * Called by VOP_INCREF.
  */
-void
-vnode_incref(struct vnode *vn)
+void vnode_incref(struct vnode *vn)
 {
-	assert(vn != NULL);
+    assert(vn != NULL);
 
-	vn->vn_refcount++;
+    vn->vn_refcount++;
 }
 
 /*
@@ -86,103 +83,94 @@ vnode_incref(struct vnode *vn)
  * Calls VOP_RECLAIM if the refcount hits zero.
  */
 extern struct device *console_dev;
-void
-vnode_decref(struct vnode *vn)
+
+void vnode_decref(struct vnode *vn)
 {
-	bool destroy;
-	int result;
+    bool destroy;
+    int result;
 
-	assert(vn != NULL);
+    assert(vn != NULL);
 
+    assert(vn->vn_refcount > 0);
+    if (vn->vn_refcount > 1) {
+        vn->vn_refcount--;
+        destroy = false;
+    } else {
+        /* Don't decrement; pass the reference to VOP_RECLAIM. */
+        destroy = true;
+    }
 
-	assert(vn->vn_refcount > 0);
-	if (vn->vn_refcount > 1) {
-		vn->vn_refcount--;
-		destroy = false;
-	}
-	else {
-		/* Don't decrement; pass the reference to VOP_RECLAIM. */
-		destroy = true;
-	}
-
-
-    // XXX very ugly way, because console dev's read is exlusive, so close should call its reclaim function to
-    // release read perm.
-    if (vn->vn_data == console_dev)
-    {
+    // XXX very ugly way, because console dev's read is exlusive, so close should
+    // call its reclaim function to release read perm.
+    if (vn->vn_data == console_dev) {
         assert(0 == VOP_RECLAIM(vn));
     }
 
     /* printf ("vnode ref: %d\n", vn->vn_refcount); */
 
-	if (destroy) {
-		result = VOP_RECLAIM(vn);
-		if (result != 0 && result != EBUSY) {
-			// XXX: lame.
-			ZF_LOGE("vfs: Warning: VOP_RECLAIM: %s\n",
-				strerror(result));
-		}
-	}
+    if (destroy) {
+        result = VOP_RECLAIM(vn);
+        if (result != 0 && result != EBUSY) {
+            // XXX: lame.
+            ZF_LOGE("vfs: Warning: VOP_RECLAIM: %s\n", strerror(result));
+        }
+    }
 }
 
 /*
  * Check for various things being valid.
  * Called before all VOP_* calls.
  */
-void
-vnode_check(struct vnode *v, const char *opstr)
+void vnode_check(struct vnode *v, const char *opstr)
 {
-	/* not safe, and not really needed to check constant fields */
-	/*vfs_biglock_acquire();*/
+    /* not safe, and not really needed to check constant fields */
+    /*vfs_biglock_acquire();*/
 
-	if (v == NULL) {
-		ZF_LOGE("vode_check: vop_%s: null vnode\n", opstr);
+    if (v == NULL) {
+        ZF_LOGE("vode_check: vop_%s: null vnode\n", opstr);
         assert(0);
-	}
-	if (v == (void *)0xdeadbeef) {
-		ZF_LOGE("vnode_check: vop_%s: deadbeef vnode\n", opstr);
+    }
+    if (v == (void *)0xdeadbeef) {
+        ZF_LOGE("vnode_check: vop_%s: deadbeef vnode\n", opstr);
         assert(0);
-	}
+    }
 
-	if (v->vn_ops == NULL) {
-		ZF_LOGE("vnode_check: vop_%s: null ops pointer\n", opstr);
+    if (v->vn_ops == NULL) {
+        ZF_LOGE("vnode_check: vop_%s: null ops pointer\n", opstr);
         assert(0);
-	}
-	if (v->vn_ops == (void *)0xdeadbeef) {
-		ZF_LOGE("vnode_check: vop_%s: deadbeef ops pointer\n", opstr);
+    }
+    if (v->vn_ops == (void *)0xdeadbeef) {
+        ZF_LOGE("vnode_check: vop_%s: deadbeef ops pointer\n", opstr);
         assert(0);
-	}
+    }
 
-	if (v->vn_ops->vop_magic != VOP_MAGIC) {
-		ZF_LOGE("vnode_check: vop_%s: ops with bad magic number %lx\n",
-		      opstr, v->vn_ops->vop_magic);
+    if (v->vn_ops->vop_magic != VOP_MAGIC) {
+        ZF_LOGE("vnode_check: vop_%s: ops with bad magic number %lx\n", opstr,
+            v->vn_ops->vop_magic);
         assert(0);
-	}
+    }
 
-	// Device vnodes have null fs pointers.
-	//if (v->vn_fs == NULL) {
-	//	panic("vnode_check: vop_%s: null fs pointer\n", opstr);
-	//}
-	if (v->vn_fs == (void *)0xdeadbeef) {
-		ZF_LOGE("vnode_check: vop_%s: deadbeef fs pointer\n", opstr);
+    // Device vnodes have null fs pointers.
+    // if (v->vn_fs == NULL) {
+    //	panic("vnode_check: vop_%s: null fs pointer\n", opstr);
+    //}
+    if (v->vn_fs == (void *)0xdeadbeef) {
+        ZF_LOGE("vnode_check: vop_%s: deadbeef fs pointer\n", opstr);
         assert(0);
-	}
+    }
 
+    if (v->vn_refcount < 0) {
+        ZF_LOGE("vnode_check: vop_%s: negative refcount %d\n", opstr,
+            v->vn_refcount);
+        assert(0);
+    } else if (v->vn_refcount == 0) {
+        ZF_LOGE("vnode_check: vop_%s: zero refcount\n", opstr);
+        assert(0);
+    } else if (v->vn_refcount > 0x100000) {
+        ZF_LOGE("vnode_check: vop_%s: warning: large refcount %d\n", opstr,
+            v->vn_refcount);
+        assert(0);
+    }
 
-	if (v->vn_refcount < 0) {
-		ZF_LOGE("vnode_check: vop_%s: negative refcount %d\n", opstr,
-		      v->vn_refcount);
-        assert(0);
-	}
-	else if (v->vn_refcount == 0) {
-		ZF_LOGE("vnode_check: vop_%s: zero refcount\n", opstr);
-        assert(0);
-	}
-	else if (v->vn_refcount > 0x100000) {
-		ZF_LOGE("vnode_check: vop_%s: warning: large refcount %d\n",
-			opstr, v->vn_refcount);
-        assert(0);
-	}
-
-	/*vfs_biglock_release();*/
+    /*vfs_biglock_release();*/
 }

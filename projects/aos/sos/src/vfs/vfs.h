@@ -33,8 +33,6 @@
 #define NAME_MAX 128
 // #include "uio.h"
 
-
-
 /*
  * Virtual File System layer functions.
  *
@@ -42,10 +40,10 @@
  * pathnames to operations on specific files on specific filesystems.
  */
 
-struct uio;    /* kernel or userspace I/O buffer (uio.h) */
+struct uio; /* kernel or userspace I/O buffer (uio.h) */
 struct device; /* abstract structure for a device (dev.h) */
-struct fs;     /* abstract structure for a filesystem (fs.h) */
-struct vnode;  /* abstract structure for an on-disk file (vnode.h) */
+struct fs; /* abstract structure for a filesystem (fs.h) */
+struct vnode; /* abstract structure for an on-disk file (vnode.h) */
 
 /*
  * VFS layer low-level operations.
@@ -79,8 +77,7 @@ const char *vfs_getdevname(struct fs *fs);
  */
 
 int vfs_lookup(char *path, struct vnode **result);
-int vfs_lookparent(char *path, struct vnode **result,
-		   char *buf, size_t buflen);
+int vfs_lookparent(char *path, struct vnode **result, char *buf, size_t buflen);
 
 /*
  * VFS layer high-level operations on pathnames

@@ -33,7 +33,6 @@
 struct uio;
 struct stat;
 
-
 /*
  * A struct vnode is an abstract representation of a file.
  *
@@ -48,13 +47,13 @@ struct stat;
  * Note: vn_fs may be null if the vnode refers to a device.
  */
 struct vnode {
-	int vn_refcount;                /* Reference count */
+    int vn_refcount; /* Reference count */
 
-	struct fs *vn_fs;               /* Filesystem vnode belongs to */
+    struct fs *vn_fs; /* Filesystem vnode belongs to */
 
-	void *vn_data;                  /* Filesystem-specific data */
+    void *vn_data; /* Filesystem-specific data */
 
-	const struct vnode_ops *vn_ops; /* Functions on this vnode */
+    const struct vnode_ops *vn_ops; /* Functions on this vnode */
 };
 
 /*
@@ -82,9 +81,6 @@ struct vnode {
  *                      in the uio, updating uio_resid to reflect the
  *                      amount read, and updating uio_offset to match.
  *                      Not allowed on directories or symlinks.
- *
- *    vop_readlink    - Read the contents of a symlink into a uio.
- *                      Not allowed on other types of object.
  *
  *    vop_getdirentry - Read a single filename from a directory into a
  *                      uio, choosing what name based on the offset
@@ -138,13 +134,7 @@ struct vnode {
  *                      existing file if there is one. Hand back the
  *                      vnode for the file as per vop_lookup.
  *
- *    vop_symlink     - Create symlink named NAME in the passed directory,
- *                      with contents CONTENTS.
- *
  *    vop_mkdir       - Make directory NAME in the passed directory PARENTDIR.
- *
- *    vop_link        - Create hard link, with name NAME, to file FILE
- *                      in the passed directory DIR.
  *
  *    vop_remove      - Delete non-directory object NAME from passed
  *                      directory. If NAME refers to a directory,
@@ -173,82 +163,73 @@ struct vnode {
  *                      vnode handed back.
  */
 
-#define VOP_MAGIC	0xa2b3c4d5
+#define VOP_MAGIC 0xa2b3c4d5
 
 struct vnode_ops {
-	unsigned long vop_magic;	/* should always be VOP_MAGIC */
+    unsigned long vop_magic; /* should always be VOP_MAGIC */
 
-	int (*vop_eachopen)(struct vnode *object, int flags_from_open);
-	int (*vop_reclaim)(struct vnode *vnode);
+    int (*vop_eachopen)(struct vnode *object, int flags_from_open);
+    int (*vop_reclaim)(struct vnode *vnode);
 
+    int (*vop_read)(struct vnode *file, struct uio *uio);
+    int (*vop_getdirentry)(struct vnode *dir, struct uio *uio);
+    int (*vop_write)(struct vnode *file, struct uio *uio);
+    int (*vop_ioctl)(struct vnode *object, int op, const void *data);
+    int (*vop_stat)(struct vnode *object, struct stat *statbuf);
+    int (*vop_gettype)(struct vnode *object, mode_t *result);
+    bool (*vop_isseekable)(struct vnode *object);
+    int (*vop_fsync)(struct vnode *object);
+    int (*vop_mmap)(struct vnode *file /* add stuff */);
+    int (*vop_truncate)(struct vnode *file, off_t len);
+    int (*vop_namefile)(struct vnode *file, struct uio *uio);
 
-	int (*vop_read)(struct vnode *file, struct uio *uio);
-	int (*vop_readlink)(struct vnode *link, struct uio *uio);
-	int (*vop_getdirentry)(struct vnode *dir, struct uio *uio);
-	int (*vop_write)(struct vnode *file, struct uio *uio);
-	int (*vop_ioctl)(struct vnode *object, int op, const void* data);
-	int (*vop_stat)(struct vnode *object, struct stat *statbuf);
-	int (*vop_gettype)(struct vnode *object, mode_t *result);
-	bool (*vop_isseekable)(struct vnode *object);
-	int (*vop_fsync)(struct vnode *object);
-	int (*vop_mmap)(struct vnode *file /* add stuff */);
-	int (*vop_truncate)(struct vnode *file, off_t len);
-	int (*vop_namefile)(struct vnode *file, struct uio *uio);
+    int (*vop_creat)(struct vnode *dir,
+        const char *name, bool excl, mode_t mode,
+        struct vnode **result);
 
+    int (*vop_mkdir)(struct vnode *parentdir,
+        const char *name, mode_t mode);
 
-	int (*vop_creat)(struct vnode *dir,
-			 const char *name, bool excl, mode_t mode,
-			 struct vnode **result);
-	int (*vop_symlink)(struct vnode *dir,
-			   const char *contents, const char *name);
-	int (*vop_mkdir)(struct vnode *parentdir,
-			 const char *name, mode_t mode);
-	int (*vop_link)(struct vnode *dir,
-			const char *name, struct vnode *file);
-	int (*vop_remove)(struct vnode *dir,
-			  const char *name);
-	int (*vop_rmdir)(struct vnode *dir,
-			 const char *name);
+    int (*vop_remove)(struct vnode *dir,
+        const char *name);
+    int (*vop_rmdir)(struct vnode *dir,
+        const char *name);
 
-	int (*vop_rename)(struct vnode *vn1, const char *name1,
-			  struct vnode *vn2, const char *name2);
+    int (*vop_rename)(struct vnode *vn1, const char *name1,
+        struct vnode *vn2, const char *name2);
 
-
-	int (*vop_lookup)(struct vnode *dir,
-			  char *pathname, struct vnode **result);
-	int (*vop_lookparent)(struct vnode *dir,
-			      char *pathname, struct vnode **result,
-			      char *buf, size_t len);
+    int (*vop_lookup)(struct vnode *dir,
+        char *pathname, struct vnode **result);
+    int (*vop_lookparent)(struct vnode *dir,
+        char *pathname, struct vnode **result,
+        char *buf, size_t len);
 };
 
 #define __VOP(vn, sym) (vnode_check(vn, #sym), (vn)->vn_ops->vop_##sym)
 
-#define VOP_EACHOPEN(vn, flags)         (__VOP(vn, eachopen)(vn, flags))
-#define VOP_RECLAIM(vn)                 (__VOP(vn, reclaim)(vn))
+#define VOP_EACHOPEN(vn, flags) (__VOP(vn, eachopen)(vn, flags))
+#define VOP_RECLAIM(vn) (__VOP(vn, reclaim)(vn))
 
-#define VOP_READ(vn, uio)               (__VOP(vn, read)(vn, uio))
-#define VOP_READLINK(vn, uio)           (__VOP(vn, readlink)(vn, uio))
-#define VOP_GETDIRENTRY(vn, uio)        (__VOP(vn,getdirentry)(vn, uio))
-#define VOP_WRITE(vn, uio)              (__VOP(vn, write)(vn, uio))
-#define VOP_IOCTL(vn, code, buf)        (__VOP(vn, ioctl)(vn,code,buf))
-#define VOP_STAT(vn, ptr) 	        (__VOP(vn, stat)(vn, ptr))
-#define VOP_GETTYPE(vn, result)         (__VOP(vn, gettype)(vn, result))
-#define VOP_ISSEEKABLE(vn)              (__VOP(vn, isseekable)(vn))
-#define VOP_FSYNC(vn)                   (__VOP(vn, fsync)(vn))
-#define VOP_MMAP(vn /*add stuff */)     (__VOP(vn, mmap)(vn /*add stuff */))
-#define VOP_TRUNCATE(vn, pos)           (__VOP(vn, truncate)(vn, pos))
-#define VOP_NAMEFILE(vn, uio)           (__VOP(vn, namefile)(vn, uio))
+#define VOP_READ(vn, uio) (__VOP(vn, read)(vn, uio))
+#define VOP_GETDIRENTRY(vn, uio) (__VOP(vn, getdirentry)(vn, uio))
+#define VOP_WRITE(vn, uio) (__VOP(vn, write)(vn, uio))
+#define VOP_IOCTL(vn, code, buf) (__VOP(vn, ioctl)(vn, code, buf))
+#define VOP_STAT(vn, ptr) (__VOP(vn, stat)(vn, ptr))
+#define VOP_GETTYPE(vn, result) (__VOP(vn, gettype)(vn, result))
+#define VOP_ISSEEKABLE(vn) (__VOP(vn, isseekable)(vn))
+#define VOP_FSYNC(vn) (__VOP(vn, fsync)(vn))
+#define VOP_MMAP(vn /*add stuff */) (__VOP(vn, mmap)(vn /*add stuff */))
+#define VOP_TRUNCATE(vn, pos) (__VOP(vn, truncate)(vn, pos))
+#define VOP_NAMEFILE(vn, uio) (__VOP(vn, namefile)(vn, uio))
 
-#define VOP_CREAT(vn,nm,excl,mode,res)  (__VOP(vn, creat)(vn,nm,excl,mode,res))
-#define VOP_SYMLINK(vn, name, content)  (__VOP(vn, symlink)(vn, name, content))
-#define VOP_MKDIR(vn, name, mode)       (__VOP(vn, mkdir)(vn, name, mode))
-#define VOP_LINK(vn, name, vn2)         (__VOP(vn, link)(vn, name, vn2))
-#define VOP_REMOVE(vn, name)            (__VOP(vn, remove)(vn, name))
-#define VOP_RMDIR(vn, name)             (__VOP(vn, rmdir)(vn, name))
-#define VOP_RENAME(vn1,name1,vn2,name2)(__VOP(vn1,rename)(vn1,name1,vn2,name2))
+#define VOP_CREAT(vn, nm, excl, mode, res) (__VOP(vn, creat)(vn, nm, excl, mode, res))
+#define VOP_MKDIR(vn, name, mode) (__VOP(vn, mkdir)(vn, name, mode))
+#define VOP_REMOVE(vn, name) (__VOP(vn, remove)(vn, name))
+#define VOP_RMDIR(vn, name) (__VOP(vn, rmdir)(vn, name))
+#define VOP_RENAME(vn1, name1, vn2, name2) (__VOP(vn1, rename)(vn1, name1, vn2, name2))
 
-#define VOP_LOOKUP(vn, name, res)       (__VOP(vn, lookup)(vn, name, res))
-#define VOP_LOOKPARENT(vn,nm,res,bf,ln) (__VOP(vn,lookparent)(vn,nm,res,bf,ln))
+#define VOP_LOOKUP(vn, name, res) (__VOP(vn, lookup)(vn, name, res))
+#define VOP_LOOKPARENT(vn, nm, res, bf, ln) (__VOP(vn, lookparent)(vn, nm, res, bf, ln))
 
 /*
  * Consistency check
@@ -261,54 +242,20 @@ void vnode_check(struct vnode *, const char *op);
 void vnode_incref(struct vnode *);
 void vnode_decref(struct vnode *);
 
-#define VOP_INCREF(vn) 			vnode_incref(vn)
-#define VOP_DECREF(vn) 			vnode_decref(vn)
+#define VOP_INCREF(vn) vnode_incref(vn)
+#define VOP_DECREF(vn) vnode_decref(vn)
 
 /*
  * Vnode initialization (intended for use by filesystem code)
  * The reference count is initialized to 1.
  */
 int vnode_init(struct vnode *, const struct vnode_ops *ops,
-	       struct fs *fs, void *fsdata);
+    struct fs *fs, void *fsdata);
 
 /*
  * Vnode final cleanup (intended for use by filesystem code)
  * The reference count is asserted to be 1.
  */
 void vnode_cleanup(struct vnode *);
-
-/*
- * Common stubs for vnode functions that just fail, in various ways.
- */
-int vopfail_uio_notdir(struct vnode *vn, struct uio *uio);
-int vopfail_uio_isdir(struct vnode *vn, struct uio *uio);
-int vopfail_uio_inval(struct vnode *vn, struct uio *uio);
-int vopfail_uio_nosys(struct vnode *vn, struct uio *uio);
-int vopfail_mmap_isdir(struct vnode *vn /* add stuff */);
-int vopfail_mmap_perm(struct vnode *vn /* add stuff */);
-int vopfail_mmap_nosys(struct vnode *vn /* add stuff */);
-int vopfail_truncate_isdir(struct vnode *vn, off_t pos);
-int vopfail_creat_notdir(struct vnode *vn, const char *name, bool excl,
-			 mode_t mode, struct vnode **result);
-int vopfail_symlink_notdir(struct vnode *vn, const char *contents,
-			   const char *name);
-int vopfail_symlink_nosys(struct vnode *vn, const char *contents,
-			  const char *name);
-int vopfail_mkdir_notdir(struct vnode *vn, const char *name, mode_t mode);
-int vopfail_mkdir_nosys(struct vnode *vn, const char *name, mode_t mode);
-int vopfail_link_notdir(struct vnode *dir, const char *name,
-			struct vnode *file);
-int vopfail_link_nosys(struct vnode *dir, const char *name,
-		       struct vnode *file);
-int vopfail_string_notdir(struct vnode *vn, const char *name);
-int vopfail_string_nosys(struct vnode *vn, const char *name);
-int vopfail_rename_notdir(struct vnode *fromdir, const char *fromname,
-			  struct vnode *todir, const char *toname);
-int vopfail_rename_nosys(struct vnode *fromdir, const char *fromname,
-			 struct vnode *todir, const char *toname);
-int vopfail_lookup_notdir(struct vnode *vn, char *path, struct vnode **result);
-int vopfail_lookparent_notdir(struct vnode *vn, char *path,
-			      struct vnode **result, char *buf, size_t len);
-
 
 #endif /* _VNODE_H_ */

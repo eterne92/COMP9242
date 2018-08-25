@@ -34,8 +34,7 @@
  * Devices.
  */
 
-
-struct uio;  /* in <uio.h> */
+struct uio; /* in <uio.h> */
 
 /*
  * Filesystem-namespace-accessible device.
@@ -44,39 +43,35 @@ typedef long blksize_t;
 typedef long blkcnt_t;
 typedef long dev_t;
 struct device {
-	const struct device_ops *d_ops;
-
-	blkcnt_t d_blocks;
-	blksize_t d_blocksize;
-
-	dev_t d_devnumber;	/* serial number for this device */
-
-	void *d_data;		/* device-specific data */
+    const struct device_ops *d_ops;
+    blkcnt_t d_blocks;
+    blksize_t d_blocksize;
+    dev_t d_devnumber;    /* serial number for this device */
+    void *d_data; 		  /* device-specific data */
 };
 
 /*
  * Device operations.
- *      devop_eachopen - called on each open call to allow denying the open
- *      devop_io - for both reads and writes (the uio indicates the direction)
- *      devop_ioctl - miscellaneous control operations
+ * 
+ * devop_eachopen - called on each open call to allow denying the open
+ * devop_io - for both reads and writes (the uio indicates the direction)
+ * devop_ioctl - miscellaneous control operations
  */
 struct device_ops {
-	int (*devop_eachopen)(struct device *, int flags_from_open);
-	int (*devop_io)(struct device *, struct uio *);
-	int (*devop_ioctl)(struct device *, int op, const void*  data);
+    int (*devop_eachopen)(struct device *, int flags_from_open);
+    int (*devop_io)(struct device *, struct uio *);
+    int (*devop_ioctl)(struct device *, int op, const void *data);
 
-
-	int (*devop_reclaim)(struct device *);
+    int (*devop_reclaim)(struct device *);
 };
 
 /*
  * Macros to shorten the calling sequences.
  */
-#define DEVOP_EACHOPEN(d, f)	((d)->d_ops->devop_eachopen(d, f))
-#define DEVOP_IO(d, u)		((d)->d_ops->devop_io(d, u))
-#define DEVOP_IOCTL(d, op, p)	((d)->d_ops->devop_ioctl(d, op, p))
-#define DEVOP_RECLAIM(d)	((d)->d_ops->devop_reclaim(d))
-
+#define DEVOP_EACHOPEN(d, f) ((d)->d_ops->devop_eachopen(d, f))
+#define DEVOP_IO(d, u) ((d)->d_ops->devop_io(d, u))
+#define DEVOP_IOCTL(d, op, p) ((d)->d_ops->devop_ioctl(d, op, p))
+#define DEVOP_RECLAIM(d) ((d)->d_ops->devop_reclaim(d))
 
 /* Create vnode for a vfs-level device. */
 struct vnode *dev_create_vnode(struct device *dev);
@@ -90,7 +85,6 @@ void devnull_create(void);
 /* Function that kicks off device probe and attach. */
 void dev_bootstrap(void);
 
-void dev_uncreate_vnode(struct vnode*);
-
+void dev_uncreate_vnode(struct vnode *);
 
 #endif /* _DEVICE_H_ */

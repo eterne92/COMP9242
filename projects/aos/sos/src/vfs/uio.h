@@ -55,25 +55,24 @@
  * increments uio_offset by the number of bytes transferred.
  */
 
-#include <stdint.h>
 #include "iovec.h"
+#include <stdint.h>
 
 /* Direction. */
 enum uio_rw {
-        UIO_READ,			/* From kernel to uio_seg */
-        UIO_WRITE,			/* From uio_seg to kernel */
+    UIO_READ, /* From kernel to uio_seg */
+    UIO_WRITE, /* From uio_seg to kernel */
 };
 
 struct uio {
-	struct iovec     *uio_iov;	/* Data blocks */
-	unsigned          uio_iovcnt;	/* Number of iovecs */
-	off_t             uio_offset;	/* Desired offset into object */
-	size_t            uio_resid;	/* Remaining amt of data to xfer */
-	// enum uio_seg      uio_segflg;	#<{(| What kind of pointer we have |)}>#
-	enum uio_rw       uio_rw;	/* Whether op is a read or write */
-	struct addrspace *uio_space;	/* Address space for user pointer */
+    struct iovec *uio_iov; /* Data blocks */
+    unsigned uio_iovcnt; /* Number of iovecs */
+    off_t uio_offset; /* Desired offset into object */
+    size_t uio_resid; /* Remaining amt of data to xfer */
+    // enum uio_seg      uio_segflg;	#<{(| What kind of pointer we have |)}>#
+    enum uio_rw uio_rw; /* Whether op is a read or write */
+    struct addrspace *uio_space; /* Address space for user pointer */
 };
-
 
 /*
  * Copy data from a kernel buffer to a data region defined by a uio struct,
@@ -129,8 +128,11 @@ int uiomovezeros(size_t len, struct uio *uio);
  *      result = VOP_READ(vn, &myuio);
  *      ...
  */
-void uio_kinit(struct iovec * io, struct uio *uio,
-	       void *kbuf, size_t len, off_t pos, enum uio_rw rw);
-
+void uio_kinit(struct iovec *io,
+    struct uio *uio,
+    void *kbuf,
+    size_t len,
+    off_t pos,
+    enum uio_rw rw);
 
 #endif /* _UIO_H_ */

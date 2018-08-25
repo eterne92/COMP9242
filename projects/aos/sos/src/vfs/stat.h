@@ -30,8 +30,8 @@
 #ifndef _KERN_STAT_H_
 #define _KERN_STAT_H_
 
-#include "comm/comm.h"
 #include "clock/clock.h"
+#include "comm/comm.h"
 /*
  * The stat structure, for returning file information via stat(),
  * fstat(), and lstat().
@@ -42,18 +42,16 @@
  * The file types are in kern/stattypes.h.
  */
 struct stat {
-	/* Essential fields */
-	off_t st_size;		/* file size in bytes */
-	mode_t st_mode;		/* file type and protection mode */
-
-	/* Timestamps */
-	uint32_t st_atime;        /* last access time: seconds */
-	uint32_t st_ctime;        /* inode change time: seconds */
-	uint32_t st_mtime;        /* modification time: seconds */
-	uint32_t st_atimensec;     /* last access time: nanoseconds */
-	uint32_t st_ctimensec;     /* inode change time: nanoseconds */
-	uint32_t st_mtimensec;     /* modification time: nanoseconds */
-
+    /* Essential fields */
+    off_t st_size; 			/* file size in bytes */
+    mode_t st_mode; 		/* file type and protection mode */
+    /* Timestamps */
+    uint32_t st_atime; 		/* last access time: seconds */
+    uint32_t st_ctime; 		/* inode change time: seconds */
+    uint32_t st_mtime; 		/* modification time: seconds */
+    uint32_t st_atimensec; 	/* last access time: nanoseconds */
+    uint32_t st_ctimensec; 	/* inode change time: nanoseconds */
+    uint32_t st_mtimensec; 	/* modification time: nanoseconds */
 };
 
 #endif /* _KERN_STAT_H_ */

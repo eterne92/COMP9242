@@ -24,6 +24,8 @@
 #include <cpio/cpio.h>
 #include <elf/elf.h>
 #include <serial/serial.h>
+#include <picoro/picoro.h>
+
 
 #include "bootstrap.h"
 #include "network.h"
@@ -630,6 +632,7 @@ NORETURN void *main_continued(UNUSED void *arg)
     ZF_LOGF_IF(!success, "Failed to start first process");
 
     printf("\nSOS entering syscall loop\n");
+    yield(NULL);
     syscall_loop(ipc_ep);
 }
 /*

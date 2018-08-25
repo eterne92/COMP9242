@@ -103,18 +103,21 @@ void handle_syscall(seL4_Word badge, int num_args)
     //      * capability was consumed by the send. */
     //     cspace_free_slot(global_cspace, reply);
     //     break;
+    case SOS_SYS_OPEN:
+        break;
     case SOS_SYS_READ:
         break;
     case SOS_SYS_WRITE:
         break;
-    case SOS_SYS_OPEN:
+    case SOS_SYS_STAT:
         break;
     case SOS_SYS_CLOSE:
         break;
     case SOS_SYS_USLEEP:
         break;
-    case SOS_SYS_STAT:
+    case SOS_SYS_TIMESTAMP:
         break;
+
     case SOS_SYSCALLMSG:
         (void)err;
         /* MSG size each timdumpe should be less then 120 */

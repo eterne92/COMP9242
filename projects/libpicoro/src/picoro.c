@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <picoro/picoro.h>
 
@@ -137,7 +138,7 @@ void coroutine_main(void *ret) {
 	fun = pass(&me, ret);
 	if(!setjmp(running->state))
 		coroutine_start();
-	for(;;) {
+	while(true) {
 		ret = fun(yield(&me));
 		push(&idle, pop(&running));
 		fun = pass(&me, ret);

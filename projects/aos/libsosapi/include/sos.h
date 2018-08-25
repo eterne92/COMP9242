@@ -32,6 +32,10 @@
 #define SOS_SYS_PROCESS_WAIT        10
 #define SOS_SYS_TIMESTAMP           11
 #define SOS_SYS_USLEEP              12
+#define SOS_SYSCALLMSG              100
+#define SOS_SYSCALLBRK              101
+#define SOS_SYSCALL_MMAP            102
+#define SOS_SYSCALL_MUNMAP          200
 
 
 

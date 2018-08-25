@@ -1,15 +1,70 @@
 #include "syscall.h"
 #include "addrspace.h"
 #include "proc.h"
-#include <cspace/cspace.h>
-#include <serial/serial.h>
-
 #include <aos/debug.h>
 #include <aos/sel4_zf_logif.h>
+#include <cspace/cspace.h>
+#include <picoro/picoro.h>
+#include <serial/serial.h>
+#include <sos/sos.h>
+#include <stdlib.h>
 
 cspace_t *global_cspace;
 proc *cur_proc;
 struct serial *serial;
+
+typedef struct coroutines {
+    coro data;
+    struct coroutines *next;
+} coroutines;
+
+static coroutines *coro_list = NULL;
+static coroutines *tail = NULL;
+
+static void create_coroutine(coro c)
+{
+    coroutines *list_node = (coroutines *)malloc(sizeof(coroutine));
+    if (!list)
+        return;
+    list_node->data = c;
+    list_node->next = NULL;
+    add_coroutine(list_node);
+}
+
+static void add_coroutine(coroutines *coroutine)
+{
+    coroutines->next = NULL;
+    if (!coro_list) {
+        coro_list = tail = coroutines;
+    } else {
+        tail->next = coroutines;
+        tail = tail->next;
+    }
+}
+
+static coroutines *pop_coroutine()
+{
+    if (coro_list) {
+        coroutines *tmp = coro_list;
+        coro_list = coro_list->next;
+        return tmp;
+    } else {
+        return NULL;
+    }
+}
+
+static void run_coroutine(void *arg)
+{
+    while (coro_list) {
+        coroutines *c = pop_coroutine();
+        if (resumable(c->data)) {
+            add_coroutine(c);
+            resume(c->data, arg);
+        } else {
+            free(c);
+        }
+    }
+}
 
 void handle_syscall(seL4_Word badge, int num_args)
 {
@@ -36,18 +91,19 @@ void handle_syscall(seL4_Word badge, int num_args)
     as_region *region;
     /* Process system call */
     switch (syscall_number) {
-    case SOS_SYSCALL0:
-        ZF_LOGV("syscall: thread example made syscall 0!\n");
-        /* construct a reply message of length 1 */
-        reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
-        /* Set the first (and only) word in the message to 0 */
-        seL4_SetMR(0, 0);
-        /* Send the reply to the saved reply capability. */
-        seL4_Send(reply, reply_msg);
-        /* Free the slot we allocated for the reply - it is now empty, as the reply
-         * capability was consumed by the send. */
-        cspace_free_slot(global_cspace, reply);
-        break;
+
+        // case SOS_SYSCALL0:
+        //     ZF_LOGV("syscall: thread example made syscall 0!\n");
+        //     /* construct a reply message of length 1 */
+        //     reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+        //     /* Set the first (and only) word in the message to 0 */
+        //     seL4_SetMR(0, 0);
+        //     /* Send the reply to the saved reply capability. */
+        //     seL4_Send(reply, reply_msg);
+        //     /* Free the slot we allocated for the reply - it is now empty, as the reply
+        //      * capability was consumed by the send. */
+        //     cspace_free_slot(global_cspace, reply);
+        //     break;
 
     case SOS_SYSCALLMSG:
         (void)err;

@@ -84,10 +84,7 @@ int vfs_lookparent(char *path, struct vnode **result, char *buf, size_t buflen);
  * Because lookup may destroy pathnames, these all may too.
  *
  *    vfs_open         - Open or create a file. FLAGS/MODE per the syscall.
- *    vfs_readlink     - Read contents of a symlink into a uio.
- *    vfs_symlink      - Create a symlink PATH containing contents CONTENTS.
  *    vfs_mkdir        - Create a directory. MODE per the syscall.
- *    vfs_link         - Create a hard link to a file.
  *    vfs_remove       - Delete a file.
  *    vfs_rmdir        - Delete a directory.
  *    vfs_rename       - rename a file.
@@ -101,10 +98,7 @@ int vfs_lookparent(char *path, struct vnode **result, char *buf, size_t buflen);
 
 int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret);
 void vfs_close(struct vnode *vn);
-int vfs_readlink(char *path, struct uio *data);
-int vfs_symlink(const char *contents, char *path);
 int vfs_mkdir(char *path, mode_t mode);
-int vfs_link(char *oldpath, char *newpath);
 int vfs_remove(char *path);
 int vfs_rmdir(char *path);
 int vfs_rename(char *oldpath, char *newpath);

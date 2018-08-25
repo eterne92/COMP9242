@@ -9,38 +9,37 @@
  *
  * @TAG(DATA61_GPL)
  */
+#include <assert.h>
 #include <autoconf.h>
-#include <utils/util.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
+#include <utils/util.h>
 
-#include <cspace/cspace.h>
-#include <aos/sel4_zf_logif.h>
 #include <aos/debug.h>
+#include <aos/sel4_zf_logif.h>
+#include <cspace/cspace.h>
 
 #include <clock/clock.h>
 #include <cpio/cpio.h>
 #include <elf/elf.h>
-#include <serial/serial.h>
 #include <picoro/picoro.h>
+#include <serial/serial.h>
 
-
-#include "bootstrap.h"
-#include "network.h"
-#include "drivers/uart.h"
-#include "ut.h"
-#include "vmem_layout.h"
-#include "mapping.h"
-#include "elfload.h"
-#include "syscalls.h"
-#include "tests.h"
-#include "frametable.h"
 #include "addrspace.h"
+#include "bootstrap.h"
+#include "drivers/uart.h"
+#include "elfload.h"
+#include "frametable.h"
+#include "mapping.h"
+#include "network.h"
 #include "pagetable.h"
 #include "proc.h"
 #include "syscall.h"
+#include "syscalls.h"
+#include "tests.h"
+#include "ut.h"
+#include "vmem_layout.h"
 
 #include <aos/vsyscall.h>
 
@@ -50,16 +49,16 @@
  * we assign a badge to the notification object. The badge that we receive will
  * be the bitwise 'OR' of the notification object badge and the badges
  * of all pending IPC messages. */
-#define IRQ_EP_BADGE         BIT(seL4_BadgeBits - 1)
+#define IRQ_EP_BADGE BIT(seL4_BadgeBits - 1)
 /* All badged IRQs set high bet, then we use uniq bits to
  * distinguish interrupt sources */
-#define IRQ_BADGE_NETWORK_IRQ  BIT(0)
+#define IRQ_BADGE_NETWORK_IRQ BIT(0)
 #define IRQ_BADGE_NETWORK_TICK BIT(1)
-#define IRQ_BADGE_TIMER        BIT(2)
+#define IRQ_BADGE_TIMER BIT(2)
 
-#define TTY_NAME             "tty_test"
-#define TTY_PRIORITY         (0)
-#define TTY_EP_BADGE         (101)
+#define TTY_NAME "tty_test"
+#define TTY_PRIORITY (0)
+#define TTY_EP_BADGE (101)
 
 /*
  * A dummy starting syscall
@@ -70,7 +69,7 @@
 extern char _cpio_archive[];
 extern char __eh_frame_start[];
 /* provided by gcc */
-extern void (__register_frame)(void *);
+extern void(__register_frame)(void *);
 
 /* root tasks cspace */
 static cspace_t cspace;
@@ -122,7 +121,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             /* page fault handler */
             if (label == seL4_Fault_VMFault) {
                 err = handle_page_fault(get_cur_proc(), seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
-                if(err){
+                if (err) {
                     /* we will deal with this later */
                     ZF_LOGF_IFERR(err, "Segment fault");
                 }
@@ -135,8 +134,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 /* Free the slot we allocated for the reply - it is now empty, as the reply
                 * capability was consumed by the send. */
                 cspace_free_slot(global_cspace, reply);
-            }
-            else{
+            } else {
                 /* some kind of fault */
                 debug_print_fault(message, TTY_NAME);
                 /* dump registers too */
@@ -145,6 +143,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 ZF_LOGF("The SOS skeleton does not know how to handle faults!");
             }
         }
+        // resume
     }
 }
 
@@ -192,8 +191,8 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     seL4_Error err;
     int frame = frame_alloc(NULL);
     err = sos_map_frame(cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace,
-                  USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
-                  seL4_ARM_Default_VMAttributes);
+        USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
+        seL4_ARM_Default_VMAttributes);
     // tty_test_process.stack_ut = alloc_retype(&tty_test_process.stack, seL4_ARM_SmallPageObject, seL4_PageBits);
     if (err != seL4_NoError) {
         ZF_LOGE("Failed to allocate stack");
@@ -204,11 +203,11 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     uintptr_t stack_top = USERSTACKTOP;
     uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
     /* virtual addresses in the SOS's address space */
-    void *local_stack_top  = (seL4_Word *) SOS_SCRATCH;
+    void *local_stack_top = (seL4_Word *)SOS_SCRATCH;
     uintptr_t local_stack_bottom = SOS_SCRATCH - PAGE_SIZE_4K;
 
     /* find the vsyscall table */
-    uintptr_t sysinfo = *((uintptr_t *) elf_getSectionNamed(elf_file, "__vsyscall", NULL));
+    uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall", NULL));
     if (sysinfo == 0) {
         ZF_LOGE("could not find syscall table for c library");
         return 0;
@@ -230,8 +229,8 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     }
 
     /* copy the stack frame cap into the slot */
-    err = cspace_copy(cspace, local_stack_cptr, cspace, 
-                      get_cap_from_vaddr(tty_test_process.pt, stack_bottom), seL4_AllRights);
+    err = cspace_copy(cspace, local_stack_cptr, cspace,
+        get_cap_from_vaddr(tty_test_process.pt, stack_bottom), seL4_AllRights);
     if (err != seL4_NoError) {
         cspace_free_slot(cspace, local_stack_cptr);
         ZF_LOGE("Failed to copy cap");
@@ -240,7 +239,7 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
 
     /* map it into the sos address space */
     err = map_frame(cspace, local_stack_cptr, local_vspace, local_stack_bottom, seL4_AllRights,
-                    seL4_ARM_Default_VMAttributes);
+        seL4_ARM_Default_VMAttributes);
     if (err != seL4_NoError) {
         cspace_delete(cspace, local_stack_cptr);
         cspace_free_slot(cspace, local_stack_cptr);
@@ -301,12 +300,12 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
  * TODO: avoid leaking memory once you implement real processes, otherwise a user
  *       can force your OS to run out of memory by creating lots of failed processes.
  */
-bool start_first_process(char* app_name, seL4_CPtr ep)
+bool start_first_process(char *app_name, seL4_CPtr ep)
 {
     int frame;
     /* Create a VSpace */
     tty_test_process.vspace_ut = alloc_retype(&tty_test_process.vspace, seL4_ARM_PageGlobalDirectoryObject,
-                                              seL4_PGDBits);
+        seL4_PGDBits);
     if (tty_test_process.vspace_ut == NULL) {
         return false;
     }
@@ -343,8 +342,8 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     printf("ipc\n");
     as_define_ipcbuffer(tty_test_process.as);
     frame = frame_alloc(NULL);
-    err = sos_map_frame(global_cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace, 
-                  USERIPCBUFFER, seL4_ReadWrite, seL4_ARM_Default_VMAttributes);
+    err = sos_map_frame(global_cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace,
+        USERIPCBUFFER, seL4_ReadWrite, seL4_ARM_Default_VMAttributes);
     // tty_test_process.ipc_buffer_ut = alloc_retype(&tty_test_process.ipc_buffer, seL4_ARM_SmallPageObject,
     //                                               seL4_PageBits);
     if (err != seL4_NoError) {
@@ -377,9 +376,9 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
 
     /* Configure the TCB */
     err = seL4_TCB_Configure(tty_test_process.tcb, user_ep,
-                             tty_test_process.cspace.root_cnode, seL4_NilData,
-                             tty_test_process.vspace, seL4_NilData, USERIPCBUFFER,
-                             get_cap_from_vaddr(tty_test_process.pt, USERIPCBUFFER));
+        tty_test_process.cspace.root_cnode, seL4_NilData,
+        tty_test_process.vspace, seL4_NilData, USERIPCBUFFER,
+        get_cap_from_vaddr(tty_test_process.pt, USERIPCBUFFER));
     if (err != seL4_NoError) {
         ZF_LOGE("Unable to configure new TCB");
         return false;
@@ -396,9 +395,9 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
     NAME_THREAD(tty_test_process.tcb, app_name);
 
     /* parse the cpio image */
-    ZF_LOGI( "\nStarting \"%s\"...\n", app_name);
+    ZF_LOGI("\nStarting \"%s\"...\n", app_name);
     unsigned long elf_size;
-    char* elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
+    char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
     if (elf_base == NULL) {
         ZF_LOGE("Unable to locate cpio header for %s", app_name);
         return false;
@@ -428,7 +427,7 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
         .pc = elf_getEntryPoint(elf_base),
         .sp = sp,
     };
-    printf("Starting ttytest at %p\n", (void *) context.pc);
+    printf("Starting ttytest at %p\n", (void *)context.pc);
     err = seL4_TCB_WriteRegisters(tty_test_process.tcb, 1, 0, 2, &context);
     ZF_LOGE_IF(err, "Failed to write registers");
     return err == seL4_NoError;
@@ -438,7 +437,7 @@ bool start_first_process(char* app_name, seL4_CPtr ep)
  * Note that these objects will never be freed, so we do not
  * track the allocated ut objects anywhere
  */
-static void sos_ipc_init(seL4_CPtr* ipc_ep, seL4_CPtr* ntfn)
+static void sos_ipc_init(seL4_CPtr *ipc_ep, seL4_CPtr *ntfn)
 {
     /* Create an notification object for interrupts */
     ut_t *ut = alloc_retype(ntfn, seL4_NotificationObject, seL4_NotificationBits);
@@ -487,7 +486,7 @@ void init_muslc(void)
     muslcsys_install_syscall(__NR_exit_group, sys_exit_group);
     muslcsys_install_syscall(__NR_ioctl, sys_ioctl);
     muslcsys_install_syscall(__NR_mmap, sys_mmap);
-    muslcsys_install_syscall(__NR_brk,  sys_brk);
+    muslcsys_install_syscall(__NR_brk, sys_brk);
     muslcsys_install_syscall(__NR_clock_gettime, sys_clock_gettime);
     muslcsys_install_syscall(__NR_nanosleep, sys_nanosleep);
     muslcsys_install_syscall(__NR_getuid, sys_getuid);
@@ -511,16 +510,18 @@ void init_muslc(void)
     muslcsys_install_syscall(__NR_madvise, sys_madvise);
 }
 
-void anotherdummycallback(uint64_t id, void *data) {
-    (void) data;
+void anotherdummycallback(uint64_t id, void *data)
+{
+    (void)data;
     uint64_t now = timestamp_us(timestamp_get_freq());
-    printf("timstamp = %ld;\t id = %ld; diff = %ld\n",now, id, now - id);
+    printf("timstamp = %ld;\t id = %ld; diff = %ld\n", now, id, now - id);
 }
 
-void dummycallback(uint64_t id, void *data){
-    (void) data;
+void dummycallback(uint64_t id, void *data)
+{
+    (void)data;
     uint64_t now = timestamp_us(timestamp_get_freq());
-    printf("timstamp = %ld;\t id = %ld; diff = %ld\n",now, id, now - id);
+    printf("timstamp = %ld;\t id = %ld; diff = %ld\n", now, id, now - id);
     register_timer(500000, &anotherdummycallback, NULL, F, ONE_SHOT);
     register_timer(1000000, &anotherdummycallback, NULL, F, ONE_SHOT);
 }
@@ -528,8 +529,7 @@ void dummycallback(uint64_t id, void *data){
 void frametable_test()
 {
     /* Allocate 10 pages and make sure you can touch them all */
-    for (int i = 0; i < 10; i++)
-    {
+    for (int i = 0; i < 10; i++) {
         /* Allocate a page */
         seL4_Word vaddr;
         frame_alloc(&vaddr);
@@ -545,8 +545,7 @@ void frametable_test()
     printf("TEST 1 past\n");
 
     /* Test that you never run out of memory if you always free frames. */
-    for (int i = 0; i < 1000000; i++)
-    {
+    for (int i = 0; i < 1000000; i++) {
         /* Allocate a page */
         seL4_Word vaddr;
         int page = frame_alloc(&vaddr);
@@ -557,8 +556,7 @@ void frametable_test()
         assert(*(int *)vaddr == 0x37);
 
         /* print every 1000 iterations */
-        if (i % 1000 == 0)
-        {
+        if (i % 1000 == 0) {
             printf("Page #%d allocated at %p\n", i, (int *)vaddr);
         }
 
@@ -568,15 +566,13 @@ void frametable_test()
     printf("TEST 2 past\n");
     /* Test that you eventually run out of memory gracefully,
    and doesn't crash */
-   int cnt = 0;
-    while (true)
-    {
+    int cnt = 0;
+    while (true) {
         /* Allocate a page */
         seL4_Word vaddr;
-        
+
         frame_alloc(&vaddr);
-        if (!vaddr)
-        {
+        if (!vaddr) {
             printf("Out of memory!\n");
             break;
         }
@@ -590,10 +586,9 @@ void frametable_test()
     printf("TEST 3 past\n");
     /* finally clean up all the memory allocated above */
     /* try to free them all */
-    for(int i = 0;i< cnt;i++){
+    for (int i = 0; i < cnt; i++) {
         frame_free(3989 + i);
     }
-    
 }
 
 NORETURN void *main_continued(UNUSED void *arg)
@@ -613,14 +608,14 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Initialise the network hardware. */
     printf("Network init\n");
     network_init(global_cspace,
-                 badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_IRQ),
-                 badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
-                 timer_vaddr);
+        badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_IRQ),
+        badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
+        timer_vaddr);
 
-    start_timer(global_cspace, 
-                 badge_irq_ntfn(ntfn, IRQ_BADGE_TIMER),
-                 timer_vaddr,
-                 F);
+    start_timer(global_cspace,
+        badge_irq_ntfn(ntfn, IRQ_BADGE_TIMER),
+        timer_vaddr,
+        F);
 
     /* Initialise libserial */
     serial = serial_init();
@@ -632,7 +627,6 @@ NORETURN void *main_continued(UNUSED void *arg)
     ZF_LOGF_IF(!success, "Failed to start first process");
 
     printf("\nSOS entering syscall loop\n");
-    yield(NULL);
     syscall_loop(ipc_ep);
 }
 /*
@@ -683,17 +677,14 @@ int main(void)
         ut_t *frame = alloc_retype(&frame_cap, seL4_ARM_SmallPageObject, seL4_PageBits);
         ZF_LOGF_IF(frame == NULL, "Failed to allocate stack page");
         seL4_Error err = map_frame(global_cspace, frame_cap, seL4_CapInitThreadVSpace,
-                                   vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
+            vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
         ZF_LOGF_IFERR(err, "Failed to map stack");
         vaddr += PAGE_SIZE_4K;
     }
 
-    
     initialize_frame_table(global_cspace);
 
-    utils_run_on_stack((void *) vaddr, main_continued, NULL);
+    utils_run_on_stack((void *)vaddr, main_continued, NULL);
 
     UNREACHABLE();
 }
-
-

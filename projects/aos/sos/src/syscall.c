@@ -4,8 +4,8 @@
 #include <cspace/cspace.h>
 #include <serial/serial.h>
 
-#include <aos/sel4_zf_logif.h>
 #include <aos/debug.h>
+#include <aos/sel4_zf_logif.h>
 
 cspace_t *global_cspace;
 proc *cur_proc;
@@ -15,8 +15,8 @@ void handle_syscall(seL4_Word badge, int num_args)
 {
     cur_proc = get_cur_proc();
 
-    (void) badge;
-    (void) num_args;
+    (void)badge;
+    (void)num_args;
     /* allocate a slot for the reply tty_test_processcap */
     seL4_MessageInfo_t reply_msg;
     seL4_CPtr reply = cspace_alloc_slot(global_cspace);
@@ -50,14 +50,13 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
 
     case SOS_SYSCALLMSG:
-        (void) err;
+        (void)err;
         /* MSG size each timdumpe should be less then 120 */
         char data[120];
         /* get datasize */
         int len = seL4_GetMR(1);
         /* get realdata */
-        for (int i = 0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             data[i] = seL4_GetMR(i + 2);
         }
         /* magic */
@@ -78,13 +77,13 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
 
     case SOS_SYSCALLBRK:
-        (void) err;
+        (void)err;
         seL4_Word newbrk = seL4_GetMR(1);
         /* we are just assume it's tty_test here */
-        reply_msg = seL4_MessageInfo_new(0,0,0,1);
-        if(cur_proc->as->heap == NULL){
+        reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+        if (cur_proc->as->heap == NULL) {
             err = as_define_heap(cur_proc->as);
-            if(err != 0){
+            if (err != 0) {
                 /* this should be delete process for later stuff */
                 ZF_LOGE("region error");
             }
@@ -92,13 +91,10 @@ void handle_syscall(seL4_Word badge, int num_args)
         }
         region = cur_proc->as->heap;
 
-
-        if(!newbrk){
-        }
-        else if(newbrk < region->size + region->vaddr){
+        if (!newbrk) {
+        } else if (newbrk < region->size + region->vaddr) {
             /* shouldn't shrink heap */
-        }
-        else{
+        } else {
             region->size = newbrk - region->vaddr;
         }
         seL4_SetMR(0, region->vaddr + region->size);
@@ -110,10 +106,10 @@ void handle_syscall(seL4_Word badge, int num_args)
 
     case SOS_SYSCALL_MMAP:
         printf("mmap called\n");
-        (void) err;
-        if(cur_proc->as->heap == NULL){
+        (void)err;
+        if (cur_proc->as->heap == NULL) {
             err = as_define_heap(cur_proc->as);
-            if(err){
+            if (err) {
                 /* should not fail here */
                 ZF_LOGE("region error");
             }
@@ -123,7 +119,7 @@ void handle_syscall(seL4_Word badge, int num_args)
         seL4_Word vtop = cur_proc->as->used_top;
         seL4_Word vbase = vtop - size;
         region = as_define_region(cur_proc->as, vbase, size, RG_R | RG_W);
-        
+
         seL4_SetMR(0, region->vaddr);
         seL4_Send(reply, reply_msg);
         /* Free the slot we allocated for the reply - it is now empty, as the reply
@@ -131,23 +127,21 @@ void handle_syscall(seL4_Word badge, int num_args)
         cspace_free_slot(global_cspace, reply);
         break;
 
-
     case SOS_SYSCALL_MUNMAP:
         printf("munmap called\n");
         region = cur_proc->as->regions;
         seL4_Word base = seL4_GetMR(1);
-        while(region){
-            if(region->vaddr == base){
+        while (region) {
+            if (region->vaddr == base) {
                 cur_proc->as->used_top = region->vaddr + region->size;
                 as_destroy_region(cur_proc->as, region);
                 break;
             }
             region = region->next;
         }
-        if(region == NULL){
+        if (region == NULL) {
             seL4_SetMR(0, region->vaddr);
-        }
-        else{
+        } else {
             seL4_SetMR(0, 0);
         }
         seL4_Send(reply, reply_msg);

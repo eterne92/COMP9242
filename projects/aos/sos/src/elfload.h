@@ -11,10 +11,10 @@
  */
 #pragma once
 
-#include <sel4/sel4.h>
 #include <cspace/cspace.h>
-#include <elf/elf.h>
 #include <elf.h>
+#include <elf/elf.h>
+#include <sel4/sel4.h>
 
 typedef struct proc proc;
 

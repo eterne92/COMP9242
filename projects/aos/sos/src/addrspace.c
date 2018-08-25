@@ -17,8 +17,8 @@ addrspace *addrspace_init(void)
 }
 
 static int create_region(as_region *region,
-                         seL4_Word vaddr, size_t memsize,
-                         unsigned char flag)
+    seL4_Word vaddr, size_t memsize,
+    unsigned char flag)
 {
     size_t npages;
 
@@ -31,13 +31,11 @@ static int create_region(as_region *region,
     npages = memsize / PAGE_SIZE_4K;
 
     // check userspace top
-    if (vaddr + memsize > USERSPACETOP)
-    {
+    if (vaddr + memsize > USERSPACETOP) {
         return -1;
     }
     // setup region
-    if (region == NULL)
-    {
+    if (region == NULL) {
         return -1;
     }
     region->next = NULL;
@@ -62,12 +60,9 @@ void as_destroy_region(addrspace *as, as_region *region)
 
     /* check first frame */
     as_region *tmp = as->regions;
-    while (tmp)
-    {
-        if (tmp->vaddr + tmp->size > first_vaddr)
-        {
-            if (tmp->vaddr < first_vaddr)
-            {
+    while (tmp) {
+        if (tmp->vaddr + tmp->size > first_vaddr) {
+            if (tmp->vaddr < first_vaddr) {
                 /* region overlapped */
                 /* start from second frame */
                 first_vaddr += PAGE_SIZE_4K;
@@ -78,16 +73,14 @@ void as_destroy_region(addrspace *as, as_region *region)
     }
 
     /* check last frame */
-    if ((region->next->vaddr & PAGE_FRAME) == last_vaddr)
-    {
+    if ((region->next->vaddr & PAGE_FRAME) == last_vaddr) {
         /* last frame overlap */
         last_vaddr -= PAGE_SIZE_4K;
     }
-    for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K)
-    {
+    for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
         seL4_Word frame = get_frame_from_vaddr(cur_proc->pt, i);
         seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
-        if(frame != 0 && slot != 0){
+        if (frame != 0 && slot != 0) {
             seL4_ARM_Page_Unmap(slot);
             frame_free(frame);
         }
@@ -95,22 +88,21 @@ void as_destroy_region(addrspace *as, as_region *region)
     tmp = as->regions;
 
     /* we are first region */
-    if(tmp == region){
+    if (tmp == region) {
         as->regions = tmp->next;
         free(region);
         return;
     }
 
     /* we are not first */
-    while(tmp){
-        if(tmp->next == region){
+    while (tmp) {
+        if (tmp->next == region) {
             tmp->next = region->next;
             free(region);
             return;
         }
         tmp = tmp->next;
     }
-
 }
 /* make region list ordered by check each region
  * this also prevent regions from overlap with each other
@@ -120,36 +112,27 @@ static int insert_region(addrspace *as, as_region *region)
     seL4_Word vaddr;
     vaddr = region->vaddr;
 
-    if (as->regions == NULL)
-    {
+    if (as->regions == NULL) {
         // first region
         as->regions = region;
-    }
-    else
-    {
+    } else {
         as_region *tmp = as->regions;
         // check overlap
-        while (tmp)
-        {
+        while (tmp) {
             // overlap
-            if (vaddr > tmp->vaddr &&
-                vaddr - tmp->vaddr < tmp->size)
-            {
+            if (vaddr > tmp->vaddr && vaddr - tmp->vaddr < tmp->size) {
                 free(region);
                 return -1;
             }
             // last region
-            if (tmp->next == NULL)
-            {
+            if (tmp->next == NULL) {
                 tmp->next = region;
                 break;
             }
             // first region
-            else if (vaddr < tmp->vaddr)
-            {
+            else if (vaddr < tmp->vaddr) {
                 // check overlap
-                if (vaddr + region->size > tmp->vaddr)
-                {
+                if (vaddr + region->size > tmp->vaddr) {
                     free(region);
                     return -1;
                 }
@@ -159,11 +142,9 @@ static int insert_region(addrspace *as, as_region *region)
             }
             // in the middle
             // and we are in the right position
-            else if (vaddr < tmp->next->vaddr)
-            {
+            else if (vaddr < tmp->next->vaddr) {
                 // check overlap
-                if (vaddr + region->size > tmp->next->vaddr)
-                {
+                if (vaddr + region->size > tmp->next->vaddr) {
                     free(region);
                     return -1;
                 }
@@ -179,7 +160,7 @@ static int insert_region(addrspace *as, as_region *region)
 }
 
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
-                            unsigned char flag)
+    unsigned char flag)
 {
     int result;
     as_region *region;
@@ -188,14 +169,12 @@ as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
 
     region = malloc(sizeof(as_region));
     result = create_region(region, vaddr, memsize, flag);
-    if (result)
-    {
+    if (result) {
         return NULL;
     }
 
     result = insert_region(as, region);
-    if (result)
-    {
+    if (result) {
         return NULL;
     }
     return region;
@@ -207,11 +186,10 @@ int as_define_stack(addrspace *as)
     as_region *region;
     int stacksize = USERSTACKSIZE; // 16M stack
     region = as_define_region(as,
-                              USERSTACKTOP - stacksize,
-                              stacksize,
-                              RG_R | RG_W);
-    if (region == NULL)
-    {
+        USERSTACKTOP - stacksize,
+        stacksize,
+        RG_R | RG_W);
+    if (region == NULL) {
         return -1;
     }
 
@@ -225,11 +203,10 @@ int as_define_ipcbuffer(addrspace *as)
     /* Initial user-level ipcbuffer pointer */
     as_region *region;
     region = as_define_region(as,
-                              USERIPCBUFFER,
-                              PAGE_SIZE_4K,
-                              RG_R | RG_W);
-    if (region == NULL)
-    {
+        USERIPCBUFFER,
+        PAGE_SIZE_4K,
+        RG_R | RG_W);
+    if (region == NULL) {
         return -1;
     }
 
@@ -243,11 +220,10 @@ int as_define_heap(addrspace *as)
     /* Initial user-level stack pointer */
     as_region *region;
     region = as_define_region(as,
-                              USERHEAPBASE,
-                              0,
-                              RG_R | RG_W);
-    if (region == NULL)
-    {
+        USERHEAPBASE,
+        0,
+        RG_R | RG_W);
+    if (region == NULL) {
         return -1;
     }
 

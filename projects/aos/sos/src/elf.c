@@ -9,21 +9,21 @@
  *
  * @TAG(DATA61_GPL)
  */
-#include <utils/util.h>
-#include <stdbool.h>
-#include <sel4/sel4.h>
-#include <elf/elf.h>
-#include <string.h>
 #include <assert.h>
 #include <cspace/cspace.h>
+#include <elf/elf.h>
+#include <sel4/sel4.h>
+#include <stdbool.h>
+#include <string.h>
+#include <utils/util.h>
 
-#include "vmem_layout.h"
-#include "ut.h"
-#include "mapping.h"
-#include "elfload.h"
 #include "addrspace.h"
+#include "elfload.h"
 #include "frametable.h"
+#include "mapping.h"
 #include "proc.h"
+#include "ut.h"
+#include "vmem_layout.h"
 /*
  * Convert ELF permissions into seL4 permissions.
  */
@@ -74,8 +74,8 @@ static inline seL4_CapRights_t get_sel4_rights_from_elf(unsigned long permission
  *
  */
 static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cur_proc,
-                                    char *src, size_t segment_size,
-                                    size_t file_size, uintptr_t dst, seL4_CapRights_t permissions)
+    char *src, size_t segment_size,
+    size_t file_size, uintptr_t dst, seL4_CapRights_t permissions)
 {
     assert(file_size <= segment_size);
 
@@ -88,14 +88,14 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
 
         /* allocate the untyped for the loadees address space */
         int frame = frame_alloc(NULL);
-        if(frame == -1){
+        if (frame == -1) {
             ZF_LOGE("fail to alloc frame in elf load");
         }
         seL4_CPtr loadee_frame = frame_table.frames[frame].frame_cap;
         ut_t *ut = frame_table.frames[frame].ut;
 
-        err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace, 
-                            loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
+        err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace,
+            loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
         /* A frame has already been mapped at this address. This occurs when segments overlap in
          * the same frame, which is permitted by the standard. That's fine as we
@@ -111,7 +111,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
             cspace_free_slot(cspace, loadee_frame);
             ut_free(ut, seL4_PageBits);
         } else if (err != seL4_NoError) {
-            ZF_LOGE("Failed to map into loadee at %p, error %u", (void *) loadee_vaddr, err);
+            ZF_LOGE("Failed to map into loadee at %p, error %u", (void *)loadee_vaddr, err);
             return -1;
         } else {
 
@@ -131,9 +131,9 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
 
             /* map the frame into the loader address space */
             err = map_frame(cspace, loader_frame, loader, loader_vaddr, seL4_AllRights,
-                            seL4_ARM_Default_VMAttributes);
+                seL4_ARM_Default_VMAttributes);
             if (err) {
-                ZF_LOGD("Failed to map into loader at %p", (void *) loader_vaddr);
+                ZF_LOGD("Failed to map into loader at %p", (void *)loader_vaddr);
                 return -1;
             }
         }
@@ -141,7 +141,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
         /* finally copy the data */
         size_t nbytes = PAGE_SIZE_4K - (dst % PAGE_SIZE_4K);
         if (pos < file_size) {
-            memcpy((void *) (loader_vaddr + (dst % PAGE_SIZE_4K)), src, MIN(nbytes, file_size - pos));
+            memcpy((void *)(loader_vaddr + (dst % PAGE_SIZE_4K)), src, MIN(nbytes, file_size - pos));
         }
 
         /* Note that we don't need to explicitly zero frames as seL4 gives us zero'd frames */
@@ -165,7 +165,7 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, char *el
         ZF_LOGE("Invalid elf file");
         return -1;
     }
-    
+
     /* create addrspace of the process  */
 
     int num_headers = elf_getNumProgramHeaders(elf_file);
@@ -184,16 +184,16 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, char *el
         seL4_Word flags = elf_getProgramHeaderFlags(elf_file, i);
 
         /* create regions of the process iamge */
-        as_region *region = as_define_region(cur_proc->as, vaddr, segment_size, (unsigned char) flags);
-        if(region == NULL){
+        as_region *region = as_define_region(cur_proc->as, vaddr, segment_size, (unsigned char)flags);
+        if (region == NULL) {
             ZF_LOGE("elf loading region alloc failed!");
         }
 
         /* Copy it across into the vspace. */
-        ZF_LOGD(" * Loading segment %p-->%p\n", (void *) vaddr, (void *)(vaddr + segment_size));
+        ZF_LOGD(" * Loading segment %p-->%p\n", (void *)vaddr, (void *)(vaddr + segment_size));
         int err = load_segment_into_vspace(cspace, loader_vspace, cur_proc,
-                                           source_addr, segment_size, file_size, vaddr,
-                                           get_sel4_rights_from_elf(flags));
+            source_addr, segment_size, file_size, vaddr,
+            get_sel4_rights_from_elf(flags));
         if (err) {
             ZF_LOGE("Elf loading failed!");
             return -1;

@@ -1,20 +1,17 @@
-#include "frametable.h"
 #include "pagetable.h"
-#include "mapping.h"
 #include "addrspace.h"
+#include "frametable.h"
+#include "mapping.h"
 
-typedef struct page_table
-{
+typedef struct page_table {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
 
-typedef struct page_table_ut
-{
+typedef struct page_table_ut {
     ut_t *ut[PAGE_TABLE_SIZE];
 } page_table_ut;
 
-typedef struct page_table_cap
-{
+typedef struct page_table_cap {
     seL4_Word cap[PAGE_TABLE_SIZE];
 } page_table_cap;
 
@@ -45,11 +42,10 @@ static seL4_Word get_n_level_table(seL4_Word page_table, seL4_Word vaddr, int n)
 {
     /* page_table is the 1st level, so we start from 2nd level */
     page_table_t *pt = (page_table_t *)page_table;
-    for (int i = 1; i < n; i++)
-    {
+    for (int i = 1; i < n; i++) {
         int offset = get_offset(vaddr, i);
         pt = (page_table_t *)pt->page_obj_addr[offset];
-        if(pt == NULL){
+        if (pt == NULL) {
             return 0;
         }
     }
@@ -93,24 +89,21 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
     as_region *region = cur_proc->as->regions;
     bool execute, read, write;
     seL4_Error err;
-  
+
     region = cur_proc->as->regions;
-    while (region)
-    {
-        if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size)
-        {
+    while (region) {
+        if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
             execute = region->flags & RG_X;
             read = region->flags & RG_R;
             write = region->flags & RG_W;
             // write to a read-only page
-            if(get_cap_from_vaddr(cur_proc->pt, vaddr) == 0){
+            if (get_cap_from_vaddr(cur_proc->pt, vaddr) == 0) {
                 /* it's a vm fault without page */
                 // allocate a frame
                 frame = frame_alloc(NULL);
                 // map it
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-            }
-            else{
+            } else {
                 /* it's a vm fault with permmision */
                 /* for now it's segment fault */
                 /* later it will be copy on write */
@@ -133,9 +126,7 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame;
     pt_cap->cap[offset] = entry->slot;
-    
 }
-
 
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
 {
@@ -144,12 +135,12 @@ seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
     page_table_t *pt;
     pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
     /* we haven't got that vaddr yet */
-    if(pt == NULL){
+    if (pt == NULL) {
         return 0;
     }
     offset = get_offset(vaddr, 4);
     frame = pt->page_obj_addr[offset];
-    if(frame == 0){
+    if (frame == 0) {
         return 0;
     }
     return frame_table.frames[frame].frame_cap;
@@ -162,7 +153,7 @@ seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr)
     page_table_t *pt;
     pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
     /* we haven't got that vaddr yet */
-    if(pt == NULL){
+    if (pt == NULL) {
         return 0;
     }
     offset = get_offset(vaddr, 4);

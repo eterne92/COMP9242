@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,11 +59,11 @@ int uiomove(void *ptr, size_t n, struct uio *uio)
             uio->uio_iovcnt--;
             if (uio->uio_iovcnt == 0) {
                 /*
-				 * This should only happen if you set
-				 * uio_resid incorrectly (to more than
-				 * the total length of buffers the uio
-				 * points to).
-				 */
+                 * This should only happen if you set
+                 * uio_resid incorrectly (to more than
+                 * the total length of buffers the uio
+                 * points to).
+                 */
                 ERROR_DEBUG("uiomove: ran out of buffers\n");
                 assert(0);
             }
@@ -117,12 +117,8 @@ int uiomovezeros(size_t n, struct uio *uio)
  * Convenience function to initialize an iovec and uio for kernel I/O.
  */
 
-void uio_kinit(struct iovec *iov,
-    struct uio *u,
-    void *kbuf,
-    size_t len,
-    off_t pos,
-    enum uio_rw rw)
+void uio_kinit(struct iovec *iov, struct uio *u, void *kbuf, size_t len,
+               off_t pos, enum uio_rw rw)
 {
     iov->iov_base = kbuf;
     iov->iov_len = len;

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,9 @@
  * Initialize an abstract vnode.
  */
 int vnode_init(struct vnode *vn,
-    const struct vnode_ops *ops,
-    struct fs *fs,
-    void *fsdata)
+               const struct vnode_ops *ops,
+               struct fs *fs,
+               void *fsdata)
 {
     assert(vn != NULL);
     assert(ops != NULL);
@@ -146,13 +146,13 @@ void vnode_check(struct vnode *v, const char *opstr)
 
     if (v->vn_ops->vop_magic != VOP_MAGIC) {
         ZF_LOGE("vnode_check: vop_%s: ops with bad magic number %lx\n", opstr,
-            v->vn_ops->vop_magic);
+                v->vn_ops->vop_magic);
         assert(0);
     }
 
     // Device vnodes have null fs pointers.
     // if (v->vn_fs == NULL) {
-    //	panic("vnode_check: vop_%s: null fs pointer\n", opstr);
+    //  panic("vnode_check: vop_%s: null fs pointer\n", opstr);
     //}
     if (v->vn_fs == (void *)0xdeadbeef) {
         ZF_LOGE("vnode_check: vop_%s: deadbeef fs pointer\n", opstr);
@@ -161,14 +161,14 @@ void vnode_check(struct vnode *v, const char *opstr)
 
     if (v->vn_refcount < 0) {
         ZF_LOGE("vnode_check: vop_%s: negative refcount %d\n", opstr,
-            v->vn_refcount);
+                v->vn_refcount);
         assert(0);
     } else if (v->vn_refcount == 0) {
         ZF_LOGE("vnode_check: vop_%s: zero refcount\n", opstr);
         assert(0);
     } else if (v->vn_refcount > 0x100000) {
         ZF_LOGE("vnode_check: vop_%s: warning: large refcount %d\n", opstr,
-            v->vn_refcount);
+                v->vn_refcount);
         assert(0);
     }
 

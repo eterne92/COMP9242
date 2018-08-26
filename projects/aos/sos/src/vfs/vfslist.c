@@ -34,7 +34,6 @@
 
 #define VFSINLINE
 
-#include "comm/comm.h"
 #include "device.h"
 #include "fs.h"
 #include "vfs.h"

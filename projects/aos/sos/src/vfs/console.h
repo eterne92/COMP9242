@@ -46,8 +46,8 @@ struct con_softc {
 	void (*cs_sendpolled)(void *devdata, int ch);
 
 	/* initialized by config routine */
-	struct semaphore *cs_rsem;
-	struct semaphore *cs_wsem;
+	// struct semaphore *cs_rsem;
+	// struct semaphore *cs_wsem;
 	unsigned char cs_gotchars[CONSOLE_INPUT_BUFFER_SIZE];
 	unsigned cs_gotchars_head;	/* next slot to put a char in */
 	unsigned cs_gotchars_tail;	/* next slot to take a char out */

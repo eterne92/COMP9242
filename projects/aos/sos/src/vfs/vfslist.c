@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,8 +89,8 @@ static int dev_count = 0;
 #define knowndevarray_get(something, index) ((knowndevs[index]))
 
 int knowndevarray_add(struct knowndev **devs,
-    struct knowndev *dev,
-    unsigned *index)
+                      struct knowndev *dev,
+                      unsigned *index)
 {
     assert(dev_count < 19);
     assert(devs == knowndevs);
@@ -141,36 +141,36 @@ int vfs_getroot(const char *devname, struct vnode **ret)
         kd = knowndevarray_get(knowndevs, i);
 
         /*
-     * If this device has a mounted filesystem, and
-     * DEVNAME names either the filesystem or the device,
-     * return the root of the filesystem.
-     *
-     * If it has no mounted filesystem, it's mountable,
-     * and DEVNAME names the device, return ENXIO.
-     */
+        * If this device has a mounted filesystem, and
+        * DEVNAME names either the filesystem or the device,
+        * return the root of the filesystem.
+        *
+        * If it has no mounted filesystem, it's mountable,
+        * and DEVNAME names the device, return ENXIO.
+        */
 
         // TODO while doing M5
         /* if (kd->kd_fs != NULL && kd->kd_fs != SWAP_FS) { */
-        /* 	const char *volname; */
-        /* 	volname = FSOP_GETVOLNAME(kd->kd_fs); */
+        /*  const char *volname; */
+        /*  volname = FSOP_GETVOLNAME(kd->kd_fs); */
         /*  */
-        /* 	if (!strcmp(kd->kd_name, devname) || */
-        /* 	    (volname!=NULL && !strcmp(volname, devname))) { */
-        /* 		return FSOP_GETROOT(kd->kd_fs, ret); */
-        /* 	} */
+        /*  if (!strcmp(kd->kd_name, devname) || */
+        /*      (volname!=NULL && !strcmp(volname, devname))) { */
+        /*      return FSOP_GETROOT(kd->kd_fs, ret); */
+        /*  } */
         /* } */
         /* else { */
-        /* 	if (kd->kd_rawname!=NULL && */
-        /* 	    !strcmp(kd->kd_name, devname)) { */
-        /* 		return ENXIO; */
-        /* 	} */
+        /*  if (kd->kd_rawname!=NULL && */
+        /*      !strcmp(kd->kd_name, devname)) { */
+        /*      return ENXIO; */
+        /*  } */
         /* } */
 
         /*
-     * If DEVNAME names the device, and we get here, it
-     * must have no fs and not be mountable. In this case,
-     * we return the device itself.
-     */
+        * If DEVNAME names the device, and we get here, it
+        * must have no fs and not be mountable. In this case,
+        * we return the device itself.
+        */
         if (!strcmp(kd->kd_name, devname)) {
             assert(kd->kd_fs == NULL);
             assert(kd->kd_rawname == NULL);
@@ -181,26 +181,26 @@ int vfs_getroot(const char *devname, struct vnode **ret)
         }
 
         /*
-     * If the device has a rawname and DEVNAME names that,
-     * return the device itself.
-     */
+        * If the device has a rawname and DEVNAME names that,
+        * return the device itself.
+        */
         /* if (kd->kd_rawname!=NULL && !strcmp(kd->kd_rawname, devname)) { */
-        /* 	assert(kd->kd_device != NULL); */
-        /* 	VOP_INCREF(kd->kd_vnode); */
-        /* 	*ret = kd->kd_vnode; */
-        /* 	return 0; */
+        /*  assert(kd->kd_device != NULL); */
+        /*  VOP_INCREF(kd->kd_vnode); */
+        /*  *ret = kd->kd_vnode; */
+        /*  return 0; */
         /* } */
 
         /*
-     * If none of the above tests matched, we didn't name
-     * any of the names of this device, so go on to the
-     * next one.
-     */
+        * If none of the above tests matched, we didn't name
+        * any of the names of this device, so go on to the
+        * next one.
+        */
     }
 
     /*
-   * If we got here, the device specified by devname doesn't exist.
-   */
+    * If we got here, the device specified by devname doesn't exist.
+    */
 
     return ENODEV;
 }
@@ -221,11 +221,11 @@ const char *vfs_getdevname(struct fs *fs)
 
         if (kd->kd_fs == fs) {
             /*
-       * This is not a race condition: as long as the
-       * guy calling us holds a reference to the fs,
-       * the fs cannot go away, and the device can't
-       * go away until the fs goes away.
-       */
+            * This is not a race condition: as long as the
+            * guy calling us holds a reference to the fs,
+            * the fs cannot go away, and the device can't
+            * go away until the fs goes away.
+            */
             return kd->kd_name;
         }
     }
@@ -264,9 +264,9 @@ static inline int samestring(const char *a, const char *b)
  * if they're not NULL.
  */
 static inline int samestring3(const char *a,
-    const char *b,
-    const char *c,
-    const char *d)
+                              const char *b,
+                              const char *c,
+                              const char *d)
 {
     return samestring(a, b) || samestring(a, c) || samestring(a, d);
 }
@@ -293,7 +293,8 @@ static int badnames(const char *n1, const char *n2, const char *n3)
             }
         }
 
-        if (samestring3(kd->kd_rawname, n1, n2, n3) || samestring3(kd->kd_name, n1, n2, n3)) {
+        if (samestring3(kd->kd_rawname, n1, n2, n3)
+                || samestring3(kd->kd_name, n1, n2, n3)) {
             return 1;
         }
     }
@@ -309,9 +310,9 @@ static int badnames(const char *n1, const char *n2, const char *n3)
  * for direct access.
  */
 static int vfs_doadd(const char *dname,
-    int mountable,
-    struct device *dev,
-    struct fs *fs)
+                     int mountable,
+                     struct device *dev,
+                     struct fs *fs)
 {
     char *name = NULL, *rawname = NULL;
     struct knowndev *kd = NULL;
@@ -447,8 +448,8 @@ static int findmount(const char *devname, struct knowndev **result)
  * The DATA argument is passed through unchanged to MOUNTFUNC.
  */
 int vfs_mount(const char *devname,
-    void *data,
-    int (*mountfunc)(void *data, struct device *, struct fs **ret))
+              void *data,
+              int (*mountfunc)(void *data, struct device *, struct fs **ret))
 {
     const char *volname;
     struct knowndev *kd;
@@ -478,7 +479,7 @@ int vfs_mount(const char *devname,
 
     volname = FSOP_GETVOLNAME(fs);
     ERROR_DEBUG("vfs: Mounted %s: on %s\n", volname ? volname : kd->kd_name,
-        kd->kd_name);
+                kd->kd_name);
 
     return 0;
 }
@@ -650,9 +651,9 @@ int vfs_unmountall(void)
                     " for %s: %s, giving up...\n",
                     dev->kd_name, strerror(result));
                 /*
-         * Do not attempt to complete the
-         * unmount as it will likely explode.
-         */
+                * Do not attempt to complete the
+                * unmount as it will likely explode.
+                */
                 continue;
             }
         }

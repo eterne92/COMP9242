@@ -46,170 +46,17 @@
  * and (2) if the system crashes before we find a console, no output
  * at all may appear.
  */
-
-#include <types.h>
-// #include <kern/errno.h>
-// #include <lib.h>
-#include <uio.h>
-// #include <cpu.h>
-#include <thread.h>
-#include <current.h>
-// #include <synch.h>
-#include <generic/console.h>
-#include <vfs.h>
-#include <device.h>
-// #include "autoconf.h"
+#include "console.h"
+#include "device.h"
+#include "uio.h"
+#include "vfs.h"
+#include <stdlib.h>
 
 /*
  * The console device.
  */
-static struct con_softc *the_console = NULL;
-
-/*
- * Lock so user I/Os are atomic.
- * We use two locks so readers waiting for input don't lock out writers.
- */
-static struct lock *con_userlock_read = NULL;
-static struct lock *con_userlock_write = NULL;
-
-//////////////////////////////////////////////////
-
-/*
- * This is for accumulating characters printed before the
- * console is set up. Upon console setup they are dumped
- * to the actual console; thenceforth this space is unused.
- */
-#define DELAYBUFSIZE  1024
-static char delayed_outbuf[DELAYBUFSIZE];
-static size_t delayed_outbuf_pos = 0;
-
-static void putch_delayed(int ch)
-{
-    /*
-     * No synchronization needed: called only during system startup
-     * by main thread.
-     */
-
-    KASSERT(delayed_outbuf_pos < sizeof(delayed_outbuf));
-    delayed_outbuf[delayed_outbuf_pos++] = ch;
-}
-
-static void flush_delay_buf(void)
-{
-    size_t i;
-    for (i = 0; i < delayed_outbuf_pos; i++) {
-        putch(delayed_outbuf[i]);
-    }
-    delayed_outbuf_pos = 0;
-}
-
-//////////////////////////////////////////////////
-
-/*
- * Print a character, using polling instead of interrupts to wait for
- * I/O completion.
- */
-static void putch_polled(struct con_softc *cs, int ch)
-{
-    cs->cs_sendpolled(cs->cs_devdata, ch);
-}
-
-//////////////////////////////////////////////////
-
-/*
- * Print a character, using interrupts to wait for I/O completion.
- */
-static void putch_intr(struct con_softc *cs, int ch)
-{
-    P(cs->cs_wsem);
-    cs->cs_send(cs->cs_devdata, ch);
-}
-
-/*
- * Read a character, using interrupts to wait for I/O completion.
- */
-static int getch_intr(struct con_softc *cs)
-{
-    unsigned char ret;
-
-    P(cs->cs_rsem);
-    ret = cs->cs_gotchars[cs->cs_gotchars_tail];
-    cs->cs_gotchars_tail =
-        (cs->cs_gotchars_tail + 1) % CONSOLE_INPUT_BUFFER_SIZE;
-    return ret;
-}
-
-/*
- * Called from underlying device when a read-ready interrupt occurs.
- *
- * Note: if gotchars_head == gotchars_tail, the buffer is empty. Thus
- * if gotchars_head+1 == gotchars_tail, the buffer is full. A slightly
- * tidier way to implement this check (that avoids wasting a slot,
- * too) would be with a second semaphore used with a nonblocking P,
- * but we don't have that in OS/161.
- */
-void con_input(void *vcs, int ch)
-{
-    struct con_softc *cs = vcs;
-    unsigned nexthead;
-
-    nexthead = (cs->cs_gotchars_head + 1) % CONSOLE_INPUT_BUFFER_SIZE;
-    if (nexthead == cs->cs_gotchars_tail) {
-        /* overflow; drop character */
-        return;
-    }
-
-    cs->cs_gotchars[cs->cs_gotchars_head] = ch;
-    cs->cs_gotchars_head = nexthead;
-
-    V(cs->cs_rsem);
-}
-
-/*
- * Called from underlying device when a write-done interrupt occurs.
- */
-void con_start(void *vcs)
-{
-    struct con_softc *cs = vcs;
-
-    V(cs->cs_wsem);
-}
-
-//////////////////////////////////////////////////
-
-/*
- * Exported interface.
- *
- * Warning: putch must work even in an interrupt handler or with
- * interrupts disabled, and before the console is probed. getch need
- * not, and does not.
- */
-
-void putch(int ch)
-{
-    struct con_softc *cs = the_console;
-
-    if (cs == NULL) {
-        putch_delayed(ch);
-    } else if (curthread->t_in_interrupt ||
-               curthread->t_curspl > 0 ||
-               curcpu->c_spinlocks > 0) {
-        putch_polled(cs, ch);
-    } else {
-        putch_intr(cs, ch);
-    }
-}
-
-int getch(void)
-{
-    struct con_softc *cs = the_console;
-    KASSERT(cs != NULL);
-    KASSERT(!curthread->t_in_interrupt && curthread->t_iplhigh_count == 0);
-
-    return getch_intr(cs);
-}
-
-////////////////////////////////////////////////////////////
+static struct con_softc console;
+static struct con_softc *the_console = &console;
 
 /*
  * VFS interface functions
@@ -217,8 +64,8 @@ int getch(void)
 
 static int con_eachopen(struct device *dev, int openflags)
 {
-    (void) dev;
-    (void) openflags;
+    (void)dev;
+    (void)openflags;
     return 0;
 }
 
@@ -228,17 +75,7 @@ static int con_io(struct device *dev, struct uio *uio)
     char ch;
     struct lock *lk;
 
-    (void) dev;   // unused
-
-    if (uio->uio_rw == UIO_READ) {
-        lk = con_userlock_read;
-    } else {
-        lk = con_userlock_write;
-    }
-
-    KASSERT(lk != NULL);
-    lock_acquire(lk);
-
+    (void)dev; // unused
     while (uio->uio_resid > 0) {
         if (uio->uio_rw == UIO_READ) {
             ch = getch();
@@ -247,7 +84,6 @@ static int con_io(struct device *dev, struct uio *uio)
             }
             result = uiomove(&ch, 1, uio);
             if (result) {
-                lock_release(lk);
                 return result;
             }
             if (ch == '\n') {
@@ -256,7 +92,6 @@ static int con_io(struct device *dev, struct uio *uio)
         } else {
             result = uiomove(&ch, 1, uio);
             if (result) {
-                lock_release(lk);
                 return result;
             }
             if (ch == '\n') {
@@ -265,17 +100,16 @@ static int con_io(struct device *dev, struct uio *uio)
             putch(ch);
         }
     }
-    lock_release(lk);
     return 0;
 }
 
-static int con_ioctl(struct device *dev, int op, userptr_t data)
+static int con_ioctl(struct device *dev, int op, const void *data)
 {
     /* No ioctls. */
-    (void) dev;
-    (void) op;
-    (void) data;
-    return EINVAL;
+    (void)dev;
+    (void)op;
+    (void)data;
+    return -1;
 }
 
 static const struct device_ops console_devops = {
@@ -291,7 +125,7 @@ static int attach_console_to_vfs(struct con_softc *cs)
 
     dev = malloc(sizeof(*dev));
     if (dev == NULL) {
-        return ENOMEM;
+        return -1;
     }
 
     dev->d_ops = &console_devops;
@@ -308,28 +142,9 @@ static int attach_console_to_vfs(struct con_softc *cs)
     return 0;
 }
 
-////////////////////////////////////////////////////////////
-
-/*
- * Config routine called by autoconf.c after we are attached to something.
- */
-
-int config_con(struct con_softc *cs, int unit)
+int con_initialize(void)
 {
-
-    /*
-     * Only allow one system console.
-     * Further devices that could be the system console are ignored.
-     *
-     * Do not hardwire the console to be "con1" instead of "con0",
-     * or these asserts will go off.
-     */
-
-    cs->cs_gotchars_head = 0;
-    cs->cs_gotchars_tail = 0;
-    the_console = cs;
-
-    flush_delay_buf();
-
-    return attach_console_to_vfs(cs);
+    console.cs_gotchars_head = 0;
+    console.cs_gotchars_tail = 0;
+    return attach_console_to_vfs(&console);
 }

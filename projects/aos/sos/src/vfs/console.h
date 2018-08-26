@@ -53,6 +53,8 @@ struct con_softc {
 	unsigned cs_gotchars_tail;	/* next slot to take a char out */
 };
 
+int con_initialize(void);
+
 /*
  * Functions called by lower-level drivers
  */

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <sel4/sel4.h>
-#include "ut.h"
 #include "proc.h"
+#include "ut.h"
+#include <sel4/sel4.h>
+#include <stdbool.h>
 
 /*
  * 4 level shadow page talbe
@@ -17,7 +18,7 @@
 typedef struct page_table page_table_t;
 
 typedef struct page_table_entry {
-    seL4_CPtr slot; 
+    seL4_CPtr slot;
     seL4_Word table_addr; /* virtual address of the shadow page table */
     ut_t *ut; /* capability of hardware page table object */
     seL4_Word frame;
@@ -69,3 +70,11 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr);
 seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
 
+/*
+ * convert a user-level virtual address to SOS's virtual address
+ * @param table        user-level page table
+ * @param vaddr        user-level virtual address
+ * 
+ * return SOS's virtual address
+ */
+seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);

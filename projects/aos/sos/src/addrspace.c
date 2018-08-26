@@ -231,3 +231,20 @@ int as_define_heap(addrspace *as)
 
     return 0;
 }
+
+bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum OPERATION operation)
+{
+    as_region *region = as->regions;
+    while (region) {
+        if (vaddr >= region->vaddr && vaddr + size < region->vaddr + region->size) {
+            if (operation == READ) {
+                // doing read means kernel will write to the buffer provided by user
+                return region->flags & RG_W;
+            } else if (operation == WRITE) {
+                return region->flags & RG_R;
+            }
+        }
+        region = region->next;
+    }
+    return false;
+}

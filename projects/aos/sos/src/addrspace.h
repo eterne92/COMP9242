@@ -13,6 +13,11 @@
 #define USERHEAPBASE 0x700000000000
 #define USERHEAPSIZE (4096 * 2 * PAGE_SIZE_4K)
 
+enum OPERATION {
+    READ, 
+    WRITE,
+};
+
 #define RG_R (1 << 2)
 #define RG_W (1 << 1)
 #define RG_X (1 << 0)
@@ -51,3 +56,14 @@ int as_define_stack(addrspace *as);
 int as_define_heap(addrspace *as);
 int as_define_ipcbuffer(addrspace *as);
 
+
+/*
+ * validate the virtual address
+ * @param cur_proc     current process
+ * @param vaddr        virtual address to be validated
+ * @param size         size (in bytes) of the memory to access
+ * @param operation    read or write 
+ * 
+ * return true when valid false otherwise
+ */
+bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum OPERATION operation);

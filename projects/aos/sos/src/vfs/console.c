@@ -101,7 +101,7 @@ static int con_io(struct device *dev, struct uio *uio)
     int result;
     int nbytes = 0, count;
     int n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-    seL4_Word sos_vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr);
+    seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     (void)dev; // unused
     if (uio->uio_rw == UIO_READ) {
         the_console->proc = uio->proc;
@@ -111,17 +111,18 @@ static int con_io(struct device *dev, struct uio *uio)
         serial_register_handler(the_console->serial, &read_handler);
     } else {
         while (uio->uio_resid > 0) {
+            sos_vaddr = get_sos_virtual_address(the_console->proc->pt, user_vaddr);
             // send n bytes
             count = n;
             nbytes = serial_send(console.serial, sos_vaddr, n);
-            while(nbytes < count) {
+            while (nbytes < count) {
                 count -= nbytes;
                 nbytes = serial_send(console.serial, sos_vaddr + (n - count), count);
             }
             yield(NULL);
             uio->uio_resid -= nbytes;
             n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
-            sos_vaddr += n;
+            user_vaddr += n;
         }
     }
     return 0;

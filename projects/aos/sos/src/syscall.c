@@ -6,7 +6,6 @@
 #include <cspace/cspace.h>
 #include <picoro/picoro.h>
 #include <serial/serial.h>
-#include <sos/sos.h>
 #include <stdlib.h>
 
 cspace_t *global_cspace;
@@ -21,25 +20,25 @@ typedef struct coroutines {
 static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
 
+static void add_coroutine(coroutines *coroutine)
+{
+    coroutine->next = NULL;
+    if (!coro_list) {
+        coro_list = tail = coroutine;
+    } else {
+        tail->next = coroutine;
+        tail = tail->next;
+    }
+}
+
 static void create_coroutine(coro c)
 {
     coroutines *list_node = (coroutines *)malloc(sizeof(coroutine));
-    if (!list)
+    if (!list_node)
         return;
     list_node->data = c;
     list_node->next = NULL;
     add_coroutine(list_node);
-}
-
-static void add_coroutine(coroutines *coroutine)
-{
-    coroutines->next = NULL;
-    if (!coro_list) {
-        coro_list = tail = coroutines;
-    } else {
-        tail->next = coroutines;
-        tail = tail->next;
-    }
 }
 
 static coroutines *pop_coroutine()

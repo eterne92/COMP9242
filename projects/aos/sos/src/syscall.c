@@ -89,6 +89,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     as_region *region;
     /* Process system call */
+    cur_proc->reply = reply;
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");

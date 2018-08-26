@@ -19,6 +19,7 @@ typedef struct proc {
     seL4_CPtr ipc_buffer;
     ut_t *stack_ut;
     seL4_CPtr stack;
+    seL4_CPtr reply;
 } proc;
 
 extern cspace_t *global_cspace;

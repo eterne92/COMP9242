@@ -28,104 +28,15 @@
  */
 
 #include "uio.h"
-#include "comm/comm.h"
-#include "proc/proc.h"
-
-/*
- * See uio.h for a description.
- */
-
-int uiomove(void *ptr, size_t n, struct uio *uio)
-{
-    struct iovec *iov;
-    size_t size;
-
-    if (uio->uio_rw != UIO_READ && uio->uio_rw != UIO_WRITE) {
-        ERROR_DEBUG("uiomove: Invalid uio_rw %d\n", (int)uio->uio_rw);
-        assert(0);
-    }
-    while (n > 0 && uio->uio_resid > 0) {
-        /* get the first iovec */
-        iov = uio->uio_iov;
-        size = iov->iov_len;
-
-        if (size > n) {
-            size = n;
-        }
-
-        if (size == 0) {
-            /* move to the next iovec and try again */
-            uio->uio_iov++;
-            uio->uio_iovcnt--;
-            if (uio->uio_iovcnt == 0) {
-                /*
-                 * This should only happen if you set
-                 * uio_resid incorrectly (to more than
-                 * the total length of buffers the uio
-                 * points to).
-                 */
-                ERROR_DEBUG("uiomove: ran out of buffers\n");
-                assert(0);
-            }
-            continue;
-        }
-
-        /* switch (uio->uio_segflg) { */
-        /*     case UIO_SYSSPACE: */
-        if (uio->uio_rw == UIO_READ) {
-            memmove(iov->iov_base, ptr, size);
-        } else {
-            memmove(ptr, iov->iov_base, size);
-        }
-        iov->iov_base = ((char *)iov->iov_base + size);
-        iov->iov_len -= size;
-        uio->uio_resid -= size;
-        uio->uio_offset += size;
-        ptr = ((char *)ptr + size);
-        n -= size;
-    }
-
-    return 0;
-}
-
-int uiomovezeros(size_t n, struct uio *uio)
-{
-    /* static, so initialized as zero */
-    static char zeros[16];
-    size_t amt;
-    int result;
-
-    /* This only makes sense when reading */
-    assert(uio->uio_rw == UIO_READ);
-
-    while (n > 0) {
-        amt = sizeof(zeros);
-        if (amt > n) {
-            amt = n;
-        }
-        result = uiomove(zeros, amt, uio);
-        if (result) {
-            return result;
-        }
-        n -= amt;
-    }
-
-    return 0;
-}
-
 /*
  * Convenience function to initialize an iovec and uio for kernel I/O.
  */
 
-void uio_kinit(struct iovec *iov, struct uio *u, void *kbuf, size_t len,
-               off_t pos, enum uio_rw rw)
+void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos, enum uio_rw rw, proc *proc)
 {
-    iov->iov_base = kbuf;
-    iov->iov_len = len;
-    u->uio_iov = iov;
-    u->uio_iovcnt = 1;
+    u->vaddr = vaddr;
     u->uio_offset = pos;
     u->uio_resid = len;
-    /* u->uio_segflg = UIO_SYSSPACE; */
     u->uio_rw = rw;
+    u->proc = proc;
 }

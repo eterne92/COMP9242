@@ -38,7 +38,7 @@
 #include "fs.h"
 #include "vfs.h"
 #include "vnode.h"
-
+#include <stdlib.h>
 /*
  * Structure for a single named device.
  *
@@ -88,8 +88,8 @@ static int dev_count = 0;
 #define knowndevarray_get(something, index) ((knowndevs[index]))
 
 int knowndevarray_add(struct knowndev **devs,
-                      struct knowndev *dev,
-                      unsigned *index)
+    struct knowndev *dev,
+    unsigned *index)
 {
     assert(dev_count < 19);
     assert(devs == knowndevs);
@@ -263,9 +263,9 @@ static inline int samestring(const char *a, const char *b)
  * if they're not NULL.
  */
 static inline int samestring3(const char *a,
-                              const char *b,
-                              const char *c,
-                              const char *d)
+    const char *b,
+    const char *c,
+    const char *d)
 {
     return samestring(a, b) || samestring(a, c) || samestring(a, d);
 }
@@ -293,7 +293,7 @@ static int badnames(const char *n1, const char *n2, const char *n3)
         }
 
         if (samestring3(kd->kd_rawname, n1, n2, n3)
-                || samestring3(kd->kd_name, n1, n2, n3)) {
+            || samestring3(kd->kd_name, n1, n2, n3)) {
             return 1;
         }
     }
@@ -309,9 +309,9 @@ static int badnames(const char *n1, const char *n2, const char *n3)
  * for direct access.
  */
 static int vfs_doadd(const char *dname,
-                     int mountable,
-                     struct device *dev,
-                     struct fs *fs)
+    int mountable,
+    struct device *dev,
+    struct fs *fs)
 {
     char *name = NULL, *rawname = NULL;
     struct knowndev *kd = NULL;
@@ -447,8 +447,8 @@ static int findmount(const char *devname, struct knowndev **result)
  * The DATA argument is passed through unchanged to MOUNTFUNC.
  */
 int vfs_mount(const char *devname,
-              void *data,
-              int (*mountfunc)(void *data, struct device *, struct fs **ret))
+    void *data,
+    int (*mountfunc)(void *data, struct device *, struct fs **ret))
 {
     const char *volname;
     struct knowndev *kd;
@@ -478,7 +478,7 @@ int vfs_mount(const char *devname,
 
     volname = FSOP_GETVOLNAME(fs);
     ERROR_DEBUG("vfs: Mounted %s: on %s\n", volname ? volname : kd->kd_name,
-                kd->kd_name);
+        kd->kd_name);
 
     return 0;
 }

@@ -61,14 +61,15 @@
 
 /* Direction. */
 enum uio_rw {
-    UIO_READ, /* From kernel to uio_seg */
+    UIO_READ,  /* From kernel to uio_seg */
     UIO_WRITE, /* From uio_seg to kernel */
 };
 
 struct uio {
     seL4_Word vaddr;
-    size_t uio_offset; /* Desired offset into object */
-    size_t uio_resid; /* Remaining amt of data to xfer */
+    size_t length;       /* number of bytes to transfer   */
+    size_t uio_offset;  /* Desired offset into object    */
+    size_t uio_resid;   /* Remaining amt of data to xfer */
     enum uio_rw uio_rw; /* Whether op is a read or write */
     proc *proc;
 };

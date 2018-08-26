@@ -30,6 +30,7 @@
 #ifndef _GENERIC_CONSOLE_H_
 #define _GENERIC_CONSOLE_H_
 
+#include <serial/serial.h>
 /*
  * Device data for the hardware-independent system console.
  *
@@ -37,34 +38,18 @@
  * device, and are to be initialized by the attach routine.
  */
 
-#define CONSOLE_INPUT_BUFFER_SIZE 32
 
+typedef struct proc *proc;
 struct con_softc {
-	/* initialized by attach routine */
-	void *cs_devdata;
-	void (*cs_send)(void *devdata, int ch);
-	void (*cs_sendpolled)(void *devdata, int ch);
+	struct serial *serial;
 
-	/* initialized by config routine */
-	// struct semaphore *cs_rsem;
-	// struct semaphore *cs_wsem;
-	unsigned char cs_gotchars[CONSOLE_INPUT_BUFFER_SIZE];
-	unsigned cs_gotchars_head;	/* next slot to put a char in */
-	unsigned cs_gotchars_tail;	/* next slot to take a char out */
+	/* use for reading info */
+	proc *proc;
+	seL4_Word vaddr;
+	seL4_Word buffsize;
+	seL4_Word index;
 };
 
 int con_initialize(void);
-
-/*
- * Functions called by lower-level drivers
- */
-void con_input(/*struct con_softc*/ void *cs, int ch);
-void con_start(/*struct con_softc*/ void *cs);
-
-/*
- * Functions called by higher-level code
- *
- * putch/getch - see <lib.h>
- */
 
 #endif /* _GENERIC_CONSOLE_H_ */

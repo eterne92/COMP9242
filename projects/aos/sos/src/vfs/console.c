@@ -50,6 +50,8 @@
 #include "device.h"
 #include "uio.h"
 #include "vfs.h"
+#include "../pagetable.h"
+#include "../syscall.h"
 #include <stdlib.h>
 
 /*
@@ -69,6 +71,30 @@ static int con_eachopen(struct device *dev, int openflags)
     return 0;
 }
 
+static void read_handler(struct serial *serial, char c){
+    if(the_console->vaddr == 0){
+        /* shouldn't handle this call */
+        return;
+    }
+    seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, the_console->vaddr + the_console->index);
+    /* there is a page fault */
+    if(vaddr == 0){
+        handle_page_fault(the_console->proc, vaddr, 0);
+    }
+    *(char *) vaddr = c;
+    /* reach buffsize */
+    if(the_console->index == the_console->buffsize){
+        syscall_reply(the_console->proc->reply, the_console->index, 0);
+        the_console->vaddr = 0;
+    }
+    /* reach endline */
+    else if(c == '\n'){
+        syscall_reply(the_console->proc->reply, the_console->index, 0);
+        the_console->vaddr = 0;
+    }
+    the_console->index++;
+}
+
 static int con_io(struct device *dev, struct uio *uio)
 {
     int result;
@@ -76,29 +102,21 @@ static int con_io(struct device *dev, struct uio *uio)
     struct lock *lk;
 
     (void)dev; // unused
-    while (uio->uio_resid > 0) {
-        if (uio->uio_rw == UIO_READ) {
-            ch = getch();
-            if (ch == '\r') {
-                ch = '\n';
-            }
-            result = uiomove(&ch, 1, uio);
-            if (result) {
-                return result;
-            }
-            if (ch == '\n') {
-                break;
-            }
-        } else {
-            result = uiomove(&ch, 1, uio);
-            if (result) {
-                return result;
-            }
-            if (ch == '\n') {
-                putch('\r');
-            }
-            putch(ch);
+    if (uio->uio_rw == UIO_READ) {
+        the_console->proc = uio->proc;
+        the_console->vaddr = uio->vaddr;
+        the_console->buffsize = uio->length;
+        the_console->index = 0;
+        serial_register_handler(the_console->serial, &read_handler);
+    } else {
+        result = uiomove(&ch, 1, uio);
+        if (result) {
+            return result;
         }
+        if (ch == '\n') {
+            putch('\r');
+        }
+        putch(ch);
     }
     return 0;
 }
@@ -133,7 +151,7 @@ static int attach_console_to_vfs(struct con_softc *cs)
     dev->d_blocksize = 1;
     dev->d_data = cs;
 
-    result = vfs_adddev("con", dev, 0);
+    result = vfs_adddev("console", dev, 0);
     if (result) {
         free(dev);
         return result;
@@ -144,7 +162,10 @@ static int attach_console_to_vfs(struct con_softc *cs)
 
 int con_initialize(void)
 {
-    console.cs_gotchars_head = 0;
-    console.cs_gotchars_tail = 0;
+    console.serial = serial_init();
+    console.vaddr = 0;
+    console.buffsize = 0;
+    console.index = 0;
+    console.proc = NULL;
     return attach_console_to_vfs(&console);
 }

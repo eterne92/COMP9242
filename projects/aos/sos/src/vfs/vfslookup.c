@@ -30,10 +30,10 @@
 /*
  * VFS operations relating to pathname translation
  */
-#include "comm/comm.h"
 #include "fs.h"
 #include "vfs.h"
 #include "vnode.h"
+#include <stdlib.h>
 
 static struct vnode *bootfs_vnode = NULL;
 

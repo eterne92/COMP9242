@@ -30,14 +30,11 @@
 /*
  * High-level VFS operations on pathnames.
  */
-
-#include <types.h>
-#include <kern/errno.h>
-#include <kern/fcntl.h>
-#include <limits.h>
-#include <lib.h>
-#include <vfs.h>
-#include <vnode.h>
+#include <assert.h>
+#include <type.h>
+#include <stdlib.h>
+#include "vfs.h"
+#include "vnode.h"
 
 
 /* Does most of the work for open(). */
@@ -83,7 +80,7 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
         return result;
     }
 
-    KASSERT(vn != NULL);
+    assert(vn != NULL);
 
     result = VOP_EACHOPEN(vn, openflags);
     if (result) {

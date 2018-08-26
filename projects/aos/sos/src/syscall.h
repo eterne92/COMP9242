@@ -41,4 +41,8 @@ void inline syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno)
     cspace_free_slot(global_cspace, reply);
 }
 
+
+void _sos_sys_time_stamp(void);
+
+void _sos_sys_usleep(void);
 /* file syscalls */

@@ -114,8 +114,10 @@ void handle_syscall(seL4_Word badge, int num_args)
     case SOS_SYS_CLOSE:
         break;
     case SOS_SYS_USLEEP:
+        _sos_sys_usleep();
         break;
     case SOS_SYS_TIMESTAMP:
+        _sos_sys_time_stamp();
         break;
 
     case SOS_SYSCALLMSG:

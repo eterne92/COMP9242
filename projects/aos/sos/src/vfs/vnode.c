@@ -30,18 +30,19 @@
 /*
  * Basic vnode support functions.
  */
-#include "vnode.h"
-#include "assert.h"
-#include "comm/comm.h"
-#include "vfs.h"
 
+#include "vnode.h"
+#include "vfs.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
 /*
  * Initialize an abstract vnode.
  */
 int vnode_init(struct vnode *vn,
-               const struct vnode_ops *ops,
-               struct fs *fs,
-               void *fsdata)
+    const struct vnode_ops *ops,
+    struct fs *fs,
+    void *fsdata)
 {
     assert(vn != NULL);
     assert(ops != NULL);
@@ -146,7 +147,7 @@ void vnode_check(struct vnode *v, const char *opstr)
 
     if (v->vn_ops->vop_magic != VOP_MAGIC) {
         ZF_LOGE("vnode_check: vop_%s: ops with bad magic number %lx\n", opstr,
-                v->vn_ops->vop_magic);
+            v->vn_ops->vop_magic);
         assert(0);
     }
 
@@ -161,14 +162,14 @@ void vnode_check(struct vnode *v, const char *opstr)
 
     if (v->vn_refcount < 0) {
         ZF_LOGE("vnode_check: vop_%s: negative refcount %d\n", opstr,
-                v->vn_refcount);
+            v->vn_refcount);
         assert(0);
     } else if (v->vn_refcount == 0) {
         ZF_LOGE("vnode_check: vop_%s: zero refcount\n", opstr);
         assert(0);
     } else if (v->vn_refcount > 0x100000) {
         ZF_LOGE("vnode_check: vop_%s: warning: large refcount %d\n", opstr,
-                v->vn_refcount);
+            v->vn_refcount);
         assert(0);
     }
 

@@ -36,3 +36,5 @@ long sys_mmap(va_list ap);
 /* not sure */
 long sys_munmap(va_list ap);
 long sys_writev(va_list ap);
+long sys_nanosleep(va_list ap);
+long sys_clock_gettime(va_list ap);

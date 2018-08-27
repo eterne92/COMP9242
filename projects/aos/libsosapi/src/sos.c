@@ -32,13 +32,15 @@ int sos_sys_open(const char *path, fmode_t mode)
 }
 
 int sos_sys_close(int file)  {
-    assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, SOS_SYS_CLOSE);
     seL4_SetMR(1, (seL4_Word)file);
-    return -1;
+
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+    int ret = seL4_GetMR(0);
+    return ret;
 }
 
 int sos_sys_read(int file, char *buf, size_t nbyte)

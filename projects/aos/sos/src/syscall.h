@@ -5,6 +5,8 @@
  * our new syscall
  */
 
+typedef struct proc proc;
+
 /* System calls for SOS */
 #define SOS_SYS_READ                0
 #define SOS_SYS_WRITE               1
@@ -34,3 +36,12 @@ void _sos_sys_time_stamp(void);
 
 void _sos_sys_usleep(void);
 /* file syscalls */
+
+void _sys_open(proc *cur_proc);
+void* _sys_read(proc *cur_proc);
+void* _sys_write(proc *cur_proc);
+void _sys_close(proc *cur_proc);
+
+void _sys_brk(proc *cur_proc);
+void _sys_mmap(proc *cur_proc);
+void _sys_munmap(proc *cur_proc);

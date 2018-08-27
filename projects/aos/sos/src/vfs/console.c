@@ -52,6 +52,7 @@
 #include "device.h"
 #include "uio.h"
 #include "vfs.h"
+#include <picoro/picoro.h>
 #include <stdlib.h>
 
 /*
@@ -67,8 +68,10 @@ static struct con_softc *the_console = &console;
 static int con_eachopen(struct device *dev, int openflags)
 {
     (void)dev;
+    int how = openflags & O_ACCMODE;
+    printf("how : %d\n", how);
     // only one process could open console in read mode
-    if ((openflags & O_ACCMODE) == O_RDONLY) {
+    if (how == O_RDONLY || how == O_RDWR) {
         if (console.proc == NULL) {
             console.proc = get_cur_proc();
             return 0;
@@ -81,6 +84,7 @@ static int con_eachopen(struct device *dev, int openflags)
 
 static void read_handler(struct serial *serial, char c)
 {
+    (void) serial;
     if (the_console->vaddr == 0) {
         /* shouldn't handle this call */
         return;
@@ -92,13 +96,13 @@ static void read_handler(struct serial *serial, char c)
     }
     *(char *)vaddr = c;
     /* reach buffsize */
-    if (the_console->index == the_console->buffsize) {
-        syscall_reply(the_console->proc->reply, the_console->index, 0);
+    if (the_console->index == the_console->buffsize - 1) {
+        syscall_reply(the_console->proc->reply, the_console->index + 1, 0);
         the_console->vaddr = 0;
     }
     /* reach endline */
     else if (c == '\n') {
-        syscall_reply(the_console->proc->reply, the_console->index, 0);
+        syscall_reply(the_console->proc->reply, the_console->index + 1, 0);
         the_console->vaddr = 0;
     }
     the_console->index++;
@@ -106,7 +110,7 @@ static void read_handler(struct serial *serial, char c)
 
 static int con_io(struct device *dev, struct uio *uio)
 {
-    int result;
+    printf("con_io called\n");
     int nbytes = 0, count;
     int n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
@@ -118,20 +122,27 @@ static int con_io(struct device *dev, struct uio *uio)
         the_console->index = 0;
         serial_register_handler(the_console->serial, &read_handler);
     } else {
+        printf("write start\n");
+        printf("%ld %ld\n", uio->length, uio->uio_resid);
         while (uio->uio_resid > 0) {
             sos_vaddr = get_sos_virtual_address(the_console->proc->pt, user_vaddr);
+            printf("%d\n", n);
             // send n bytes
             count = n;
-            nbytes = serial_send(console.serial, sos_vaddr, n);
+            for(int i = 0;i < 75000;i++);
+            nbytes = serial_send(the_console->serial, (char *)sos_vaddr, n);
             while (nbytes < count) {
                 count -= nbytes;
-                nbytes = serial_send(console.serial, sos_vaddr + (n - count), count);
+            for(int i = 0;i < 75000;i++);
+                nbytes = serial_send(the_console->serial, (char *)(sos_vaddr + (n - count)), count);
             }
-            yield(NULL);
+            // yield(NULL);
             uio->uio_resid -= nbytes;
             n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
             user_vaddr += n;
         }
+        syscall_reply(uio->proc->reply, uio->length, 0);
+        printf("write done\n");
     }
     return 0;
 }

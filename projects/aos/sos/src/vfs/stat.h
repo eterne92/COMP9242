@@ -30,8 +30,28 @@
 #ifndef _KERN_STAT_H_
 #define _KERN_STAT_H_
 
-#include "clock/clock.h"
-#include "comm/comm.h"
+#include <stdint.h>
+#include "type.h"
+
+#define _S_IFMT   070000	/* mask for type of file */
+#define _S_IFREG  010000	/* ordinary regular file */
+#define _S_IFDIR  020000	/* directory */
+#define _S_IFLNK  030000	/* symbolic link */
+#define _S_IFIFO  040000	/* pipe or named pipe */
+#define _S_IFSOCK 050000	/* socket */
+#define _S_IFCHR  060000	/* character device */
+#define _S_IFBLK  070000	/* block device */
+
+#define S_IFMT   _S_IFMT
+#define S_IFREG  _S_IFREG
+#define S_IFDIR  _S_IFDIR
+#define S_IFLNK  _S_IFLNK
+#define S_IFIFO  _S_IFIFO
+#define S_IFSOCK _S_IFSOCK
+#define S_IFCHR  _S_IFCHR
+#define S_IFBLK  _S_IFBLK
+
+
 /*
  * The stat structure, for returning file information via stat(),
  * fstat(), and lstat().
@@ -42,16 +62,32 @@
  * The file types are in kern/stattypes.h.
  */
 struct stat {
-    /* Essential fields */
-    off_t st_size; 			/* file size in bytes */
-    mode_t st_mode; 		/* file type and protection mode */
-    /* Timestamps */
-    uint32_t st_atime; 		/* last access time: seconds */
-    uint32_t st_ctime; 		/* inode change time: seconds */
-    uint32_t st_mtime; 		/* modification time: seconds */
-    uint32_t st_atimensec; 	/* last access time: nanoseconds */
-    uint32_t st_ctimensec; 	/* inode change time: nanoseconds */
-    uint32_t st_mtimensec; 	/* modification time: nanoseconds */
+	/* Essential fields */
+	off_t st_size;		/* file size in bytes */
+	mode_t st_mode;		/* file type and protection mode */
+	nlink_t st_nlink;	/* number of hard links */
+	blkcnt_t st_blocks;	/* number of blocks file is using */
+
+ 	/* Identity */
+	dev_t st_dev;           /* device object lives on */
+	ino_t st_ino;           /* inode number (serial number) of object */
+	dev_t st_rdev;          /* device object is (if a device) */
+
+	/* Timestamps */
+	time_t st_atime;        /* last access time: seconds */
+	time_t st_ctime;        /* inode change time: seconds */
+	time_t st_mtime;        /* modification time: seconds */
+	__u32 st_atimensec;     /* last access time: nanoseconds */
+	__u32 st_ctimensec;     /* inode change time: nanoseconds */
+	__u32 st_mtimensec;     /* modification time: nanoseconds */
+
+	/* Permissions (also st_mode) */
+	uid_t st_uid;           /* owner */
+	gid_t st_gid;           /* group */
+
+	/* Other */
+	__u32 st_gen;           /* file generation number (root only) */
+	blksize_t st_blksize;   /* recommended I/O block size */
 };
 
 #endif /* _KERN_STAT_H_ */

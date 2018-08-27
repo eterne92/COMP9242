@@ -32,6 +32,7 @@
 
 struct vnode; /* in vnode.h */
 
+
 /*
  * Abstract file system. (Or device accessible as a file.)
  *
@@ -39,8 +40,8 @@ struct vnode; /* in vnode.h */
  */
 
 struct fs {
-    void *fs_data;
-    const struct fs_ops *fs_ops;
+	void *fs_data;
+	const struct fs_ops *fs_ops;
 };
 
 /*
@@ -69,20 +70,22 @@ struct fs {
  * filesystem should have been discarded/released.
  */
 struct fs_ops {
-    int (*fsop_sync)(struct fs *);
-    const char *(*fsop_getvolname)(struct fs *);
-    int (*fsop_getroot)(struct fs *, struct vnode **);
-    int (*fsop_unmount)(struct fs *);
+	int           (*fsop_sync)(struct fs *);
+	const char   *(*fsop_getvolname)(struct fs *);
+	int           (*fsop_getroot)(struct fs *, struct vnode **);
+	int           (*fsop_unmount)(struct fs *);
 };
 
 /*
  * Macros to shorten the calling sequences.
  */
-#define FSOP_SYNC(fs) ((fs)->fs_ops->fsop_sync(fs))
-#define FSOP_GETVOLNAME(fs) ((fs)->fs_ops->fsop_getvolname(fs))
+#define FSOP_SYNC(fs)        ((fs)->fs_ops->fsop_sync(fs))
+#define FSOP_GETVOLNAME(fs)  ((fs)->fs_ops->fsop_getvolname(fs))
 #define FSOP_GETROOT(fs, ret) ((fs)->fs_ops->fsop_getroot(fs, ret))
-#define FSOP_UNMOUNT(fs) ((fs)->fs_ops->fsop_unmount(fs))
+#define FSOP_UNMOUNT(fs)     ((fs)->fs_ops->fsop_unmount(fs))
 
 /* Initialization functions for builtin fake file systems. */
+void semfs_bootstrap(void);
+
 
 #endif /* _FS_H_ */

@@ -49,10 +49,10 @@ MakeCPIO(archive.o "${apps}")
 
 # add any new c files here
 add_executable(sos EXCLUDE_FROM_ALL crt/sel4_crt0.S src/bootstrap.c src/dma.c src/elf.c src/frametable.c src/main.c
-               src/addrspace.c src/pagetable.c src/proc.c src/syscall.c src/mapping.c src/network.c src/ut.c 
+               src/addrspace.c src/pagetable.c src/proc.c src/timesyscall.c src/syscall.c src/mapping.c src/network.c src/ut.c 
                src/tests.c src/sys/backtrace.c src/sys/exit.c src/sys/morecore.c src/sys/stdio.c src/sys/thread.c 
-               src/sys/time.c src/drivers/uart.c src/vfs/device.c src/vfs/uio.c src/vfs/vfslist.c src/vfs/vfslookup.c 
-               src/vfs/vnode.c archive.o src/sos.lds)
+               src/sys/time.c src/drivers/uart.c src/vfs/device.c src/vfs/console.c src/vfs/uio.c src/vfs/vfslist.c src/vfs/vfslookup.c 
+               src/vfs/vnode.c src/vfs/vfsfail.c src/vfs/vfscwd.c src/vfs/vfspath.c src/vfs/array.c archive.o src/sos.lds)
 target_include_directories(sos PRIVATE "include")
 target_link_libraries(sos Configuration muslc sel4 elf cpio serial clock sel4cspace aos utils picotcp
                       picotcp_bsd nfs ethernet picoro)

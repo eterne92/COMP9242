@@ -27,19 +27,7 @@
 
 void handle_syscall(seL4_Word badge, int num_args);
 
-void inline syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno)
-{
-    seL4_MessageInfo_t reply_msg;
-    reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
-    /* Set the first (and only) word in the message to 0 */
-    seL4_SetMR(0, ret);
-    seL4_SetMR(1, errno);
-    /* Send the reply to the saved reply capability. */
-    seL4_Send(reply, reply_msg);
-    /* Free the slot we allocated for the reply - it is now empty, as the reply
-         * capability was consumed by the send. */
-    cspace_free_slot(global_cspace, reply);
-}
+void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno);
 
 
 void _sos_sys_time_stamp(void);

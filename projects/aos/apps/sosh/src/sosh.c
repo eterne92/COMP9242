@@ -334,6 +334,11 @@ int main(void)
 
     printf("\n[SOS Starting]\n");
 
+    printf("Current Time is %lu\n", sos_sys_time_stamp());
+    sos_sys_usleep(1000000);
+    
+    printf("Current Time is %lu\n", sos_sys_time_stamp());
+
     while (!done) {
         if (new) {
             printf("$ ");

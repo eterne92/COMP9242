@@ -1,6 +1,10 @@
 #include "syscall.h"
 #include "addrspace.h"
 #include "proc.h"
+#include "vfs/vfs.h"
+#include "vfs/vnode.h"
+#include "vfs/uio.h"
+#include <fcntl.h>
 #include <aos/debug.h>
 #include <aos/sel4_zf_logif.h>
 #include <cspace/cspace.h>
@@ -19,6 +23,23 @@ typedef struct coroutines {
 
 static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
+
+static struct vnode *vn;
+
+void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno)
+{
+    seL4_MessageInfo_t reply_msg;
+    reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+    /* Set the first (and only) word in the message to 0 */
+    seL4_SetMR(0, ret);
+    seL4_SetMR(1, errno);
+    /* Send the reply to the saved reply capability. */
+    seL4_Send(reply, reply_msg);
+    /* Free the slot we allocated for the reply - it is now empty, as the reply
+         * capability was consumed by the send. */
+    cspace_free_slot(global_cspace, reply);
+}
+
 
 static void add_coroutine(coroutines *coroutine)
 {
@@ -91,6 +112,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     as_region *region;
     /* Process system call */
     cur_proc->reply = reply;
+    printf("SYSCALL NO.%d IS CALLED\n", syscall_number);
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -104,16 +126,37 @@ void handle_syscall(seL4_Word badge, int num_args)
     //      * capability was consumed by the send. */
     //     cspace_free_slot(global_cspace, reply);
     //     break;
-    case SOS_SYS_OPEN:
+    case SOS_SYS_OPEN:{
+        printf("in open\n");
+        vfs_open("console:", O_RDWR,0, &vn);
+        printf("%p %p %p\n", vn, vn->vn_data, vn->vn_fs);
+        syscall_reply(cur_proc->reply, 4, 0);
         break;
-    case SOS_SYS_READ:
-        coro c = coroutine(NULL);
-        create_coroutine(c);
+
+    }
+    case SOS_SYS_READ:{
+        printf("in read\n");
+        seL4_Word vaddr = seL4_GetMR(2);
+        seL4_Word length = seL4_GetMR(3);
+        struct uio my_uio;
+        uio_init(&my_uio, vaddr, length, 0, UIO_READ, cur_proc);
+        VOP_READ(vn, &my_uio);
+        // coro c = coroutine(NULL);
+        // create_coroutine(c);
         break;
-    case SOS_SYS_WRITE:
-        coro c = coroutine(NULL);
-        create_coroutine(c);
+    }
+    case SOS_SYS_WRITE:{
+        printf("in write\n");
+        seL4_Word vaddr = seL4_GetMR(2);
+        seL4_Word length = seL4_GetMR(3);
+        printf("vaddr %p, length %ld;\n", vaddr, length);
+        struct uio my_uio;
+        uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
+        VOP_WRITE(vn, &my_uio);
+        // coro c = coroutine(NULL);
+        // create_coroutine(c);
         break;
+    }
     case SOS_SYS_STAT:
         break;
     case SOS_SYS_CLOSE:

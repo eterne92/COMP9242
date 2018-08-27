@@ -30,6 +30,8 @@
 #ifndef _DEVICE_H_
 #define _DEVICE_H_
 
+#include "type.h"
+
 /*
  * Devices.
  */
@@ -39,9 +41,6 @@ struct uio; /* in <uio.h> */
 /*
  * Filesystem-namespace-accessible device.
  */
-typedef long blksize_t;
-typedef long blkcnt_t;
-typedef long dev_t;
 struct device {
     const struct device_ops *d_ops;
     blkcnt_t d_blocks;

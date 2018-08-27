@@ -40,6 +40,7 @@
 #include "tests.h"
 #include "ut.h"
 #include "vmem_layout.h"
+#include "vfs/vfs.h"
 
 #include <aos/vsyscall.h>
 
@@ -56,7 +57,7 @@
 #define IRQ_BADGE_NETWORK_TICK BIT(1)
 #define IRQ_BADGE_TIMER BIT(2)
 
-#define TTY_NAME "tty_test"
+#define TTY_NAME "sosh"
 #define TTY_PRIORITY (0)
 #define TTY_EP_BADGE (101)
 
@@ -618,7 +619,7 @@ NORETURN void *main_continued(UNUSED void *arg)
         F);
 
     /* Initialise libserial */
-    serial = serial_init();
+    vfs_bootstrap();
 
     // frametable_test();
     /* Start the user application */

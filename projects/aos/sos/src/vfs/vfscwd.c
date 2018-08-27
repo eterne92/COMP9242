@@ -27,31 +27,73 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _GENERIC_CONSOLE_H_
-#define _GENERIC_CONSOLE_H_
-
-#include <serial/serial.h>
-#include <fcntl.h>
-#include <sel4/sel4.h>
 /*
- * Device data for the hardware-independent system console.
- *
- * devdata, send, and sendpolled are provided by the underlying
- * device, and are to be initialized by the attach routine.
+ * VFS operations involving the current directory.
  */
 
+#include <errno.h>
+#include "stat.h"
+#include "uio.h"
+#include "../proc.h"
+#include "vfs.h"
+#include "fs.h"
+#include "vnode.h"
+#include <assert.h>
 
-typedef struct proc proc;
-struct con_softc {
-	struct serial *serial;
+/*
+ * Get current directory as a vnode.
+ */
+int
+vfs_getcurdir(struct vnode **ret)
+{
+	(void) ret;
+	assert(-1);
+	return -1;
+}
 
-	/* use for reading info */
-	proc *proc;
-	seL4_Word vaddr;
-	seL4_Word buffsize;
-	seL4_Word index;
-};
+/*
+ * Set current directory as a vnode.
+ * The passed vnode must in fact be a directory.
+ */
+int
+vfs_setcurdir(struct vnode *dir)
+{
+	(void) dir;
+	assert(-1);
+	return -1;
+}
 
-int con_initialize(void);
+/*
+ * Set current directory to "none".
+ */
+int
+vfs_clearcurdir(void)
+{
+	assert(-1);
+	return -1;
+}
 
-#endif /* _GENERIC_CONSOLE_H_ */
+/*
+ * Set current directory, as a pathname. Use vfs_lookup to translate
+ * it to a vnode.
+ */
+int
+vfs_chdir(char *path)
+{
+	(void) path;
+	assert(-1);
+	return -1;
+}
+
+/*
+ * Get current directory, as a pathname.
+ * Use VOP_NAMEFILE to get the pathname and FSOP_GETVOLNAME to get the
+ * volume name.
+ */
+int
+vfs_getcwd(struct uio *uio)
+{
+	(void) uio;
+	assert(-1);
+	return -1;
+}

@@ -52,14 +52,17 @@ void _sys_open(proc *cur_proc) {
 	int ret;
 	seL4_Word path = seL4_GetMR(1);
 	seL4_Word mode = seL4_GetMR(2);
-	char str[256];
+	char str[257];
 	int path_length = copyinstr(cur_proc, (char *) path, str, 256);
 	if(path_length == -1){
 		ret = -1;
 		syscall_reply(cur_proc->reply, ret, 0);
 	}
+	str[path_length] = ':';
+	str[path_length + 1] = '\0';
 
 	ret = vfs_open(str, mode, 0, &vn);
+	printf("vnode is %lp\n", vn);
 	syscall_reply(cur_proc->reply, 4, 0);
 }
 
@@ -92,7 +95,7 @@ void *_sys_write(proc *cur_proc) {
 
 	struct uio my_uio;
 	uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
-	VOP_READ(vn, &my_uio);
+	VOP_WRITE(vn, &my_uio);
 	return NULL;
 }
 
@@ -102,4 +105,5 @@ void _sys_close(proc *cur_proc) {
 	seL4_Word file = seL4_GetMR(1);
 
 	VOP_DECREF(vn);
+	syscall_reply(cur_proc->reply, 0, 0);
 }

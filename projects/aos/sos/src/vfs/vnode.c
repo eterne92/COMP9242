@@ -106,6 +106,12 @@ vnode_decref(struct vnode *vn)
 		destroy = true;
 	}
 
+	struct vnode *newvn;
+	vfs_lookup("console:", &newvn);
+	if(vn == newvn){
+		VOP_RECLAIM(vn);
+	}
+
 	if (destroy) {
 		result = VOP_RECLAIM(vn);
 		if (result != 0 && result != EBUSY) {

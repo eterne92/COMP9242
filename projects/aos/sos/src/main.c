@@ -87,12 +87,14 @@ NORETURN void syscall_loop(seL4_CPtr ep)
 
     while (1) {
         seL4_Word badge = 0;
+        seL4_Word label;
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
         seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
+        run_coroutine(NULL);
         /* Awake! We got a message - check the label and badge to
          * see what the message is about */
-        seL4_Word label = seL4_MessageInfo_get_label(message);
+        label = seL4_MessageInfo_get_label(message);
 
         if (badge & IRQ_EP_BADGE) {
             /* It's a notification from our bound notification

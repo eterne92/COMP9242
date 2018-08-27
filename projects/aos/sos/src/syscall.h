@@ -7,6 +7,17 @@
 
 typedef struct proc proc;
 
+/* To differentiate between signals from notification objects and and IPC messages,
+ * we assign a badge to the notification object. The badge that we receive will
+ * be the bitwise 'OR' of the notification object badge and the badges
+ * of all pending IPC messages. */
+#define IRQ_EP_BADGE BIT(seL4_BadgeBits - 1)
+/* All badged IRQs set high bet, then we use uniq bits to
+ * distinguish interrupt sources */
+#define IRQ_BADGE_NETWORK_IRQ BIT(0)
+#define IRQ_BADGE_NETWORK_TICK BIT(1)
+#define IRQ_BADGE_TIMER BIT(2)
+
 /* System calls for SOS */
 #define SOS_SYS_READ                0
 #define SOS_SYS_WRITE               1
@@ -27,6 +38,7 @@ typedef struct proc proc;
 #define SOS_SYSCALL_MUNMAP          200
 
 
+void run_coroutine(void *arg);
 void handle_syscall(seL4_Word badge, int num_args);
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno);

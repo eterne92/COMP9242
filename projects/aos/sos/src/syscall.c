@@ -70,7 +70,7 @@ static coroutines *pop_coroutine()
     }
 }
 
-static void run_coroutine(void *arg)
+void run_coroutine(void *arg)
 {
     while (coro_list) {
         coroutines *c = pop_coroutine();
@@ -83,6 +83,8 @@ static void run_coroutine(void *arg)
         }
     }
 }
+
+
 
 void handle_syscall(seL4_Word badge, int num_args)
 {
@@ -164,7 +166,6 @@ void handle_syscall(seL4_Word badge, int num_args)
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
     }
-    run_coroutine(NULL);
 }
 
 void _sys_brk(proc *cur_proc){

@@ -327,6 +327,15 @@ int main(void)
 
     in = open("console", O_RDONLY);
     assert(in >= 0);
+    close(in);
+    printf("close done\n");
+    in = open("console", O_RDWR);
+    assert(in >= 0);
+    // printf("buf top %p\n", buf + 4098);
+    for(int i = 0;i < 4099;i++){
+        buf[i] = 'a' + i % 25;
+    }
+    sos_sys_write(in, buf, 4098);
 
     bp = buf;
     done = 0;
@@ -335,7 +344,7 @@ int main(void)
     printf("\n[SOS Starting]\n");
 
     printf("Current Time is %lu\n", sos_sys_time_stamp());
-    sos_sys_usleep(1000000);
+    // sleep(1000000);
     
     printf("Current Time is %lu\n", sos_sys_time_stamp());
 

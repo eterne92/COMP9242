@@ -31,6 +31,7 @@
 #define _GENERIC_CONSOLE_H_
 
 #include <serial/serial.h>
+#include <fcntl.h>
 /*
  * Device data for the hardware-independent system console.
  *

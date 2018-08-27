@@ -59,6 +59,7 @@ static void run_coroutine(void *arg)
         if (resumable(c->data)) {
             add_coroutine(c);
             resume(c->data, arg);
+            return;
         } else {
             free(c);
         }
@@ -106,8 +107,12 @@ void handle_syscall(seL4_Word badge, int num_args)
     case SOS_SYS_OPEN:
         break;
     case SOS_SYS_READ:
+        coro c = coroutine(NULL);
+        create_coroutine(c);
         break;
     case SOS_SYS_WRITE:
+        coro c = coroutine(NULL);
+        create_coroutine(c);
         break;
     case SOS_SYS_STAT:
         break;
@@ -124,7 +129,7 @@ void handle_syscall(seL4_Word badge, int num_args)
         (void)err;
         /* MSG size each timdumpe should be less then 120 */
         char data[120];
-        /* get datasize */
+        /* get dacoroutinestasize */
         int len = seL4_GetMR(1);
         /* get realdata */
         for (int i = 0; i < len; i++) {
@@ -223,4 +228,5 @@ void handle_syscall(seL4_Word badge, int num_args)
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
     }
+    run_coroutine(NULL);
 }

@@ -67,7 +67,15 @@ static struct con_softc *the_console = &console;
 static int con_eachopen(struct device *dev, int openflags)
 {
     (void)dev;
-    (void)openflags;
+    // only one process could open console in read mode
+    if ((openflags & O_ACCMODE) == O_RDONLY) {
+        if (console.proc == NULL) {
+            console.proc = get_cur_proc();
+            return 0;
+        } else {
+            return -1;
+        }
+    }
     return 0;
 }
 

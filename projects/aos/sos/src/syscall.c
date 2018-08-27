@@ -136,6 +136,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
     case SOS_SYS_READ:{
         printf("in read\n");
+        seL4_Word path = seL4_GetMR(1);
         seL4_Word vaddr = seL4_GetMR(2);
         seL4_Word length = seL4_GetMR(3);
         struct uio my_uio;

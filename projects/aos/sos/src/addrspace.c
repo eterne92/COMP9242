@@ -248,3 +248,16 @@ bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum 
     }
     return false;
 }
+
+
+as_region *vaddr_get_region(addrspace *as, seL4_Word vaddr){
+    as_region *region = as->regions;
+    while (region) {
+        if(vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
+            return region;
+        }
+        region = region->next;
+    }
+
+    return NULL;
+}

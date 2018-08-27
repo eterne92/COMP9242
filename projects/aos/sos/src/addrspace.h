@@ -67,3 +67,5 @@ int as_define_ipcbuffer(addrspace *as);
  * return true when valid false otherwise
  */
 bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum OPERATION operation);
+
+as_region *vaddr_get_region(addrspace *as, seL4_Word vaddr);

@@ -84,7 +84,7 @@ static int con_eachopen(struct device *dev, int openflags)
 
 static void read_handler(struct serial *serial, char c)
 {
-    (void) serial;
+    (void)serial;
     if (the_console->vaddr == 0) {
         /* shouldn't handle this call */
         return;
@@ -118,8 +118,6 @@ static int con_io(struct device *dev, struct uio *uio)
     if (uio->uio_rw == UIO_READ) {
         the_console->proc = uio->proc;
         the_console->vaddr = uio->vaddr;
-        the_console->buffsize = uio->length;
-        the_console->index = 0;
         serial_register_handler(the_console->serial, &read_handler);
     } else {
         printf("write start\n");
@@ -129,11 +127,13 @@ static int con_io(struct device *dev, struct uio *uio)
             printf("%d\n", n);
             // send n bytes
             count = n;
-            for(int i = 0;i < 75000;i++);
+            for (int i = 0; i < 75000; i++)
+                ;
             nbytes = serial_send(the_console->serial, (char *)sos_vaddr, n);
             while (nbytes < count) {
                 count -= nbytes;
-            for(int i = 0;i < 75000;i++);
+                for (int i = 0; i < 75000; i++)
+                    ;
                 nbytes = serial_send(the_console->serial, (char *)(sos_vaddr + (n - count)), count);
             }
             // yield(NULL);
@@ -190,8 +190,9 @@ int con_initialize(void)
 {
     console.serial = serial_init();
     console.vaddr = 0;
-    console.buffsize = 0;
-    console.index = 0;
+    console.cs_gotchars_head = 0;
+    console.cs_gotchars_tail = 0;
     console.proc = NULL;
+    console.n = 0;
     return attach_console_to_vfs(&console);
 }

@@ -30,26 +30,27 @@
 #ifndef _GENERIC_CONSOLE_H_
 #define _GENERIC_CONSOLE_H_
 
-#include <serial/serial.h>
 #include <fcntl.h>
 #include <sel4/sel4.h>
+#include <serial/serial.h>
 /*
  * Device data for the hardware-independent system console.
  *
  * devdata, send, and sendpolled are provided by the underlying
  * device, and are to be initialized by the attach routine.
  */
-
+#define BUFFER_SIZE 1024
 
 typedef struct proc proc;
 struct con_softc {
-	struct serial *serial;
-
-	/* use for reading info */
-	proc *proc;
-	seL4_Word vaddr;
-	seL4_Word buffsize;
-	seL4_Word index;
+    struct serial *serial;
+    /* use for reading info */
+    proc *proc;
+    seL4_Word vaddr;
+    unsigned cs_gotchars_head; /* next slot to put a char in   */
+    unsigned cs_gotchars_tail; /* next slot to take a char out */
+	int n;					   /* number of characters in the buffer */
+	char console_buffer[BUFFER_SIZE];
 };
 
 int con_initialize(void);

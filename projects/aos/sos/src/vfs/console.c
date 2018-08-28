@@ -82,8 +82,6 @@ static int con_eachopen(struct device *dev, int openflags)
     return 0;
 }
 
-
-
 static void putchar_to_user(void)
 {
     struct uio *uio = the_console->uio;
@@ -94,28 +92,28 @@ static void putchar_to_user(void)
     int idx = uio->length - uio->uio_resid;
     char c;
     // while (uio->uio_resid > 0) {
-        while (the_console->n > 0) {
-            seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
-            if (vaddr == 0) {
-                handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
-                vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
-            }
-            *(char *)vaddr = c = the_console->console_buffer[the_console->cs_gotchars_head];
-            the_console->cs_gotchars_head = (the_console->cs_gotchars_head + 1) % BUFFER_SIZE;
-            --the_console->n;
-            --uio->uio_resid;
-            if (uio->uio_resid == 0) {
-                // finish reading
-                the_console->uio = NULL;
-                syscall_reply(the_console->proc->reply, idx + 1, 0);
-                return;
-            } else if (c == '\n') {
-                the_console->uio = NULL;
-                syscall_reply(the_console->proc->reply, idx + 1, 0);
-                return;
-            }
-            ++idx;
+    while (the_console->n > 0) {
+        seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
+        if (vaddr == 0) {
+            handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
+            vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
         }
+        *(char *)vaddr = c = the_console->console_buffer[the_console->cs_gotchars_head];
+        the_console->cs_gotchars_head = (the_console->cs_gotchars_head + 1) % BUFFER_SIZE;
+        --the_console->n;
+        --uio->uio_resid;
+        if (uio->uio_resid == 0) {
+            // finish reading
+            the_console->uio = NULL;
+            syscall_reply(the_console->proc->reply, idx + 1, 0);
+            return;
+        } else if (c == '\n') {
+            the_console->uio = NULL;
+            syscall_reply(the_console->proc->reply, idx + 1, 0);
+            return;
+        }
+        ++idx;
+    }
     // }
 
     //
@@ -146,7 +144,7 @@ static void read_handler(struct serial *serial, char c)
         the_console->console_buffer[the_console->cs_gotchars_tail] = c;
         the_console->cs_gotchars_tail = (the_console->cs_gotchars_tail + 1) % BUFFER_SIZE;
         ++the_console->n;
-        if(the_console->uio){
+        if (the_console->uio) {
             putchar_to_user();
         }
     }
@@ -158,7 +156,7 @@ static int con_io(struct device *dev, struct uio *uio)
     printf("uio %p\n", uio);
     int nbytes = 0, count;
     int n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-    if(uio->uio_resid < n){
+    if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
@@ -213,9 +211,9 @@ static int con_reclaim(struct device *dev)
 {
     struct con_softc *cs = (struct con_softc *)dev->d_data;
     proc *proc = get_cur_proc();
-    if(proc == cs->proc){
+    if (proc == cs->proc) {
         cs->vaddr = cs->n = cs->cs_gotchars_head = cs->cs_gotchars_tail = 0;
-        cs->proc = NULL;
+        cs->uio = cs->proc = NULL;
     }
     return 0;
 }
@@ -259,6 +257,7 @@ int con_initialize(void)
     console.cs_gotchars_tail = 0;
     console.proc = NULL;
     console.n = 0;
+    console.uio = NULL;
     serial_register_handler(the_console->serial, &read_handler);
     return attach_console_to_vfs(&console);
 }

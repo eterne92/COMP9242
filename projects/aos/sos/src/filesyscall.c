@@ -75,11 +75,12 @@ void *_sys_read(proc *cur_proc) {
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
 
-	validate_virtual_address(cur_proc->as, vaddr, length, READ);
-
-	struct uio my_uio;
-	uio_init(&my_uio, vaddr, length, 0, UIO_READ, cur_proc);
-	VOP_READ(vn, &my_uio);
+	if(validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
+		struct uio my_uio;
+		uio_init(&my_uio, vaddr, length, 0, UIO_READ, cur_proc);
+		VOP_READ(vn, &my_uio);
+	}
+	syscall_reply(cur_proc->reply, -1, -1);
 	return NULL;
 }
 
@@ -91,11 +92,12 @@ void *_sys_write(proc *cur_proc) {
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
 
-	validate_virtual_address(cur_proc->as, vaddr, length, WRITE);
-
-	struct uio my_uio;
-	uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
-	VOP_WRITE(vn, &my_uio);
+	if(validate_virtual_address(cur_proc->as, vaddr, length, WRITE)) {
+		struct uio my_uio;
+		uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
+		VOP_WRITE(vn, &my_uio);
+	}
+	syscall_reply(cur_proc->reply, -1, -1);
 	return NULL;
 }
 

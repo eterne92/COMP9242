@@ -82,49 +82,41 @@ static int con_eachopen(struct device *dev, int openflags)
     return 0;
 }
 
-static void read_handler(struct serial *serial, char c)
-{
-    (void)serial;
-    if (the_console->n < BUFFER_SIZE) {
-        the_console->console_buffer[the_console->cs_gotchars_tail] = c;
-        the_console->cs_gotchars_tail = (the_console->cs_gotchars_tail + 1) % BUFFER_SIZE;
-        ++the_console->n;
-    }
-}
 
-static void putchar_to_user(struct uio *uio)
+
+static void putchar_to_user(void)
 {
+    struct uio *uio = the_console->uio;
     if (uio->vaddr == 0) {
         /* shouldn't handle this call */
         return;
     }
-    int idx = 0;
+    int idx = uio->length - uio->uio_resid;
     char c;
-    while (uio->uio_resid > 0) {
+    // while (uio->uio_resid > 0) {
         while (the_console->n > 0) {
             seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
             if (vaddr == 0) {
-                handle_page_fault(the_console->proc, vaddr, 0);
+                handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
+                vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
             }
             *(char *)vaddr = c = the_console->console_buffer[the_console->cs_gotchars_head];
-            printf("%c read\n", c);
             the_console->cs_gotchars_head = (the_console->cs_gotchars_head + 1) % BUFFER_SIZE;
             --the_console->n;
             --uio->uio_resid;
             if (uio->uio_resid == 0) {
                 // finish reading
-                printf("not read enter\n");
+                the_console->uio = NULL;
                 syscall_reply(the_console->proc->reply, idx + 1, 0);
                 return;
             } else if (c == '\n') {
-                printf("read enter\n");
+                the_console->uio = NULL;
                 syscall_reply(the_console->proc->reply, idx + 1, 0);
                 return;
             }
             ++idx;
         }
-        yield(NULL);
-    }
+    // }
 
     //
 
@@ -147,22 +139,45 @@ static void putchar_to_user(struct uio *uio)
     // the_console->index++;
 }
 
+static void read_handler(struct serial *serial, char c)
+{
+    (void)serial;
+    if (the_console->n < BUFFER_SIZE) {
+        the_console->console_buffer[the_console->cs_gotchars_tail] = c;
+        the_console->cs_gotchars_tail = (the_console->cs_gotchars_tail + 1) % BUFFER_SIZE;
+        ++the_console->n;
+        if(the_console->uio){
+            putchar_to_user();
+        }
+    }
+}
+
 static int con_io(struct device *dev, struct uio *uio)
 {
     printf("con_io called\n");
     printf("uio %p\n", uio);
     int nbytes = 0, count;
     int n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+    if(uio->uio_resid < n){
+        n = uio->uio_resid;
+    }
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     (void)dev; // unused
     if (uio->uio_rw == UIO_READ) {
         // the_console->proc = uio->proc;
         // the_console->vaddr = uio->vaddr;
-        putchar_to_user(uio);
+        // putchar_to_user(uio);
+        the_console->uio = uio;
+        putchar_to_user();
     } else {
         while (uio->uio_resid > 0) {
-            sos_vaddr = get_sos_virtual_address(the_console->proc->pt, user_vaddr);
-            printf("sos_vaddr %p, lenth %d\n", sos_vaddr, n);
+            sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+
+            if (sos_vaddr == 0) {
+                printf("handle vm fault\n");
+                handle_page_fault(uio->proc, user_vaddr, 0);
+                sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+            }
 
             // send n bytes
             count = n;

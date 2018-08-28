@@ -33,13 +33,14 @@
 #include <fcntl.h>
 #include <sel4/sel4.h>
 #include <serial/serial.h>
+#include "uio.h"
 /*
  * Device data for the hardware-independent system console.
  *
  * devdata, send, and sendpolled are provided by the underlying
  * device, and are to be initialized by the attach routine.
  */
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE (3000)
 
 typedef struct proc proc;
 struct con_softc {
@@ -51,6 +52,8 @@ struct con_softc {
     unsigned cs_gotchars_tail; /* next slot to take a char out */
 	int n;					   /* number of characters in the buffer */
 	char console_buffer[BUFFER_SIZE];
+
+    struct uio *uio;
 };
 
 int con_initialize(void);

@@ -79,8 +79,9 @@ void *_sys_read(proc *cur_proc) {
 		struct uio my_uio;
 		uio_init(&my_uio, vaddr, length, 0, UIO_READ, cur_proc);
 		VOP_READ(vn, &my_uio);
+	} else {
+		syscall_reply(cur_proc->reply, -1, -1);
 	}
-	syscall_reply(cur_proc->reply, -1, -1);
 	return NULL;
 }
 
@@ -96,8 +97,9 @@ void *_sys_write(proc *cur_proc) {
 		struct uio my_uio;
 		uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
 		VOP_WRITE(vn, &my_uio);
+	} else {
+		syscall_reply(cur_proc->reply, -1, -1);
 	}
-	syscall_reply(cur_proc->reply, -1, -1);
 	return NULL;
 }
 

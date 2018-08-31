@@ -46,7 +46,7 @@ struct filetable *filetable_create(void)
     struct filetable *ft;
     int fd;
 
-    ft = kmalloc(sizeof(struct filetable));
+    ft = malloc(sizeof(struct filetable));
     if (ft == NULL) {
         return NULL;
     }
@@ -75,7 +75,7 @@ void filetable_destroy(struct filetable *ft)
             ft->ft_openfiles[fd] = NULL;
         }
     }
-    kfree(ft);
+    free(ft);
 }
 
 /*

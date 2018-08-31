@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009, 2014
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,7 +56,7 @@
  * read() using the same file handle?
  */
 struct filetable {
-	struct openfile *ft_openfiles[OPEN_MAX];
+    struct openfile *ft_openfiles[OPEN_MAX];
 };
 
 /*
@@ -84,7 +84,7 @@ void filetable_put(struct filetable *ft, int fd, struct openfile *file);
 
 int filetable_place(struct filetable *ft, struct openfile *file, int *fd);
 void filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
-		       struct openfile **oldfile_ret);
+                       struct openfile **oldfile_ret);
 
 
 #endif /* _FILETABLE_H_ */

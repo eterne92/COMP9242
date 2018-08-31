@@ -40,7 +40,7 @@
  * devdata, send, and sendpolled are provided by the underlying
  * device, and are to be initialized by the attach routine.
  */
-#define BUFFER_SIZE (3000)
+#define BUFFER_SIZE (4096)
 
 typedef struct proc proc;
 struct con_softc {
@@ -52,7 +52,6 @@ struct con_softc {
     unsigned cs_gotchars_tail; /* next slot to take a char out */
 	int n;					   /* number of characters in the buffer */
 	char console_buffer[BUFFER_SIZE];
-
     struct uio *uio;
 };
 

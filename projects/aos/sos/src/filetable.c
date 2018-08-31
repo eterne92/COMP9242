@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009, 2014
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,40 +44,39 @@
 struct filetable *
 filetable_create(void)
 {
-	struct filetable *ft;
-	int fd;
+    struct filetable *ft;
+    int fd;
 
-	ft = kmalloc(sizeof(struct filetable));
-	if (ft == NULL) {
-		return NULL;
-	}
+    ft = kmalloc(sizeof(struct filetable));
+    if (ft == NULL) {
+        return NULL;
+    }
 
-	/* the table starts empty */
-	for (fd = 0; fd < OPEN_MAX; fd++) {
-		ft->ft_openfiles[fd] = NULL;
-	}
+    /* the table starts empty */
+    for (fd = 0; fd < OPEN_MAX; fd++) {
+        ft->ft_openfiles[fd] = NULL;
+    }
 
-	return ft;
+    return ft;
 }
 
 /*
  * Destroy a filetable.
  */
-void
-filetable_destroy(struct filetable *ft)
+void filetable_destroy(struct filetable *ft)
 {
-	int fd;
+    int fd;
 
-	KASSERT(ft != NULL);
+    KASSERT(ft != NULL);
 
-	/* Close any open files. */
-	for (fd = 0; fd < OPEN_MAX; fd++) {
-		if (ft->ft_openfiles[fd] != NULL) {
-			openfile_decref(ft->ft_openfiles[fd]);
-			ft->ft_openfiles[fd] = NULL;
-		}
-	}
-	kfree(ft);
+    /* Close any open files. */
+    for (fd = 0; fd < OPEN_MAX; fd++) {
+        if (ft->ft_openfiles[fd] != NULL) {
+            openfile_decref(ft->ft_openfiles[fd]);
+            ft->ft_openfiles[fd] = NULL;
+        }
+    }
+    kfree(ft);
 }
 
 /*
@@ -95,47 +94,45 @@ filetable_destroy(struct filetable *ft)
  * produce the intended output instead of having the second echo
  * command overwrite the first.
  */
-int
-filetable_copy(struct filetable *src, struct filetable **dest_ret)
+int filetable_copy(struct filetable *src, struct filetable **dest_ret)
 {
-	struct filetable *dest;
-	struct openfile *file;
-	int fd;
+    struct filetable *dest;
+    struct openfile *file;
+    int fd;
 
-	/* Copying the nonexistent table avoids special cases elsewhere */
-	if (src == NULL) {
-		*dest_ret = NULL;
-		return 0;
-	}
+    /* Copying the nonexistent table avoids special cases elsewhere */
+    if (src == NULL) {
+        *dest_ret = NULL;
+        return 0;
+    }
 
-	dest = filetable_create();
-	if (dest == NULL) {
-		return ENOMEM;
-	}
+    dest = filetable_create();
+    if (dest == NULL) {
+        return ENOMEM;
+    }
 
-	/* share the entries */
-	for (fd = 0; fd < OPEN_MAX; fd++) {
-		file = src->ft_openfiles[fd];
-		if (file != NULL) {
-			openfile_incref(file);
-		}
-		dest->ft_openfiles[fd] = file;
-	}
+    /* share the entries */
+    for (fd = 0; fd < OPEN_MAX; fd++) {
+        file = src->ft_openfiles[fd];
+        if (file != NULL) {
+            openfile_incref(file);
+        }
+        dest->ft_openfiles[fd] = file;
+    }
 
-	*dest_ret = dest;
-	return 0;
+    *dest_ret = dest;
+    return 0;
 }
 
 /*
  * Check if a file handle is in range.
  */
-bool
-filetable_okfd(struct filetable *ft, int fd)
+bool filetable_okfd(struct filetable *ft, int fd)
 {
-	/* We have a fixed-size table so we don't need to check the size */
-	(void)ft;
+    /* We have a fixed-size table so we don't need to check the size */
+    (void)ft;
 
-	return (fd >= 0 && fd < OPEN_MAX);
+    return (fd >= 0 && fd < OPEN_MAX);
 }
 
 /*
@@ -146,22 +143,21 @@ filetable_okfd(struct filetable *ft, int fd)
  * returning a null openfile; it only yields files that are actually
  * open.
  */
-int
-filetable_get(struct filetable *ft, int fd, struct openfile **ret)
+int filetable_get(struct filetable *ft, int fd, struct openfile **ret)
 {
-	struct openfile *file;
+    struct openfile *file;
 
-	if (!filetable_okfd(ft, fd)) {
-		return EBADF;
-	}
+    if (!filetable_okfd(ft, fd)) {
+        return EBADF;
+    }
 
-	file = ft->ft_openfiles[fd];
-	if (file == NULL) {
-		return EBADF;
-	}
+    file = ft->ft_openfiles[fd];
+    if (file == NULL) {
+        return EBADF;
+    }
 
-	*ret = file;
-	return 0;
+    *ret = file;
+    return 0;
 }
 
 /*
@@ -181,10 +177,9 @@ filetable_get(struct filetable *ft, int fd, struct openfile **ret)
  * your own reference to the openfile (with openfile_incref) and call
  * filetable_put before mucking about.
  */
-void
-filetable_put(struct filetable *ft, int fd, struct openfile *file)
+void filetable_put(struct filetable *ft, int fd, struct openfile *file)
 {
-	KASSERT(ft->ft_openfiles[fd] == file);
+    KASSERT(ft->ft_openfiles[fd] == file);
 }
 
 /*
@@ -197,20 +192,19 @@ filetable_put(struct filetable *ft, int fd, struct openfile *file)
  * Consumes a reference to the openfile object. (That reference is
  * placed in the table.)
  */
-int
-filetable_place(struct filetable *ft, struct openfile *file, int *fd_ret)
+int filetable_place(struct filetable *ft, struct openfile *file, int *fd_ret)
 {
-	int fd;
+    int fd;
 
-	for (fd = 0; fd < OPEN_MAX; fd++) {
-		if (ft->ft_openfiles[fd] == NULL) {
-			ft->ft_openfiles[fd] = file;
-			*fd_ret = fd;
-			return 0;
-		}
-	}
+    for (fd = 0; fd < OPEN_MAX; fd++) {
+        if (ft->ft_openfiles[fd] == NULL) {
+            ft->ft_openfiles[fd] = file;
+            *fd_ret = fd;
+            return 0;
+        }
+    }
 
-	return EMFILE;
+    return EMFILE;
 }
 
 /*
@@ -226,12 +220,11 @@ filetable_place(struct filetable *ft, struct openfile *file, int *fd_ret)
  * Note that you can use this to place NULL in the filetable, which is
  * potentially handy.
  */
-void
-filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
-		  struct openfile **oldfile_ret)
+void filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
+                       struct openfile **oldfile_ret)
 {
-	KASSERT(filetable_okfd(ft, fd));
+    KASSERT(filetable_okfd(ft, fd));
 
-	*oldfile_ret = ft->ft_openfiles[fd];
-	ft->ft_openfiles[fd] = newfile;
+    *oldfile_ret = ft->ft_openfiles[fd];
+    ft->ft_openfiles[fd] = newfile;
 }

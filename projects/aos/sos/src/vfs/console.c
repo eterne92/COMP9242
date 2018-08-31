@@ -114,27 +114,6 @@ static void putchar_to_user(void)
         }
         ++idx;
     }
-    // }
-
-    //
-
-    // seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, the_console->vaddr + idx);
-    // /* there is a page fault */
-    // if (vaddr == 0) {
-    //     handle_page_fault(the_console->proc, vaddr, 0);
-    // }
-    // *(char *)vaddr = c;
-    // /* reach buffsize */
-    // if (the_console->index == the_console->buffsize - 1) {
-    //     syscall_reply(the_console->proc->reply, the_console->index + 1, 0);
-    //     the_console->vaddr = 0;
-    // }
-    // /* reach endline */
-    // else if (c == '\n') {
-    //     syscall_reply(the_console->proc->reply, the_console->index + 1, 0);
-    //     the_console->vaddr = 0;
-    // }
-    // the_console->index++;
 }
 
 static void read_handler(struct serial *serial, char c)

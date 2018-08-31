@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009, 2014
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,6 @@
 #ifndef _OPENFILE_H_
 #define _OPENFILE_H_
 
-#include <spinlock.h>
 
 
 /*
@@ -49,19 +48,19 @@
  * among multiple concurrent processes.
  */
 struct openfile {
-	struct vnode *of_vnode;
-	int of_accmode;	/* from open: O_RDONLY, O_WRONLY, or O_RDWR */
+    struct vnode *of_vnode;
+    int of_accmode; /* from open: O_RDONLY, O_WRONLY, or O_RDWR */
 
-	struct lock *of_offsetlock;	/* lock for of_offset */
-	off_t of_offset;
+    //struct lock *of_offsetlock;   /* lock for of_offset */
+    off_t of_offset;
 
-	struct spinlock of_reflock;	/* lock for of_refcount */
-	int of_refcount;
+    //struct spinlock of_reflock;   /* lock for of_refcount */
+    int of_refcount;
 };
 
 /* open a file (args must be kernel pointers; destroys filename) */
 int openfile_open(char *filename, int openflags, mode_t mode,
-		  struct openfile **ret);
+                  struct openfile **ret);
 
 /* adjust the refcount on an openfile */
 void openfile_incref(struct openfile *);

@@ -1,4 +1,4 @@
-#include "proc.h"
+#include "../proc.h"
 #include "syscall.h"
 #include <clock/clock.h>
 #include <clock/timestamp.h>

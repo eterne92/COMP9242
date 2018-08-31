@@ -32,22 +32,22 @@
  */
 
 #include <types.h>
-#include <kern/errno.h>
-#include <kern/fcntl.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <kern/limits.h>
 #include <kern/seek.h>
 #include <kern/stat.h>
-#include <lib.h>
+#include <stdlib.h>
 #include <uio.h>
-#include <proc.h>
+#include "../proc.h"
 #include <current.h>
-#include <synch.h>
+
 #include <copyinout.h>
-#include <vfs.h>
-#include <vnode.h>
-#include <openfile.h>
-#include <filetable.h>
-#include <syscall.h>
+#include "../vfs/vfs.h"
+#include "../vfs/vnode.h"
+#include "openfile.h"
+#include "filetable.h"
+#include "syscall.h"
 
 /*
  * open() - get the path with copyinstr, then use openfile_open and
@@ -67,7 +67,7 @@ int sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
         return EINVAL;
     }
 
-    kpath = kmalloc(PATH_MAX);
+    kpath = malloc(PATH_MAX);
     if (kpath == NULL) {
         return ENOMEM;
     }
@@ -75,7 +75,7 @@ int sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
     /* Get the pathname. */
     result = copyinstr(upath, kpath, PATH_MAX, NULL);
     if (result) {
-        kfree(kpath);
+        free(kpath);
         return result;
     }
 
@@ -85,10 +85,10 @@ int sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
      */
     result = openfile_open(kpath, flags, mode, &file);
     if (result) {
-        kfree(kpath);
+        free(kpath);
         return result;
     }
-    kfree(kpath);
+    free(kpath);
 
     /*
      * Place the file in our process's file table, which gives us
@@ -333,19 +333,19 @@ int sys_chdir(const_userptr_t path)
     char *pathbuf;
     int result;
 
-    pathbuf = kmalloc(PATH_MAX);
+    pathbuf = malloc(PATH_MAX);
     if (pathbuf == NULL) {
         return ENOMEM;
     }
 
     result = copyinstr(path, pathbuf, PATH_MAX, NULL);
     if (result) {
-        kfree(pathbuf);
+        free(pathbuf);
         return result;
     }
 
     result = vfs_chdir(pathbuf);
-    kfree(pathbuf);
+    free(pathbuf);
     return result;
 }
 

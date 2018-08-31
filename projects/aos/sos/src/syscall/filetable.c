@@ -31,18 +31,17 @@
  * File tables.
  */
 
-#include <types.h>
-#include <kern/errno.h>
-#include <lib.h>
-#include <openfile.h>
-#include <filetable.h>
-
+#include "../vfs/type.h"
+#include "filetable.h"
+#include "openfile.h"
+#include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
 
 /*
  * Construct a filetable.
  */
-struct filetable *
-filetable_create(void)
+struct filetable *filetable_create(void)
 {
     struct filetable *ft;
     int fd;
@@ -67,7 +66,7 @@ void filetable_destroy(struct filetable *ft)
 {
     int fd;
 
-    KASSERT(ft != NULL);
+    assert(ft != NULL);
 
     /* Close any open files. */
     for (fd = 0; fd < OPEN_MAX; fd++) {
@@ -179,7 +178,7 @@ int filetable_get(struct filetable *ft, int fd, struct openfile **ret)
  */
 void filetable_put(struct filetable *ft, int fd, struct openfile *file)
 {
-    KASSERT(ft->ft_openfiles[fd] == file);
+    assert(ft->ft_openfiles[fd] == file);
 }
 
 /*
@@ -221,9 +220,9 @@ int filetable_place(struct filetable *ft, struct openfile *file, int *fd_ret)
  * potentially handy.
  */
 void filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
-                       struct openfile **oldfile_ret)
+    struct openfile **oldfile_ret)
 {
-    KASSERT(filetable_okfd(ft, fd));
+    assert(filetable_okfd(ft, fd));
 
     *oldfile_ret = ft->ft_openfiles[fd];
     ft->ft_openfiles[fd] = newfile;

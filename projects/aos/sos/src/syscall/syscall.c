@@ -1,7 +1,7 @@
 #include "syscall.h"
-#include "addrspace.h"
-#include "proc.h"
-#include "pagetable.h"
+#include "../addrspace.h"
+#include "../proc.h"
+#include "../pagetable.h"
 #include <fcntl.h>
 #include <aos/debug.h>
 #include <aos/sel4_zf_logif.h>

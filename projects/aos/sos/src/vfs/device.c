@@ -159,7 +159,6 @@ int
 dev_stat(struct vnode *v, struct stat *statbuf)
 {
 	struct device *d = v->vn_data;
-	int result;
 
 	bzero(statbuf, sizeof(struct stat));
 
@@ -171,21 +170,21 @@ dev_stat(struct vnode *v, struct stat *statbuf)
 		statbuf->st_size = 0;
 	}
 
-	result = VOP_GETTYPE(v, &statbuf->st_mode);
-	if (result) {
-		return result;
-	}
-	/* Make up some plausible default permissions. */
-	statbuf->st_mode |= 0600;
+	// /* Make up some plausible default permissions. */
+	// statbuf->st_mode |= 0600;
 
-	statbuf->st_nlink = 1;
-	statbuf->st_blocks = d->d_blocks;
+	// statbuf->st_nlink = 1;
+	// statbuf->st_blocks = d->d_blocks;
 
-	/* The device number this device sits on (in OS/161, it doesn't) */
-	statbuf->st_dev = 0;
+	// /* The device number this device sits on (in OS/161, it doesn't) */
+	// statbuf->st_dev = 0;
 
-	/* The device number this device *is* */
-	statbuf->st_rdev = d->d_devnumber;
+	// /* The device number this device *is* */
+	// statbuf->st_rdev = d->d_devnumber;
+	statbuf->st_atime = 0;
+	statbuf->st_ctime = 0;
+	statbuf->st_size = 0;
+	statbuf->st_mode = 0;
 
 	return 0;
 }
@@ -204,7 +203,7 @@ dev_gettype(struct vnode *v, mode_t *ret)
 		*ret = S_IFBLK;
 	}
 	else {
-		*ret = S_IFCHR;
+		*ret = 2;
 	}
 	return 0;
 }
@@ -305,14 +304,12 @@ int
 dev_lookup(struct vnode *dir,
 	   char *pathname, struct vnode **result)
 {
+	(void) pathname;
 	/*
 	 * If the path was "device:", we get "". For that, return self.
 	 * Anything else is an error.
 	 * Increment the ref count of the vnode before returning it.
 	 */
-	if (strlen(pathname)>0) {
-		return ENOENT;
-	}
 	VOP_INCREF(dir);
 	*result = dir;
 	return 0;

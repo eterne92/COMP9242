@@ -27,16 +27,16 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _NFSFS_H_
-#define _NFSFS_H_
+#pragma once
 
 
 /*
  * Get abstract structure definitions
  */
-#include <fs.h>
-#include <vnode.h>
+#include "../vfs/fs.h"
+#include "../vfs/vnode.h"
 #include <sel4/sel4.h>
+#include <nfsc/libnfs.h>
 
 /*
  * Our structures
@@ -59,4 +59,3 @@ struct nfs_cb {
 	int status;
 };
 
-#endif /* _EMUFS_H_ */

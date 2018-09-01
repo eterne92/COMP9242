@@ -171,22 +171,6 @@ vfs_getroot(const char *devname, struct vnode **ret)
             return 0;
         }
 
-        /*
-        * If the device has a rawname and DEVNAME names that,
-        * return the device itself.
-        */
-		if (kd->kd_rawname!=NULL && !strcmp(kd->kd_rawname, devname)) {
-			assert(kd->kd_device != NULL);
-			VOP_INCREF(kd->kd_vnode);
-			*ret = kd->kd_vnode;
-			return 0;
-		}
-
-        /*
-        * If none of the above tests matched, we didn't name
-        * any of the names of this device, so go on to the
-        * next one.
-        */
     }
 
     /*
@@ -412,7 +396,7 @@ vfs_adddev(const char *devname, struct device *dev, int mountable)
 
 /*
  * Add a filesystem that does not have an underlying device.
- * This is used for emufs, but might also be used for network
+ * This is used for nfs, but might also be used for network
  * filesystems and the like.
  */
 int

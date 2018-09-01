@@ -1163,8 +1163,6 @@ EXTERN int nfs_opendir_async(struct nfs_context *nfs, const char *path,
 EXTERN int nfs_opendir(struct nfs_context *nfs, const char *path,
                        struct nfsdir **nfsdir);
 
-
-
 /*
  * READDIR()
  */

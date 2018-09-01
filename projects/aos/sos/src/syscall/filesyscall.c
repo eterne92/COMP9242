@@ -59,7 +59,6 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
     struct openfile *file;
     bool seekable;
     off_t pos;
-    struct uio useruio;
     int result;
 
     /* better be a valid file descriptor */
@@ -100,7 +99,7 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
      * The amount read (or written) is the original buffer size,
      * minus how much is left in it.
      */
-    *retval = size - useruio.uio_resid;
+    *retval = size - my_uio.uio_resid;
 
     return 0;
 
@@ -157,7 +156,7 @@ void *_sys_read(proc *cur_proc) {
 	seL4_Word fd = seL4_GetMR(1);
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
-	int ret;
+	size_t ret;
 
 	if(validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ, O_WRONLY, &ret);
@@ -173,7 +172,7 @@ void *_sys_write(proc *cur_proc) {
 	seL4_Word fd = seL4_GetMR(1);
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
-    int ret;
+    size_t ret;
 
 	if(validate_virtual_address(cur_proc->as, vaddr, length, WRITE)) {
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
@@ -224,7 +223,7 @@ void *_sys_close(proc *cur_proc)
 
 	seL4_Word fd = seL4_GetMR(1);
 
-    struct oepnfile *file;
+    struct openfile *file;
     int result = filetable_get(cur_proc->openfile_table, fd, &file);
     if(result != 0){
         syscall_reply(cur_proc->reply, 0, 0);

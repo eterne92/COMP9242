@@ -42,10 +42,10 @@
 #include "nfsfs.h"
 #include "nfs.h"
 #include "../syscall/syscall.h"
-#include <picoro/picoro.h>
+// #include <picoro/picoro.h>
+#include <nfsc/libnfs.h>
 #include <string.h>
 
-// #include <nfsc/libnfs.h>
 
 #ifndef SOS_NFS_DIR
 #  ifdef CONFIG_SOS_NFS_DIR

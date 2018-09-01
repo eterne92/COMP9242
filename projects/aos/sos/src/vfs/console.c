@@ -91,7 +91,6 @@ static void putchar_to_user(void)
     }
     int idx = uio->length - uio->uio_resid;
     char c;
-    // while (uio->uio_resid > 0) {
     while (the_console->n > 0) {
         seL4_Word vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
         if (vaddr == 0) {

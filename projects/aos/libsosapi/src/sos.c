@@ -83,7 +83,9 @@ int sos_getdirent(int pos, char *name, size_t nbyte)
     seL4_SetMR(1, (seL4_Word)pos);
     seL4_SetMR(2, (seL4_Word)name);
     seL4_SetMR(3, (seL4_Word)nbyte);
-    return -1;
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+    int ret = seL4_GetMR(0);
+    return ret;
 }
 
 int sos_stat(const char *path, sos_stat_t *buf)

@@ -233,3 +233,24 @@ void *_sys_close(proc *cur_proc)
 	syscall_reply(cur_proc->reply, 0, 0);
 	return NULL;
 }
+
+void *_sys_getdirent(proc *cur_proc)
+{
+    int pos = (int)seL4_GetMR(1);
+    char *path = (char *) seL4_GetMR(2);
+    size_t nbytes = (size_t)seL4_GetMR(3);
+    if (validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
+         struct vnode *vn;
+        int ret, errno = 0;
+        vfs_lookup(str, &vn);
+        struct uio my_uio;
+        uio_init(&my_uio, (seL4_Word) path, nbytes, 0, UIO_READ, cur_proc);
+        ret = VOP_GETDIRENTRY(vn, &my_uio);
+        errno = !ret ? 0 : -1;
+        syscall_reply(cur_proc->reply, ret, errno);
+    } else {
+        syscall_reply(cur_proc->reply, -1, EFAULT);
+    }
+   
+    return NULL;
+}

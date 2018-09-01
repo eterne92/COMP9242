@@ -31,7 +31,7 @@
 
 
 #include <autoconf.h>
-// #include "../vfs/type.h"
+#include "../vfs/type.h"
 #include <errno.h>
 #include <fcntl.h>
 #include "../vfs/stat.h"
@@ -42,7 +42,7 @@
 #include "nfsfs.h"
 #include "nfs.h"
 #include "../syscall/syscall.h"
-// #include <picoro/picoro.h>
+#include <picoro/picoro.h>
 #include <nfsc/libnfs.h>
 #include <string.h>
 
@@ -253,6 +253,28 @@ _nfs_getdirentry(struct vnode *v, struct uio *uio)
 {
 	struct nfs_vnode *nv = v->vn_data;
 	struct nfs_fs *nf = v->vn_fs->fs_data;
+	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+	char buf[NAME_MAX];
+	int ret;
+	// calculate the remaining number of bytes within the current page
+	// first read n bytes then keep reading until uio_resid == 0
+	size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+	if (uio->uio_resid < n) {
+        n = uio->uio_resid;
+    }
+	while (uio->uio_resid > 0) {
+		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+		if (!sos_vaddr) {
+			handle_page_fault(uio->proc, user_vaddr, 0);
+            sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+		}
+		memcpy(buf, (void *)sos_vaddr, n);
+		uio->uio_resid -= n;
+		user_vaddr += n;
+		n = uio->len - n;
+	}
+	// opendir at bootstrap and keep it open or open when getdirent is called
+	//struct nfsdirent *entry = nfs_readdir(nf->context, XXX);
 	(void) v;
 	(void) uio;
 	(void) nv;

@@ -6,6 +6,7 @@
 #include "vfs/vfs.h"
 #include "vfs/uio.h"
 #include <fcntl.h>
+#include <errno.h>
 
 static struct vnode *vn;
 /* only used to copy string size less then 256 */
@@ -63,7 +64,10 @@ void _sys_open(proc *cur_proc) {
 
 	ret = vfs_open(str, mode, 0, &vn);
 	printf("vnode is %lp\n", vn);
-	syscall_reply(cur_proc->reply, 4, 0);
+	/* this is a sync call, we reply right now */
+	if(vn != NULL){
+		syscall_reply(cur_proc->reply, 4, 0);
+	}
 }
 
 
@@ -80,7 +84,7 @@ void *_sys_read(proc *cur_proc) {
 		uio_init(&my_uio, vaddr, length, 0, UIO_READ, cur_proc);
 		VOP_READ(vn, &my_uio);
 	} else {
-		syscall_reply(cur_proc->reply, -1, -1);
+		syscall_reply(cur_proc->reply, -1, EFAULT);
 	}
 	return NULL;
 }
@@ -98,7 +102,7 @@ void *_sys_write(proc *cur_proc) {
 		uio_init(&my_uio, vaddr, length, 0, UIO_WRITE, cur_proc);
 		VOP_WRITE(vn, &my_uio);
 	} else {
-		syscall_reply(cur_proc->reply, -1, -1);
+		syscall_reply(cur_proc->reply, -1, EFAULT);
 	}
 	return NULL;
 }

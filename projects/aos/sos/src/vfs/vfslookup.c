@@ -74,14 +74,12 @@ vfs_setbootfs(const char *fsname)
 	int result;
 	struct vnode *newguy;
 
-	vfs_biglock_acquire();
 
 	snprintf(tmp, sizeof(tmp)-1, "%s", fsname);
 	s = strchr(tmp, ':');
 	if (s) {
 		/* If there's a colon, it must be at the end */
 		if (strlen(s)>0) {
-			vfs_biglock_release();
 			return EINVAL;
 		}
 	}
@@ -91,19 +89,16 @@ vfs_setbootfs(const char *fsname)
 
 	result = vfs_chdir(tmp);
 	if (result) {
-		vfs_biglock_release();
 		return result;
 	}
 
 	result = vfs_getcurdir(&newguy);
 	if (result) {
-		vfs_biglock_release();
 		return result;
 	}
 
 	change_bootfs(newguy);
 
-	vfs_biglock_release();
 	return 0;
 }
 
@@ -131,8 +126,8 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
 	int slash=-1, colon=-1, i;
 	struct vnode *vn;
 	int result;
+	int length;
 
-	assert(vfs_biglock_do_i_hold());
 
 	/*
 	 * Entirely empty filenames aren't legal.
@@ -141,94 +136,22 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
 		return EINVAL;
 	}
 
-	/*
-	 * Locate the first colon or slash.
-	 */
-
-	for (i=0; path[i]; i++) {
-		if (path[i]==':') {
-			colon = i;
-			break;
-		}
-		if (path[i]=='/') {
-			slash = i;
-			break;
-		}
-	}
-
-	if (colon < 0 && slash != 0) {
-		/*
-		 * No colon before a slash, so no device name
-		 * specified, and the slash isn't leading or is also
-		 * absent, so this is a relative path or just a bare
-		 * filename. Start from the current directory, and
-		 * use the whole thing as the subpath.
-		 */
-		*subpath = path;
-		return vfs_getcurdir(startvn);
-	}
-
-	if (colon>0) {
-		/* device:path - get root of device's filesystem */
-		path[colon]=0;
-		while (path[colon+1]=='/') {
-			/* device:/path - skip slash, treat as device:path */
-			colon++;
-		}
-		*subpath = &path[colon+1];
-
+	length = strlen(path);
+	if(path[length - 1] == ':'){
+		/* it's a device */
 		result = vfs_getroot(path, startvn);
 		if (result) {
 			return result;
 		}
-
+		*subpath = &path[length];
+	}
+	else{
+		/* it's our nfs fs system */
+		*startvn = bootfs_vnode;
+		*subpath = path;
 		return 0;
 	}
-
-	/*
-	 * We have either /path or :path.
-	 *
-	 * /path is a path relative to the root of the "boot filesystem".
-	 * :path is a path relative to the root of the current filesystem.
-	 */
-	assert(colon==0 || slash==0);
-
-	if (path[0]=='/') {
-		if (bootfs_vnode==NULL) {
-			return ENOENT;
-		}
-		VOP_INCREF(bootfs_vnode);
-		*startvn = bootfs_vnode;
-	}
-	else {
-		assert(path[0]==':');
-
-		result = vfs_getcurdir(&vn);
-		if (result) {
-			return result;
-		}
-
-		/*
-		 * The current directory may not be a device, so it
-		 * must have a fs.
-		 */
-		assert(vn->vn_fs!=NULL);
-
-		result = FSOP_GETROOT(vn->vn_fs, startvn);
-
-		VOP_DECREF(vn);
-
-		if (result) {
-			return result;
-		}
-	}
-
-	while (path[1]=='/') {
-		/* ///... or :/... */
-		path++;
-	}
-
-	*subpath = path+1;
+	
 
 	return 0;
 }
@@ -245,29 +168,26 @@ vfs_lookparent(char *path, struct vnode **retval,
 	struct vnode *startvn;
 	int result;
 
-	vfs_biglock_acquire();
 
 	result = getdevice(path, &path, &startvn);
 	if (result) {
-		vfs_biglock_release();
 		return result;
 	}
 
-	if (strlen(path)==0) {
-		/*
-		 * It does not make sense to use just a device name in
-		 * a context where "lookparent" is the desired
-		 * operation.
-		 */
-		result = EINVAL;
-	}
-	else {
-		result = VOP_LOOKPARENT(startvn, path, retval, buf, buflen);
-	}
+	// if (strlen(path)==0) {
+	// 	/*
+	// 	 * It does not make sense to use just a device name in
+	// 	 * a context where "lookparent" is the desired
+	// 	 * operation.
+	// 	 */
+	// 	result = EINVAL;
+	// }
+	// else {
+	// 	result = VOP_LOOKPARENT(startvn, path, retval, buf, buflen);
+	// }
 
 	VOP_DECREF(startvn);
 
-	vfs_biglock_release();
 	return result;
 }
 
@@ -277,23 +197,14 @@ vfs_lookup(char *path, struct vnode **retval)
 	struct vnode *startvn;
 	int result;
 
-	vfs_biglock_acquire();
-
 	result = getdevice(path, &path, &startvn);
 	if (result) {
-		vfs_biglock_release();
 		return result;
 	}
 
-	if (strlen(path)==0) {
-		*retval = startvn;
-		vfs_biglock_release();
-		return 0;
-	}
 
 	result = VOP_LOOKUP(startvn, path, retval);
 
 	VOP_DECREF(startvn);
-	vfs_biglock_release();
 	return result;
 }

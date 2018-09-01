@@ -73,7 +73,7 @@ vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
 			return result;
 		}
 
-		result = VOP_CREAT(dir, name, excl, mode, &vn);
+		result = VOP_CREAT(dir, path, excl, mode, &vn);
 
 		VOP_DECREF(dir);
 	}
@@ -85,7 +85,10 @@ vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
 		return result;
 	}
 
-	assert(vn != NULL);
+	if(vn == NULL){
+		/* this must been a async call */
+		return 0;
+	}
 
 	result = VOP_EACHOPEN(vn, openflags);
 	if (result) {

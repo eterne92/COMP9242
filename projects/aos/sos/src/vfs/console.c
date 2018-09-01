@@ -155,7 +155,7 @@ static int con_io(struct device *dev, struct uio *uio)
     printf("con_io called\n");
     printf("uio %p\n", uio);
     int nbytes = 0, count;
-    int n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+    size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
     if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
@@ -213,7 +213,8 @@ static int con_reclaim(struct device *dev)
     proc *proc = get_cur_proc();
     if (proc == cs->proc) {
         cs->vaddr = cs->n = cs->cs_gotchars_head = cs->cs_gotchars_tail = 0;
-        cs->uio = cs->proc = NULL;
+        cs->uio = NULL;
+        cs->proc = NULL;
     }
     return 0;
 }

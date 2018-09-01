@@ -50,7 +50,7 @@ struct con_softc {
     seL4_Word vaddr;
     unsigned cs_gotchars_head; /* next slot to put a char in   */
     unsigned cs_gotchars_tail; /* next slot to take a char out */
-	int n;					   /* number of characters in the buffer */
+	size_t n;					   /* number of characters in the buffer */
 	char console_buffer[BUFFER_SIZE];
 
     struct uio *uio;

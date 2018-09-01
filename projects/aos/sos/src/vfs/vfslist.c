@@ -157,31 +157,6 @@ vfs_getroot(const char *devname, struct vnode **ret)
 	for (i=0; i<num; i++) {
         kd = knowndevarray_get(knowndevs, i);
 
-		// /*
-		//  * If this device has a mounted filesystem, and
-		//  * DEVNAME names either the filesystem or the device,
-		//  * return the root of the filesystem.
-		//  *
-		//  * If it has no mounted filesystem, it's mountable,
-		//  * and DEVNAME names the device, return ENXIO.
-		//  */
-
-		// if (kd->kd_fs != NULL && kd->kd_fs != SWAP_FS) {
-		// 	const char *volname;
-		// 	volname = FSOP_GETVOLNAME(kd->kd_fs);
-
-		// 	if (!strcmp(kd->kd_name, devname) ||
-		// 	    (volname!=NULL && !strcmp(volname, devname))) {
-		// 		return FSOP_GETROOT(kd->kd_fs, ret);
-		// 	}
-		// }
-		// else {
-		// 	if (kd->kd_rawname!=NULL &&
-		// 	    !strcmp(kd->kd_name, devname)) {
-		// 		return ENXIO;
-		// 	}
-		// }
-
         /*
         * If DEVNAME names the device, and we get here, it
         * must have no fs and not be mountable. In this case,

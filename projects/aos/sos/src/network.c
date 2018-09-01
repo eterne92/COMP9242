@@ -45,6 +45,7 @@
 #include "dma.h"
 #include "mapping.h"
 #include "ut.h"
+#include "nfs/nfs.h"
 
 
 #ifndef SOS_NFS_DIR
@@ -64,7 +65,6 @@ const uint8_t OUR_MAC[6] = {0x00,0x1e,0x06,0x36,0x05,0xe5};
 static struct pico_device pico_dev;
 static struct nfs_context *nfs = NULL;
 static seL4_CPtr irq_handler_network, irq_handler_tick;
-static void nfs_mount_cb(int status, struct nfs_context *nfs, void *data, void *private_data);
 
 static int pico_eth_send(UNUSED struct pico_device *dev, void *input_buf, int len)
 {

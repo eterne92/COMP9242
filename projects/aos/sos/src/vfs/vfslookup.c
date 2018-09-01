@@ -128,20 +128,17 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
     }
 
     length = strlen(path);
-    if (path[length - 1] == ':') {
-        /* it's a device */
-        result = vfs_getroot(path, startvn);
-        if (result) {
-            return result;
-        }
-        *subpath = &path[length];
-    } else {
-        /* it's our nfs fs system */
-        *startvn = bootfs_vnode;
-        *subpath = path;
-        return 0;
-    }
-
+	result = vfs_getroot(path, startvn);
+	if (result == ENODEV) {
+		/* it's our nfs fs system */
+		*startvn = bootfs_vnode;
+		*subpath = path;
+		return 0;
+	}
+	else if(result != 0){
+		return result;
+	}
+	*subpath = &path[length];
     return 0;
 }
 
@@ -160,18 +157,6 @@ int vfs_lookparent(char *path, struct vnode **retval,
     if (result) {
         return result;
     }
-
-    // if (strlen(path)==0) {
-    // 	/*
-    // 	 * It does not make sense to use just a device name in
-    // 	 * a context where "lookparent" is the desired
-    // 	 * operation.
-    // 	 */
-    // 	result = EINVAL;
-    // }
-    // else {
-    // 	result = VOP_LOOKPARENT(startvn, path, retval, buf, buflen);
-    // }
 
     VOP_DECREF(startvn);
 

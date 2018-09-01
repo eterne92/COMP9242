@@ -48,7 +48,7 @@
  */
 #include "console.h"
 #include "../pagetable.h"
-#include "../syscall.h"
+#include "../syscall/syscall.h"
 #include "device.h"
 #include "uio.h"
 #include "vfs.h"

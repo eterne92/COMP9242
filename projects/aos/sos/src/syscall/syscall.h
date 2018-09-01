@@ -49,12 +49,12 @@ void _sos_sys_time_stamp(void);
 void _sos_sys_usleep(void);
 /* file syscalls */
 
-void _sys_open(proc *cur_proc);
-void* _sys_read(proc *cur_proc);
-void* _sys_write(proc *cur_proc);
-void _sys_close(proc *cur_proc);
+void *_sys_open(proc *cur_proc);
+void *_sys_read(proc *cur_proc);
+void *_sys_write(proc *cur_proc);
+void *_sys_close(proc *cur_proc);
 
-void _sys_stat(proc *cur_proc);
+void *_sys_stat(proc *cur_proc);
 
 void _sys_brk(proc *cur_proc);
 void _sys_mmap(proc *cur_proc);

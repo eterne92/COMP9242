@@ -93,12 +93,12 @@ long sys_readv(va_list ap)
     return read;
 }
 
-long sys_stat(va_list ap)
-{
-    const char *path = va_arg(ap, char*);
-    struct stat *buf = va_arg(ap, struct stat*)
-    return sos_stat(path, buf);
-}
+// long sys_stat(va_list ap)
+// {
+//     const char *path = va_arg(ap, char*);
+//     struct stat *buf = va_arg(ap, struct stat*)
+//     return sos_stat(path, buf);
+// }
 
 long sys_read(va_list ap)
 {

@@ -30,19 +30,30 @@
 /* wrapper of nfs */
 
 
-#include "../vfs/type.h"
+#include <autoconf.h>
+// #include "../vfs/type.h"
 #include <errno.h>
 #include <fcntl.h>
 #include "../vfs/stat.h"
 #include "../vfs/array.h"
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
+#include "../pagetable.h"
 #include "nfsfs.h"
 #include "nfs.h"
-#include <nfsc/libnfs.h>
 #include "../syscall/syscall.h"
-#include <nfsc/libnfs.h>
 #include <picoro/picoro.h>
+#include <string.h>
+
+// #include <nfsc/libnfs.h>
+
+#ifndef SOS_NFS_DIR
+#  ifdef CONFIG_SOS_NFS_DIR
+#    define SOS_NFS_DIR CONFIG_SOS_NFS_DIR
+#  else
+#    define SOS_NFS_DIR ""
+#  endif
+#endif
 
 struct nfs_vnode *nfs_vn = NULL;
 
@@ -73,14 +84,6 @@ static void nfs_creat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 	cb->handle = data;
 }
 
-static void nfs_open_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
-{
-	struct nfs_cb *cb = private_data;
-	cb->handle = NULL;
-	cb->status = status;
-}
-
 //
 // vnode functions
 //
@@ -101,8 +104,10 @@ _nfs_eachopen(struct vnode *v, int openflags)
 static void nfs_close_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 						void *private_data)
 {
+	(void) data;
 	struct nfs_cb *cb = private_data;
 	cb->handle = NULL;
+	cb->status = status;
 }
 
 /*
@@ -132,7 +137,7 @@ _nfs_reclaim(struct vnode *v)
 	}
 	if (ix == num) {
 		/* should never hanppen */
-		ZF_LOG_E("vnode not exist\n");
+		assert(false);
 	}
 
 	vnodearray_remove(nf->nfs_vnodes, ix);
@@ -207,7 +212,7 @@ _nfs_read(struct vnode *v, struct uio *uio)
 		result = nfs_pread_async(nf->context,nv->handle,uio->uio_offset, 
 								 count, nfs_read_cb, &cb);
 		if(result){
-			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			syscall_reply(uio->proc->reply, -1, 0);
 			return result;
 		}
 		/* wait until callback done */
@@ -216,14 +221,14 @@ _nfs_read(struct vnode *v, struct uio *uio)
 		}
 		/* callback got sth wrong */
 		if(cb.status < 0){
-			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			syscall_reply(uio->proc->reply, -1, 0);
 			return 0;
 		}
 
 		nbytes = cb.status;
 		/* use handle to get the return data pointer */
 		ret_data = cb.handle;
-		result = memcpy((void *) sos_vaddr, ret_data, nbytes);
+		memcpy((void *) sos_vaddr, ret_data, nbytes);
 		if(nbytes < count){
 			/* it's over */
 			uio->uio_resid -= nbytes;
@@ -248,14 +253,18 @@ _nfs_getdirentry(struct vnode *v, struct uio *uio)
 {
 	struct nfs_vnode *nv = v->vn_data;
 	struct nfs_fs *nf = v->vn_fs->fs_data;
+	(void) v;
+	(void) uio;
+	(void) nv;
+	(void) nf;
 
-
-	return emu_readdir(ev->ev_emu, ev->ev_handle, amt, uio);
+	return 0;
 }
 
 static void nfs_write_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 						void *private_data)
 {
+	(void) data;
 	struct nfs_cb *cb = private_data;
 	cb->status = status;
 }
@@ -271,7 +280,6 @@ _nfs_write(struct vnode *v, struct uio *uio)
 	struct nfs_vnode *nv = v->vn_data;
 	struct nfs_fs *nf = v->vn_fs->fs_data;
 	struct nfs_cb cb;
-	void *ret_data;
 	int result;
 
 	assert(uio->uio_rw==UIO_WRITE);
@@ -299,9 +307,9 @@ _nfs_write(struct vnode *v, struct uio *uio)
 		cb.handle = nv->handle;
 
 		result = nfs_pwrite_async(nf->context,nv->handle,uio->uio_offset, 
-								  (void *) sos_vaddr, count, nfs_write_cb, &cb);
+								count, (void *) sos_vaddr, nfs_write_cb, &cb);
 		if(result){
-			syscall_reply(uio->proc->reply, -1, -1);
+			syscall_reply(uio->proc->reply, -1, 0);
 			return result;
 		}
 		/* wait until callback done */
@@ -310,13 +318,11 @@ _nfs_write(struct vnode *v, struct uio *uio)
 		}
 		/* callback got sth wrong */
 		if(cb.status < 0){
-			syscall_reply(uio->proc->reply, -1, cb.status);
+			syscall_reply(uio->proc->reply, -1, 0);
 			return 0;
 		}
 
 		nbytes = cb.status;
-		/* use handle to get the return data pointer */
-		ret_data = cb.handle;
 		if(nbytes < count){
 			/* it's over */
 			uio->uio_resid -= nbytes;
@@ -468,7 +474,8 @@ int
 _nfs_creat(struct vnode *root, const char *name, bool excl, mode_t mode,
 	    struct vnode **ret)
 {
-	struct nfs_fs *nf = root->vn_fs->fs_data;
+	(void) mode;
+	(void) excl;
 	struct nfs_vnode *newguy;
 	int result;
 
@@ -488,7 +495,6 @@ static
 int
 _nfs_lookup(struct vnode *root, char *pathname, struct vnode **ret)
 {
-	struct nfs_fs *nf = root->vn_fs->fs_data;
 	struct nfs_vnode *newguy;
 	int result;
 
@@ -997,20 +1003,23 @@ struct vnode *nfs_bootstrap(struct nfs_context *context)
 {
 	nfs_vn = (struct nfs_vnode *)malloc(sizeof(struct nfs_vnode));
 	if (!nfs_vn) {
-		ZF_LOG_E("Out of Memory!");
+		printf("Out of Memory!");
+		assert(false);
 		return NULL;
 	}
 	struct nfs_fs *fs = (struct nfs_fs *)malloc(sizeof(fs));
 	if (!fs) {
 		free(nfs_vn);
-		ZF_LOG_E("Out of Memory!");
+		printf("Out of Memory!");
+		assert(false);
 		return NULL;
 	}
 	fs->nfs_vnodes = vnodearray_create();
 	if (!fs->nfs_vnodes) {
 		free(nfs_vn);
 		free(fs);
-		ZF_LOG_E("Out of Memory!");
+		printf("Out of Memory!");
+		assert(false);
 		return NULL;
 	}
 	fs->nfs_fsdata.fs_ops = &nfs_fsops;

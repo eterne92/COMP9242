@@ -36,8 +36,9 @@
 #include "../vfs/fs.h"
 #include "../vfs/vnode.h"
 #include <sel4/sel4.h>
-#include <nfsc/libnfs.h>
 
+struct nfsfh;
+struct nfs_context;
 /*
  * Our structures
  */
@@ -59,3 +60,6 @@ struct nfs_cb {
 	int status;
 };
 
+
+// int nfs_create_async(struct nfs_context *nfs, const char *path,
+//                             int flags, int mode, nfs_cb cb, void *private_data);

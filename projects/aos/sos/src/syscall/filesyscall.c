@@ -1,11 +1,13 @@
 #include "syscall.h"
-#include "pagetable.h"
-#include "proc.h"
-#include "addrspace.h"
-#include "vfs/stat.h"
-#include "vfs/vnode.h"
-#include "vfs/vfs.h"
-#include "vfs/uio.h"
+#include "../pagetable.h"
+#include "../proc.h"
+#include "../addrspace.h"
+#include "../vfs/stat.h"
+#include "../vfs/vnode.h"
+#include "../vfs/vfs.h"
+#include "../vfs/uio.h"
+#include "openfile.h"
+#include "filetable.h"
 #include <fcntl.h>
 #include <errno.h>
 
@@ -52,12 +54,11 @@ static int copyinstr(proc *proc, const char *src, char *dest, size_t length){
  * Look up the fd, then use VOP_READ or VOP_WRITE.
  */
 static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum uio_rw rw,
-                 		 int badaccmode, ssize_t *retval)
+                 		 int badaccmode, size_t *retval)
 {
     struct openfile *file;
     bool seekable;
     off_t pos;
-    struct iovec iov;
     struct uio useruio;
     int result;
 
@@ -120,7 +121,7 @@ void *_sys_open(proc *cur_proc) {
 	seL4_Word openflags = seL4_GetMR(2);
 	seL4_Word mode = seL4_GetMR(3);
 	struct openfile *file;
-	if ((openflags & allflags) != flags) {
+	if ((openflags & allflags) != openflags) {
         /* unknown flags were set */
         syscall_reply(cur_proc->reply, ret, -1);
     }
@@ -139,13 +140,14 @@ void *_sys_open(proc *cur_proc) {
      * Place the file in our process's file table, which gives us
      * the result file descriptor.
      */
-    ret = filetable_place(curproc->p_filetable, file, retval);
+    int fd;
+    ret = filetable_place(cur_proc->openfile_table, file, &fd);
     if (ret) {
         openfile_decref(file);
 		syscall_reply(cur_proc->reply, -1, -1);
     }
 
-	syscall_reply(cur_proc->reply, ret, 0);
+	syscall_reply(cur_proc->reply, fd, 0);
 	return NULL;
 }
 
@@ -159,6 +161,7 @@ void *_sys_read(proc *cur_proc) {
 
 	if(validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ, O_WRONLY, &ret);
+        syscall_reply(cur_proc->reply, ret, 0);
 	} else {
 		syscall_reply(cur_proc->reply, -1, EFAULT);
 	}
@@ -170,9 +173,11 @@ void *_sys_write(proc *cur_proc) {
 	seL4_Word fd = seL4_GetMR(1);
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
+    int ret;
 
 	if(validate_virtual_address(cur_proc->as, vaddr, length, WRITE)) {
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
+        syscall_reply(cur_proc->reply, ret, 0);
 	} else {
 		syscall_reply(cur_proc->reply, -1, EFAULT);
 	}
@@ -182,7 +187,7 @@ void *_sys_write(proc *cur_proc) {
 void *_sys_stat(proc *cur_proc)
 {
 	printf("in stat\n");
-	struct stat;
+	struct stat st;
 	mode_t result;
 	int ret;
 	seL4_Word path = seL4_GetMR(1);
@@ -192,19 +197,21 @@ void *_sys_stat(proc *cur_proc)
 		ret = -1;
 		syscall_reply(cur_proc->reply, ret, 0);
 	}
+    struct vnode *vn;
+    vfs_lookup(str, &vn);
 	VOP_GETTYPE(vn, &result);
-	ret = VOP_STAT(vn, &stat);
+	ret = VOP_STAT(vn, &st);
 	seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 7);
     /* Set the first (and only) word in the message to 0 */
     seL4_SetMR(0, ret);
     seL4_SetMR(1, errno);
 	seL4_SetMR(2, result);
-	seL4_SetMR(3, stat.st_mode);
-	seL4_SetMR(4, stat.st_size);
-	seL4_SetMR(5, stat.st_ctime);
-	seL4_SetMR(6, stat.st_atime);
+	seL4_SetMR(3, st.st_mode);
+	seL4_SetMR(4, st.st_size);
+	seL4_SetMR(5, st.st_ctime);
+	seL4_SetMR(6, st.st_atime);
     /* Send the reply to the saved reply capability. */
-    seL4_Send(reply, reply_msg);
+    seL4_Send(cur_proc->reply, reply_msg);
     /* Free the slot we allocated for the reply - it is now empty, as the reply
          * capability was consumed by the send. */
     cspace_free_slot(global_cspace, cur_proc->reply);
@@ -215,9 +222,15 @@ void *_sys_close(proc *cur_proc)
 {
 	printf("in close\n");
 
-	seL4_Word file = seL4_GetMR(1);
+	seL4_Word fd = seL4_GetMR(1);
 
-	VOP_DECREF(vn);
+    struct oepnfile *file;
+    int result = filetable_get(cur_proc->openfile_table, fd, &file);
+    if(result != 0){
+        syscall_reply(cur_proc->reply, 0, 0);
+        return NULL;
+    }
+    openfile_decref(file);
 	syscall_reply(cur_proc->reply, 0, 0);
 	return NULL;
 }

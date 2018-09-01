@@ -115,7 +115,6 @@ void vfs_clearbootfs(void)
 static int
 getdevice(char *path, char **subpath, struct vnode **startvn)
 {
-    int slash = -1, colon = -1, i;
     struct vnode *vn;
     int result;
     int length;
@@ -150,6 +149,8 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
 int vfs_lookparent(char *path, struct vnode **retval,
     char *buf, size_t buflen)
 {
+    (void) buf;
+    (void) buflen;
     struct vnode *startvn;
     int result;
 
@@ -159,6 +160,8 @@ int vfs_lookparent(char *path, struct vnode **retval,
     }
 
     VOP_DECREF(startvn);
+
+    *retval = startvn;
 
     return result;
 }

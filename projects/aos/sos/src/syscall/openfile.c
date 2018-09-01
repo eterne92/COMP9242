@@ -53,15 +53,6 @@ static struct openfile *openfile_create(struct vnode *vn, int accmode)
     if (file == NULL) {
         return NULL;
     }
-
-    file->of_offsetlock = lock_create("openfile");
-    if (file->of_offsetlock == NULL) {
-        free(file);
-        return NULL;
-    }
-
-    spinlock_init(&file->of_reflock);
-
     file->of_vnode = vn;
     file->of_accmode = accmode;
     file->of_offset = 0;
@@ -78,9 +69,6 @@ static void openfile_destroy(struct openfile *file)
 {
     /* balance vfs_open with vfs_close (not VOP_DECREF) */
     vfs_close(file->of_vnode);
-
-    spinlock_cleanup(&file->of_reflock);
-    lock_destroy(file->of_offsetlock);
     free(file);
 }
 
@@ -114,9 +102,7 @@ int openfile_open(char *filename, int openflags, mode_t mode,
  */
 void openfile_incref(struct openfile *file)
 {
-    spinlock_acquire(&file->of_reflock);
     file->of_refcount++;
-    spinlock_release(&file->of_reflock);
 }
 
 /*
@@ -125,15 +111,12 @@ void openfile_incref(struct openfile *file)
  */
 void openfile_decref(struct openfile *file)
 {
-    spinlock_acquire(&file->of_reflock);
 
     /* if this is the last close of this file, free it up */
     if (file->of_refcount == 1) {
-        spinlock_release(&file->of_reflock);
         openfile_destroy(file);
     } else {
         assert(file->of_refcount > 1);
         file->of_refcount--;
-        spinlock_release(&file->of_reflock);
     }
 }

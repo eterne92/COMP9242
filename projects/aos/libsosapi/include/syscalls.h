@@ -30,6 +30,7 @@ long sys_openat(va_list ap);
 long sys_close(va_list ap);
 long sys_readv(va_list ap);
 long sys_read(va_list ap);
+long sys_stat(va_list ap);
 long sys_ioctl(va_list ap);
 long sys_brk(va_list ap);
 long sys_mmap(va_list ap);

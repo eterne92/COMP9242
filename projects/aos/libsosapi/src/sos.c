@@ -91,11 +91,17 @@ int sos_stat(const char *path, sos_stat_t *buf)
     assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
-    tag = seL4_MessageInfo_new(0, 0, 0, 3);
+    tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, SOS_SYS_STAT);
     seL4_SetMR(1, (seL4_Word)path);
-    seL4_SetMR(2, (seL4_Word)buf);
-    return -1;
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+    int ret = seL4_GetMR(0);
+    buf->st_type = (st_type_t) seL4_GetMR(2);
+    buf->st_fmode = (fmode_t) seL4_GetMR(3);
+    buf->st_size = (unsigned) seL4_GetMR(4);
+    buf->st_ctime = (long) seL4_GetMR(5);
+    buf->st_atime = (long) seL4_GetMR(6);
+    return ret;
 }
 
 pid_t sos_process_create(const char *path)

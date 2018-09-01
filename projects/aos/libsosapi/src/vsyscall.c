@@ -25,6 +25,7 @@ void sosapi_init_syscall_table(void)
     muslcsys_install_syscall(__NR_close, sys_close);
     muslcsys_install_syscall(__NR_readv, sys_readv);
     muslcsys_install_syscall(__NR_read, sys_read);
+    muslcsys_install_syscall(__NR_stat, sys_stat);
     muslcsys_install_syscall(__NR_ioctl, sys_ioctl);
     muslcsys_install_syscall(__NR_openat, sys_openat);
     muslcsys_install_syscall(__NR_brk, sys_brk);

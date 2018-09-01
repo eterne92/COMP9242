@@ -84,7 +84,7 @@ static int cat(int argc, char **argv)
     printf("<%s>\n", argv[1]);
 
     fd = open(argv[1], O_RDONLY);
-    stdout_fd = open("console", O_WRONLY);
+    stdout_fd = open("console:", O_WRONLY);
 
     assert(fd >= 0);
 

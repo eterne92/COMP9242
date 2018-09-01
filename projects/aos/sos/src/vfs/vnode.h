@@ -235,7 +235,7 @@ struct vnode_ops {
 #define VOP_GETDIRENTRY(vn, uio)        (__VOP(vn,getdirentry)(vn, uio))
 #define VOP_WRITE(vn, uio)              (__VOP(vn, write)(vn, uio))
 #define VOP_IOCTL(vn, code, buf)        (__VOP(vn, ioctl)(vn,code,buf))
-#define VOP_STAT(vn, ptr) 	        (__VOP(vn, stat)(vn, ptr))
+#define VOP_STAT(vn, ptr) 	        	(__VOP(vn, stat)(vn, ptr))
 #define VOP_GETTYPE(vn, result)         (__VOP(vn, gettype)(vn, result))
 #define VOP_ISSEEKABLE(vn)              (__VOP(vn, isseekable)(vn))
 #define VOP_FSYNC(vn)                   (__VOP(vn, fsync)(vn))

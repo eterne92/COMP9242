@@ -53,6 +53,7 @@ struct openfile {
     off_t of_offset;
 
     //struct spinlock of_reflock;   /* lock for of_refcount */
+    int of_reflock;
     int of_refcount;
 };
 

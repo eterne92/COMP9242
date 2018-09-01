@@ -455,7 +455,7 @@ nfs_write(struct vnode *v, struct uio *uio)
 		result = nfs_pwrite_async(nf->context,nv->handle,uio->uio_offset, 
 								  (void *) sos_vaddr, count, nfs_write_cb, &cb);
 		if(result){
-			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			syscall_reply(uio->proc->reply, -1, -1);
 			return result;
 		}
 		/* wait until callback done */
@@ -464,7 +464,7 @@ nfs_write(struct vnode *v, struct uio *uio)
 		}
 		/* callback got sth wrong */
 		if(cb.status < 0){
-			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			syscall_reply(uio->proc->reply, -1, cb.status);
 			return 0;
 		}
 

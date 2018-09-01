@@ -26,7 +26,7 @@ static coroutines *tail = NULL;
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno)
 {
     seL4_MessageInfo_t reply_msg;
-    reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
+    reply_msg = seL4_MessageInfo_new(0, 0, 0, 2);
     /* Set the first (and only) word in the message to 0 */
     seL4_SetMR(0, ret);
     seL4_SetMR(1, errno);

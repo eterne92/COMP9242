@@ -54,13 +54,9 @@ struct nfs_fs {
 	struct vnodearray *nfs_vnodes;	/* table of loaded vnodes */
 };
 
-<<<<<<< HEAD
-#endif /* _NFSFS_H_ */
-=======
 struct nfs_cb {
 	struct nfsfh *handle;
 	int status;
 };
 
 #endif /* _EMUFS_H_ */
->>>>>>> cea603afc3ca2479cbf31a96aaf1b5192d6dac58

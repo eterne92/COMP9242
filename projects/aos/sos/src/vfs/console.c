@@ -167,10 +167,10 @@ static int con_io(struct device *dev, struct uio *uio)
                     ;
                 nbytes = serial_send(the_console->serial, (char *)(sos_vaddr + (n - count)), count);
             }
-            yield(NULL);
-            uio->uio_resid -= nbytes;
+            uio->uio_resid -= n;
             user_vaddr += n;
             n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+            yield(NULL);
         }
         syscall_reply(uio->proc->reply, uio->length, 0);
     }

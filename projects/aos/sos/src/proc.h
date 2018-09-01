@@ -6,6 +6,7 @@
 
 typedef struct page_table page_table_t;
 typedef struct addrspace addrspace;
+typedef struct filetable filetable;
 
 typedef struct proc {
     ut_t *tcb_ut;
@@ -20,6 +21,7 @@ typedef struct proc {
     ut_t *stack_ut;
     seL4_CPtr stack;
     seL4_CPtr reply;
+    filetable *openfile_table;
 } proc;
 
 extern cspace_t *global_cspace;

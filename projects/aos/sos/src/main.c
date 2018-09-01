@@ -37,6 +37,7 @@
 #include "proc.h"
 #include "syscall.h"
 #include "syscalls.h"
+#include "syscall/filetable.h"
 #include "tests.h"
 #include "ut.h"
 #include "vmem_layout.h"
@@ -340,6 +341,9 @@ bool start_first_process(char *app_name, seL4_CPtr ep)
         ZF_LOGE("Failed to create cspace");
         return false;
     }
+    
+    /* Create open file table */
+    tty_test_process.openfile_table = filetable_create();
 
     /* Create an IPC buffer */
     printf("ipc\n");

@@ -34,7 +34,10 @@
 #ifndef _FILETABLE_H_
 #define _FILETABLE_H_
 
-#include <limits.h> /* for OPEN_MAX */
+//#include <limits.h> /* for OPEN_MAX */
+#include <stdbool.h>
+
+#define OPEN_MAX 128
 
 /*
  * The file table is an array of open files.

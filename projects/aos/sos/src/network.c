@@ -237,12 +237,4 @@ void network_init(cspace_t *cspace, seL4_CPtr ntfn_irq, seL4_CPtr ntfn_tick, voi
     ZF_LOGF_IF(ret != 0, "NFS Mount failed: %s", nfs_get_error(nfs));
 }
 
-void nfs_mount_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-                  UNUSED void *private_data)
-{
-    if (status < 0) {
-        ZF_LOGF("mount/mnt call failed with \"%s\"\n", (char *)data);
-    }
 
-    printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
-}

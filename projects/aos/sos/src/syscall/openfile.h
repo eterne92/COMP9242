@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009, 2014
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,34 +27,40 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _GENERIC_CONSOLE_H_
-#define _GENERIC_CONSOLE_H_
-
-#include <fcntl.h>
-#include <sel4/sel4.h>
-#include <serial/serial.h>
-#include "uio.h"
 /*
- * Device data for the hardware-independent system console.
- *
- * devdata, send, and sendpolled are provided by the underlying
- * device, and are to be initialized by the attach routine.
+ * File handles.
  */
-#define BUFFER_SIZE (4096)
 
-typedef struct proc proc;
-struct con_softc {
-    struct serial *serial;
-    /* use for reading info */
-    proc *proc;
-    seL4_Word vaddr;
-    unsigned cs_gotchars_head; /* next slot to put a char in   */
-    unsigned cs_gotchars_tail; /* next slot to take a char out */
-	size_t n;					   /* number of characters in the buffer */
-	char console_buffer[BUFFER_SIZE];
-    struct uio *uio;
+#ifndef _OPENFILE_H_
+#define _OPENFILE_H_
+
+/*
+ * Structure for open files.
+ *
+ * This is pretty much just a wrapper around a vnode; the important
+ * additional things we keep here are the open mode and the file's
+ * seek position.
+ *
+ * Open files are reference-counted because they get shared via fork
+ * and dup2 calls. And they need locking because that sharing can be
+ * among multiple concurrent processes.
+ */
+struct openfile {
+    struct vnode *of_vnode;
+    int of_accmode; /* from open: O_RDONLY, O_WRONLY, or O_RDWR */
+
+    //struct lock *of_offsetlock;   /* lock for of_offset */
+    off_t of_offset;
+
+    //struct spinlock of_reflock;   /* lock for of_refcount */
+    int of_refcount;
 };
 
-int con_initialize(void);
+/* open a file (args must be kernel pointers; destroys filename) */
+int openfile_open(char *filename, int openflags, mode_t mode, struct openfile **ret);
 
-#endif /* _GENERIC_CONSOLE_H_ */
+/* adjust the refcount on an openfile */
+void openfile_incref(struct openfile *);
+void openfile_decref(struct openfile *);
+
+#endif /* _OPENFILE_H_ */

@@ -1239,7 +1239,7 @@ void nfs_mount_cb(int status, struct nfs_context *nfs, void *data, void *private
 
     printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
 	struct vnode *vn;
-	vn = nfs_bootstrap(nfs, &vn);
+	vn = nfs_bootstrap(nfs);
 	change_bootfs(vn);
 	
 }

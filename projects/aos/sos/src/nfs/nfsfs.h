@@ -44,16 +44,19 @@
 
 struct nfs_vnode {
 	struct vnode nv_v;		/* abstract vnode structure */
-	// struct emu_softc *ev_emu;	/* device */
-	struct nfs_context *context;
 	struct nfsfh *handle;		/* file handle */
+	char filename[NAME_MAX + 1];
 };
 
 struct nfs_fs {
-	struct fs nfs_fs;		/* abstract filesystem structure */
+	struct fs nfs_fsdata;		/* abstract filesystem structure */
 	struct nfs_context *context;
 	struct vnodearray *nfs_vnodes;	/* table of loaded vnodes */
 };
 
+struct nfs_cb {
+	struct nfsfh *handle;
+	int status;
+};
 
 #endif /* _EMUFS_H_ */

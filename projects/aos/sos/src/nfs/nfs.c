@@ -38,57 +38,52 @@
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
 #include "nfsfs.h"
-#include <nfs/libnfs.h>
+#include "../syscall/syscall.h"
+#include <nfsc/libnfs.h>
+#include <picoro/picoro.h>
 
-static struct nfsfs *nfs;
+
+void nfs_mount_cb(int status, UNUSED struct nfs_context *nfs, void *data,
+                  UNUSED void *private_data);
+
+static int nfs_loadvnode(struct vnode *root, const char *name, struct nfs_vnode **ret);
+
+static void nfs_open_cb(int status, UNUSED struct nfs_context *nfs, void *data,
+						void *private_data)
+{
+	struct nfs_cb *cb = private_data;
+	if(status != 0){
+		cb->status = status;
+		cb->handle = NULL;
+	}
+	cb->handle = data;
+}
+
+static void nfs_open_cb(int status, UNUSED struct nfs_context *nfs, void *data,
+						void *private_data)
+{
+	struct nfs_cb *cb = private_data;
+	cb->handle = NULL;
+	cb->status = status;
+}
 /*
- * Common file open routine (for both VOP_LOOKUP and VOP_CREATE).  Not
- * for VOP_EACHOPEN. At the hardware level, we need to "open" files in
- * order to look at them, so by the time VOP_EACHOPEN is called the
- * files are already open.
  */
 static
 int
-nfs_open(struct emu_softc *sc, uint32_t handle, const char *name,
-	 bool create, bool excl, mode_t mode,
-	 uint32_t *newhandle, int *newisdir)
+nfs_open(struct vnode *root, const char *name, struct vnode **vn)
 {
-	uint32_t op;
 	int result;
 
-	if (strlen(name)+1 > EMU_MAXIO) {
-		return ENAMETOOLONG;
+	struct nfs_vnode *nv;
+	/* everything is right, send back vn */
+	result = nfs_loadvnode(root, name, &nv);
+	if(result){
+		return result;
 	}
 
-	if (create && excl) {
-		op = EMU_OP_EXCLCREATE;
-	}
-	else if (create) {
-		op = EMU_OP_CREATE;
-	}
-	else {
-		op = EMU_OP_OPEN;
-	}
+	*vn = &nv->nv_v;
 
-	/* mode isn't supported (yet?) */
-	(void)mode;
-
-	lock_acquire(sc->e_lock);
-
-	strcpy(sc->e_iobuf, name);
-	membar_store_store();
-	emu_wreg(sc, REG_IOLEN, strlen(name));
-	emu_wreg(sc, REG_HANDLE, handle);
-	emu_wreg(sc, REG_OPER, op);
-	result = emu_waitdone(sc);
-
-	if (result==0) {
-		*newhandle = emu_rreg(sc, REG_HANDLE);
-		*newisdir = emu_rreg(sc, REG_IOLEN)>0;
-	}
-
-	lock_release(sc->e_lock);
-	return result;
+	return 0;
 }
 
 /*
@@ -268,76 +263,129 @@ nfs_eachopen(struct vnode *v, int openflags)
  */
 static
 int
-emufs_reclaim(struct vnode *v)
+nfs_reclaim(struct vnode *v)
 {
 	struct nfs_vnode *nv = v->vn_data;
 	struct nfs_fs *nf = v->vn_fs->fs_data;
+	struct nfs_cb cb;
 	unsigned ix, i, num;
 	int result;
 
-	/* emu_close retries on I/O error */
-	result = nfs_close(ev->ev_emu, ev->ev_handle);
+	cb.status = 0;
+	cb.handle = nv->handle;
+	/* should not got something wrong, but we still track it */
+	result = nfs_close_async(nf->context, nv->handle, nfs_close_cb, &cb);
 	if (result) {
-		lock_release(ef->ef_emu->e_lock);
-		vfs_biglock_release();
 		return result;
 	}
 
-	num = vnodearray_num(nf->nf_vnodes);
+	while(nv->handle){
+		yield(NULL);
+	}
+
+	if(cb.status != 0){
+		return cb.status;
+	}
+
+	num = vnodearray_num(nf->nfs_vnodes);
 	ix = num;
 	for (i=0; i<num; i++) {
 		struct vnode *vx;
 
-		vx = vnodearray_get(nf->nf_vnodes, i);
+		vx = vnodearray_get(nf->nfs_vnodes, i);
 		if (vx == v) {
 			ix = i;
 			break;
 		}
 	}
 	if (ix == num) {
+		/* should never hanppen */
 		ZF_LOG_E("vnode not exist\n");
 	}
 
-	vnodearray_remove(nf->nf_vnodes, ix);
+	vnodearray_remove(nf->nfs_vnodes, ix);
 	vnode_cleanup(&nv->nv_v);
 
-	kfree(nv);
+	free(nv);
 	return 0;
 }
 
+static void nfs_read_cb(int status, UNUSED struct nfs_context *nfs, void *data,
+						void *private_data)
+{
+	struct nfs_cb *cb = private_data;
+	cb->status = status;
+	cb->handle = data;
+}
 /*
  * VOP_READ
  */
 static
 int
-emufs_read(struct vnode *v, struct uio *uio)
+nfs_read(struct vnode *v, struct uio *uio)
 {
-	struct emufs_vnode *ev = v->vn_data;
-	uint32_t amt;
-	size_t oldresid;
+	struct nfs_vnode *nv = v->vn_data;
+	struct nfs_fs *nf = v->vn_fs->fs_data;
+	struct nfs_cb cb;
+	void *ret_data;
 	int result;
 
-	KASSERT(uio->uio_rw==UIO_READ);
+	assert(uio->uio_rw==UIO_READ);
+
+	/* read frame by frame */
+	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+    size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+	int nbytes = 0, count;
+    if (uio->uio_resid < n) {
+        n = uio->uio_resid;
+    }
 
 	while (uio->uio_resid > 0) {
-		amt = uio->uio_resid;
-		if (amt > EMU_MAXIO) {
-			amt = EMU_MAXIO;
+		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+
+		if (sos_vaddr == 0) {
+			printf("handle vm fault\n");
+			handle_page_fault(uio->proc, user_vaddr, 0);
+			sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 		}
 
-		oldresid = uio->uio_resid;
+		// read n bytes
+		count = n;
+		cb.status = 0;
+		cb.handle = nv->handle;
 
-		result = emu_read(ev->ev_emu, ev->ev_handle, amt, uio);
-		if (result) {
+		result = nfs_pread_async(nf->context,nv->handle,uio->uio_offset, 
+								 count, nfs_read_cb, &cb);
+		if(result){
+			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
 			return result;
 		}
-
-		if (uio->uio_resid == oldresid) {
-			/* nothing read - EOF */
-			break;
+		/* wait until callback done */
+		while(cb.status == 0){
+			yield(NULL);
 		}
-	}
+		/* callback got sth wrong */
+		if(cb.status < 0){
+			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			return 0;
+		}
 
+		nbytes = cb.status;
+		/* use handle to get the return data pointer */
+		ret_data = cb.handle;
+		result = memcpy((void *) sos_vaddr, ret_data, nbytes);
+		if(nbytes < count){
+			/* it's over */
+			uio->uio_resid -= nbytes;
+			syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
+		}
+
+		uio->uio_resid -= nbytes;
+		user_vaddr += n;
+		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+		yield(NULL);
+	}
+	syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
 	return 0;
 }
 
@@ -361,39 +409,82 @@ emufs_getdirentry(struct vnode *v, struct uio *uio)
 	return emu_readdir(ev->ev_emu, ev->ev_handle, amt, uio);
 }
 
+static void nfs_write_cb(int status, UNUSED struct nfs_context *nfs, void *data,
+						void *private_data)
+{
+	struct nfs_cb *cb = private_data;
+	cb->status = status;
+}
+
 /*
  * VOP_WRITE
  */
+
 static
 int
-emufs_write(struct vnode *v, struct uio *uio)
+nfs_write(struct vnode *v, struct uio *uio)
 {
-	struct emufs_vnode *ev = v->vn_data;
-	uint32_t amt;
-	size_t oldresid;
+	struct nfs_vnode *nv = v->vn_data;
+	struct nfs_fs *nf = v->vn_fs->fs_data;
+	struct nfs_cb cb;
+	void *ret_data;
 	int result;
 
-	KASSERT(uio->uio_rw==UIO_WRITE);
+	assert(uio->uio_rw==UIO_WRITE);
+
+	/* read frame by frame */
+	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+    size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+	int nbytes = 0, count;
+    if (uio->uio_resid < n) {
+        n = uio->uio_resid;
+    }
 
 	while (uio->uio_resid > 0) {
-		amt = uio->uio_resid;
-		if (amt > EMU_MAXIO) {
-			amt = EMU_MAXIO;
+		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+
+		if (sos_vaddr == 0) {
+			printf("handle vm fault\n");
+			handle_page_fault(uio->proc, user_vaddr, 0);
+			sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 		}
 
-		oldresid = uio->uio_resid;
+		// read n bytes
+		count = n;
+		cb.status = 0;
+		cb.handle = nv->handle;
 
-		result = emu_write(ev->ev_emu, ev->ev_handle, amt, uio);
-		if (result) {
+		result = nfs_pwrite_async(nf->context,nv->handle,uio->uio_offset, 
+								  (void *) sos_vaddr, count, nfs_write_cb, &cb);
+		if(result){
+			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
 			return result;
 		}
-
-		if (uio->uio_resid == oldresid) {
-			/* nothing written...? */
-			break;
+		/* wait until callback done */
+		while(cb.status == 0){
+			yield(NULL);
 		}
-	}
+		/* callback got sth wrong */
+		if(cb.status < 0){
+			syscall_reply(uio->proc->reply, -1, nfs_get_error(nf->context));
+			return 0;
+		}
 
+		nbytes = cb.status;
+		/* use handle to get the return data pointer */
+		ret_data = cb.handle;
+		if(nbytes < count){
+			/* it's over */
+			uio->uio_resid -= nbytes;
+			syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
+		}
+
+		uio->uio_resid -= nbytes;
+		user_vaddr += n;
+		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+		yield(NULL);
+	}
+	syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
 	return 0;
 }
 
@@ -402,7 +493,7 @@ emufs_write(struct vnode *v, struct uio *uio)
  */
 static
 int
-emufs_ioctl(struct vnode *v, int op, userptr_t data)
+nfs_ioctl(struct vnode *v, int op, void *data)
 {
 	/*
 	 * No ioctls.
@@ -850,14 +941,14 @@ emufs_truncate_isdir(struct vnode *v, off_t len)
 static const struct vnode_ops emufs_fileops = {
 	.vop_magic = VOP_MAGIC,	/* mark this a valid vnode ops table */
 
-	.vop_eachopen = emufs_eachopen,
-	.vop_reclaim = emufs_reclaim,
+	.vop_eachopen = nfs_eachopen,
+	.vop_reclaim = nfs_reclaim,
 
-	.vop_read = emufs_read,
+	.vop_read = nfs_read,
 	.vop_readlink = emufs_readlink_notlink,
 	.vop_getdirentry = emufs_uio_op_notdir,
-	.vop_write = emufs_write,
-	.vop_ioctl = emufs_ioctl,
+	.vop_write = nfs_write,
+	.vop_ioctl = nfs_ioctl,
 	.vop_stat = emufs_stat,
 	.vop_gettype = emufs_file_gettype,
 	.vop_isseekable = emufs_isseekable,
@@ -915,69 +1006,77 @@ static const struct vnode_ops emufs_dirops = {
 /*
  * Function to load a vnode into memory.
  */
-static
 int
-emufs_loadvnode(struct emufs_fs *ef, uint32_t handle, int isdir,
-		struct emufs_vnode **ret)
+nfs_loadvnode(struct vnode *root, const char *name, struct nfs_vnode **ret)
 {
 	struct vnode *v;
-	struct emufs_vnode *ev;
+	struct nfs_vnode *nv;
 	unsigned i, num;
 	int result;
 
-	vfs_biglock_acquire();
-	lock_acquire(ef->ef_emu->e_lock);
+	struct nfs_fs *nf = root->vn_fs->fs_data;
 
-	num = vnodearray_num(ef->ef_vnodes);
+	num = vnodearray_num(nf->nfs_vnodes);
 	for (i=0; i<num; i++) {
-		v = vnodearray_get(ef->ef_vnodes, i);
-		ev = v->vn_data;
-		if (ev->ev_handle == handle) {
+		v = vnodearray_get(nf->nfs_vnodes, i);
+		nv = v->vn_data;
+		if (strcmp(name, nv->filename) == 0) {
 			/* Found */
+			VOP_INCREF(&nv->nv_v);
 
-			VOP_INCREF(&ev->ev_v);
-
-			lock_release(ef->ef_emu->e_lock);
-			vfs_biglock_release();
-			*ret = ev;
+			*ret = nv;
 			return 0;
 		}
 	}
 
 	/* Didn't have one; create it */
 
-	ev = kmalloc(sizeof(struct emufs_vnode));
-	if (ev==NULL) {
-		lock_release(ef->ef_emu->e_lock);
+	/* async open file */
+	struct nfs_cb cb;
+	cb.handle = NULL;
+	cb.status = 0;
+
+	result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_cb, &cb);
+	if (result)
+	{
+		return result;
+	}
+	/* wait until callback is done */
+	while (cb.handle == NULL && cb.status == 0)
+	{
+		yield(NULL);
+	}
+
+	/* something wrong with open callback */
+	if(cb.status != 0){
+		*ret = NULL;
+		return cb.status;
+	}
+	/* init a nfs_vnode */
+	nv = malloc(sizeof(struct nfs_vnode));
+	if (nv==NULL) {
 		return ENOMEM;
 	}
 
-	ev->ev_emu = ef->ef_emu;
-	ev->ev_handle = handle;
+	nv->handle = cb.handle;
+	strcpy(nv->filename, name);
 
-	result = vnode_init(&ev->ev_v, isdir ? &emufs_dirops : &emufs_fileops,
-			    &ef->ef_fs, ev);
+	/* since we do root node seperately, this node is always a file node */
+	result = vnode_init(&nv->nv_v, nfs_fileops, &nf->nfs_fsdata, nv);
 	if (result) {
-		lock_release(ef->ef_emu->e_lock);
-		vfs_biglock_release();
-		kfree(ev);
+		free(nv);
 		return result;
 	}
 
-	result = vnodearray_add(ef->ef_vnodes, &ev->ev_v, NULL);
+	result = vnodearray_add(nf->nfs_vnodes, &nv->nv_v, NULL);
 	if (result) {
 		/* note: vnode_cleanup undoes vnode_init - it does not kfree */
-		vnode_cleanup(&ev->ev_v);
-		lock_release(ef->ef_emu->e_lock);
-		vfs_biglock_release();
-		kfree(ev);
+		vnode_cleanup(&nv->nv_v);
+		free(nv);
 		return result;
 	}
 
-	lock_release(ef->ef_emu->e_lock);
-	vfs_biglock_release();
-
-	*ret = ev;
+	*ret = nv;
 	return 0;
 }
 
@@ -1085,19 +1184,11 @@ emufs_addtovfs(struct emu_softc *sc, const char *devname)
 		return ENOMEM;
 	}
 
-	result = emufs_loadvnode(ef, EMU_ROOTHANDLE, 1, &ef->ef_root);
-	if (result) {
-		kfree(ef);
-		return result;
-	}
-
-	KASSERT(ef->ef_root!=NULL);
-
-	result = vfs_addfs(devname, &ef->ef_fs);
-	if (result) {
-		VOP_DECREF(&ef->ef_root->ev_v);
-		kfree(ef);
-	}
+	// result = vfs_addfs(devname, &ef->ef_fs);
+	// if (result) {
+	// 	VOP_DECREF(&ef->ef_root->ev_v);
+	// 	kfree(ef);
+	// }
 	return result;
 }
 

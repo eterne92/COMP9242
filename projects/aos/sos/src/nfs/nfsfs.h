@@ -27,8 +27,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _EMUFS_H_
-#define _EMUFS_H_
+#ifndef _NFSFS_H_
+#define _NFSFS_H_
 
 
 /*
@@ -44,8 +44,6 @@
 
 struct nfs_vnode {
 	struct vnode nv_v;		/* abstract vnode structure */
-	// struct emu_softc *ev_emu;	/* device */
-	struct nfs_context *context;
 	struct nfsfh *handle;		/* file handle */
 };
 
@@ -55,5 +53,4 @@ struct nfs_fs {
 	struct vnodearray *nfs_vnodes;	/* table of loaded vnodes */
 };
 
-
-#endif /* _EMUFS_H_ */
+#endif /* _NFSFS_H_ */

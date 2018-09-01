@@ -38,9 +38,9 @@
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
 #include "nfsfs.h"
-#include <nfs/libnfs.h>
+#include <nfsc/libnfs.h>
 
-static struct nfsfs *nfs;
+struct nfs_vnode *nfs_vn = NULL;
 /*
  * Common file open routine (for both VOP_LOOKUP and VOP_CREATE).  Not
  * for VOP_EACHOPEN. At the hardware level, we need to "open" files in
@@ -117,7 +117,7 @@ emu_doread(struct emu_softc *sc, uint32_t handle, uint32_t len,
 {
 	int result;
 
-	KASSERT(uio->uio_rw == UIO_READ);
+	assert(uio->uio_rw == UIO_READ);
 
 	if (uio->uio_offset > (off_t)0xffffffff) {
 		/* beyond the largest size the file can have; generate EOF */
@@ -167,7 +167,7 @@ emu_write(struct emu_softc *sc, uint32_t handle, uint32_t len,
 {
 	int result;
 
-	KASSERT(uio->uio_rw == UIO_WRITE);
+	assert(uio->uio_rw == UIO_WRITE);
 
 	if (uio->uio_offset > (off_t)0xffffffff) {
 		return EFBIG;
@@ -224,7 +224,7 @@ emu_trunc(struct emu_softc *sc, uint32_t handle, off_t len)
 {
 	int result;
 
-	KASSERT(len >= 0);
+	assert(len >= 0);
 
 	lock_acquire(sc->e_lock);
 
@@ -237,10 +237,6 @@ emu_trunc(struct emu_softc *sc, uint32_t handle, off_t len)
 	return result;
 }
 
-//
-////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
 //
 // vnode functions
 //
@@ -317,7 +313,7 @@ emufs_read(struct vnode *v, struct uio *uio)
 	size_t oldresid;
 	int result;
 
-	KASSERT(uio->uio_rw==UIO_READ);
+	assert(uio->uio_rw==UIO_READ);
 
 	while (uio->uio_resid > 0) {
 		amt = uio->uio_resid;
@@ -351,7 +347,7 @@ emufs_getdirentry(struct vnode *v, struct uio *uio)
 	struct emufs_vnode *ev = v->vn_data;
 	uint32_t amt;
 
-	KASSERT(uio->uio_rw==UIO_READ);
+	assert(uio->uio_rw==UIO_READ);
 
 	amt = uio->uio_resid;
 	if (amt > EMU_MAXIO) {
@@ -373,7 +369,7 @@ emufs_write(struct vnode *v, struct uio *uio)
 	size_t oldresid;
 	int result;
 
-	KASSERT(uio->uio_rw==UIO_WRITE);
+	assert(uio->uio_rw==UIO_WRITE);
 
 	while (uio->uio_resid > 0) {
 		amt = uio->uio_resid;
@@ -981,8 +977,6 @@ emufs_loadvnode(struct emufs_fs *ef, uint32_t handle, int isdir,
 	return 0;
 }
 
-//
-////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
 //
@@ -994,7 +988,7 @@ emufs_loadvnode(struct emufs_fs *ef, uint32_t handle, int isdir,
  */
 static
 int
-emufs_sync(struct fs *fs)
+nfs_sync(struct fs *fs)
 {
 	(void)fs;
 	return 0;
@@ -1005,7 +999,7 @@ emufs_sync(struct fs *fs)
  */
 static
 const char *
-emufs_getvolname(struct fs *fs)
+nfs_getvolname(struct fs *fs)
 {
 	/* We don't have a volume name beyond the device name */
 	(void)fs;
@@ -1017,19 +1011,12 @@ emufs_getvolname(struct fs *fs)
  */
 static
 int
-emufs_getroot(struct fs *fs, struct vnode **ret)
+nfs_getroot(struct fs *fs, struct vnode **ret)
 {
-	struct emufs_fs *ef;
-
-	KASSERT(fs != NULL);
-
-	ef = fs->fs_data;
-
-	KASSERT(ef != NULL);
-	KASSERT(ef->ef_root != NULL);
-
-	VOP_INCREF(&ef->ef_root->ev_v);
-	*ret = &ef->ef_root->ev_v;
+	assert(fs != NULL);
+	assert(nfs_vn != NULL);
+	VOP_INCREF(&nfs_vn->nv_v);
+	*ret = &nfs_vn->nv_v;
 	return 0;
 }
 
@@ -1038,7 +1025,7 @@ emufs_getroot(struct fs *fs, struct vnode **ret)
  */
 static
 int
-emufs_unmount(struct fs *fs)
+nfs_unmount(struct fs *fs)
 {
 	/* Always prohibit unmount, as we're not really "mounted" */
 	(void)fs;
@@ -1048,11 +1035,11 @@ emufs_unmount(struct fs *fs)
 /*
  * Function table for the emufs file system.
  */
-static const struct fs_ops emufs_fsops = {
-	.fsop_sync = emufs_sync,
-	.fsop_getvolname = emufs_getvolname,
-	.fsop_getroot = emufs_getroot,
-	.fsop_unmount = emufs_unmount,
+static const struct fs_ops nfs_fsops = {
+	.fsop_sync = nfs_sync,
+	.fsop_getvolname = nfs_getvolname,
+	.fsop_getroot = nfs_getroot,
+	.fsop_unmount =nfs_unmount,
 };
 
 /*
@@ -1062,6 +1049,7 @@ static const struct fs_ops emufs_fsops = {
  *
  * Basically, we just add ourselves to the name list in the VFS layer.
  */
+/*
 static
 int
 emufs_addtovfs(struct emu_softc *sc, const char *devname)
@@ -1091,24 +1079,25 @@ emufs_addtovfs(struct emu_softc *sc, const char *devname)
 		return result;
 	}
 
-	KASSERT(ef->ef_root!=NULL);
+	assert(ef->ef_root!=NULL);
 
 	result = vfs_addfs(devname, &ef->ef_fs);
 	if (result) {
 		VOP_DECREF(&ef->ef_root->ev_v);
 		kfree(ef);
 	}
-	return result;
+	return result;*.h
 }
 
 //
 ////////////////////////////////////////////////////////////
-
+*/
 /*
  * Config routine called by autoconf stuff.
  *
  * Initialize our data, then add ourselves to the VFS layer.
  */
+/*
 int
 config_emu(struct emu_softc *sc, int emuno)
 {
@@ -1131,4 +1120,46 @@ config_emu(struct emu_softc *sc, int emuno)
 	return emufs_addtovfs(sc, name);
 }
 
+*/
 
+void change_bootfs(struct vnode *newvn);
+
+void nfs_mount_cb(int status, struct nfs_context *nfs, void *data, void *private_data)
+{
+	if (status < 0) {
+        ZF_LOGF("mount/mnt call failed with \"%s\"\n", (char *)data);
+    }
+
+    printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
+	struct vnode *vn;
+	vn = nfs_bootstrap(nfs, &vn);
+	change_bootfs(vn);
+	
+}
+
+struct vnode *nfs_bootstrap(struct nfs_context *context)
+{
+	nfs_vn = (struct nfs_vnode *)malloc(sizeof(struct nfs_vnode));
+	if (!nfs_vn) {
+		ZF_LOG_E("Out of Memory!");
+		return;
+	}
+	nfs_fs *fs = (nfs_fs *)malloc(sizeof(fs));
+	if (!fs) {
+		free(nfs_vn);
+		ZF_LOG_E("Out of Memory!");
+		return;
+	}
+	fs->nfs_vnodes = vnodearray_create();
+	if (!fs->nfs_vnodes) {
+		free(nfs_vn);
+		free(fs);
+		ZF_LOG_E("Out of Memory!");
+		return;
+	}
+	fs->nfs_fsdata.fs_ops = nfs_fsops;
+	fs->nfs_fsdata.fs_data = fs;
+	fs->context = context;
+	vnode_init(&nfs_vn->nv_v, vnode_ops, &fs->nfs_fsdata, nfs_vn);
+	return &nfs_vn->nv_v;
+}

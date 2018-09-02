@@ -106,6 +106,7 @@ static void nfs_close_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 {
 	(void) data;
 	struct nfs_cb *cb = private_data;
+	printf("cb close is called with cb->handle is %p\n", cb->handle);
 	cb->handle = NULL;
 	cb->status = status;
 }
@@ -124,6 +125,15 @@ _nfs_reclaim(struct vnode *v)
 	unsigned ix, i, num;
 	int result;
 
+	cb.status = 0;
+	cb.handle = nv->handle;
+
+	result = nfs_close_async(nf->context, cb.handle, nfs_close_cb, &cb);
+	if (result) {
+		return result;
+	}
+	printf("start to destroy vn\n");
+
 	num = vnodearray_num(nf->nfs_vnodes);
 	ix = num;
 	for (i=0; i<num; i++) {
@@ -140,20 +150,17 @@ _nfs_reclaim(struct vnode *v)
 		assert(false);
 	}
 
+	printf("vn remove\n");
 	vnodearray_remove(nf->nfs_vnodes, ix);
+	printf("vn cleanup\n");
 	vnode_cleanup(&nv->nv_v);
 
 	free(nv);
 
-	cb.status = 0;
-	cb.handle = nv->handle;
+	printf("cb.handle is %p\n", cb.handle);
 	/* should not got something wrong, but we still track it */
-	result = nfs_close_async(nf->context, nv->handle, nfs_close_cb, &cb);
-	if (result) {
-		return result;
-	}
 
-	while(nv->handle){
+	while(cb.handle != NULL){
 		yield(NULL);
 	}
 
@@ -161,6 +168,7 @@ _nfs_reclaim(struct vnode *v)
 		return cb.status;
 	}
 
+	printf("done real vn_reclaim\n");
 
 	return 0;
 }
@@ -901,7 +909,7 @@ nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode
 	cb.status = 0;
 
 	if(creat){
-		result = nfs_creat_async(nf->context, name, 777, nfs_creat_cb, &cb);
+		result = nfs_creat_async(nf->context, name, 0777, nfs_creat_cb, &cb);
 	}
 	else{
 		result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_cb, &cb);

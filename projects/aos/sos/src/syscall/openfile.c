@@ -111,7 +111,6 @@ void openfile_incref(struct openfile *file)
  */
 void openfile_decref(struct openfile *file)
 {
-
     /* if this is the last close of this file, free it up */
     if (file->of_refcount == 1) {
         openfile_destroy(file);

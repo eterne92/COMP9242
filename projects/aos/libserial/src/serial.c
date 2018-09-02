@@ -55,7 +55,7 @@ struct serial *serial_init(void)
         return NULL;
     }
 
-    serial.pico_socket = pico_socket_open(PICO_PROTO_IPV4, PICO_PROTO_TCP, &serial_recv_handler);
+    serial.pico_socket = pico_socket_open(PICO_PROTO_IPV4, PICO_PROTO_UDP, &serial_recv_handler);
     if (!serial.pico_socket) {
         ZF_LOGE("serial connection failed");
         return NULL;

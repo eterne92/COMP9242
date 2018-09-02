@@ -112,8 +112,10 @@ vnode_decref(struct vnode *vn)
 		VOP_RECLAIM(vn);
 	}
 
+	printf("try real destroy\n");
 	if (destroy) {
 		result = VOP_RECLAIM(vn);
+		printf("reclaim done\n");
 		if (result != 0 && result != EBUSY) {
 			// XXX: lame.
 			printf("vfs: Warning: VOP_RECLAIM: %s\n",

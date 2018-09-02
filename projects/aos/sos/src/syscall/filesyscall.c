@@ -64,6 +64,7 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
     /* better be a valid file descriptor */
     result = filetable_get(cur_proc->openfile_table, fd, &file);
     if (result) {
+        printf("fd wrong\n");
         return result;
     }
 
@@ -92,7 +93,6 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
         /* set the offset to the updated offset in the uio */
         file->of_offset = my_uio.uio_offset;
     }
-    printf("new offset is %d\n", file->of_offset);
 
     filetable_put(cur_proc->openfile_table, fd, file);
 
@@ -101,7 +101,6 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
      * minus how much is left in it.
      */
     *retval = size - my_uio.uio_resid;
-    printf("retval is %d, resid %d, size %d\n", *retval, my_uio.uio_resid, size);
 
     return 0;
 
@@ -146,7 +145,6 @@ void *_sys_open(proc *cur_proc) {
 	if(path_length == -1) {
 		syscall_reply(cur_proc->reply, ret, -1);
 	}
-    printf("got name of %s, openflags %d\n", str, openflags);
 
     ret = _sys_do_open(cur_proc, str, openflags);
 
@@ -166,12 +164,15 @@ void *_sys_read(proc *cur_proc) {
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
 	size_t ret;
+    int result;
 
 
 	bool valid = validate_virtual_address(cur_proc->as, vaddr, length, READ);
     if(valid){
-		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ, O_WRONLY, &ret);
-        printf("ret val is %ld\n", ret);
+		result = _sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ, O_WRONLY, &ret);
+        if(result){
+            syscall_reply(cur_proc->reply, 0, EFAULT);
+        }
         syscall_reply(cur_proc->reply, ret, 0);
 	} else {
 		syscall_reply(cur_proc->reply, 0, EFAULT);
@@ -185,10 +186,13 @@ void *_sys_write(proc *cur_proc) {
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
     size_t ret;
+    int result;
     bool valid = validate_virtual_address(cur_proc->as, vaddr, length, WRITE);
-    printf("valid %d\n", valid);
 	if(valid){
-		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
+		result = _sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
+        if(result){
+            syscall_reply(cur_proc->reply, 0, EFAULT);
+        }
         syscall_reply(cur_proc->reply, ret, 0);
 	} else {
 		syscall_reply(cur_proc->reply, 0, EFAULT);
@@ -242,7 +246,9 @@ void *_sys_close(proc *cur_proc)
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
+    printf("close find file %p\n", file);
     openfile_decref(file);
+    printf("close done\n");
 	syscall_reply(cur_proc->reply, 0, 0);
 	return NULL;
 }

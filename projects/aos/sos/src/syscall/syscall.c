@@ -108,7 +108,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    printf("SYSCALL NO.%d IS CALLED, cap saved as %ld\n", syscall_number, reply);
+    // printf("SYSCALL NO.%d IS CALLED, cap saved as %ld\n", syscall_number, reply);
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -142,9 +142,12 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
     case SOS_SYS_STAT:
         break;
-    case SOS_SYS_CLOSE:
-        _sys_close(cur_proc);
+    case SOS_SYS_CLOSE:{
+        coro c = coroutine((coro_t)&_sys_close);
+        resume(c, cur_proc);
+        create_coroutine(c);
         break;
+    }
     case SOS_SYS_USLEEP:
         _sos_sys_usleep();
         break;

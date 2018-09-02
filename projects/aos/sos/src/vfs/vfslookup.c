@@ -166,7 +166,6 @@ int vfs_lookparent(char *path, struct vnode **retval,
         return result;
     }
 
-    // VOP_DECREF(startvn);
 
     *retval = startvn;
     printf("start vn in lookparent %p\n", startvn);
@@ -183,12 +182,8 @@ int vfs_lookup(char *path, struct vnode **retval)
     if (result) {
         return result;
     }
-    printf("startvn is %p\n", startvn);
 
     result = VOP_LOOKUP(startvn, path, retval);
-
-    printf("return val is retval %p\n", *retval);
-    printf("result is %d\n", result);
 
     return result;
 }

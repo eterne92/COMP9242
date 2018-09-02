@@ -74,7 +74,6 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
 
         result = VOP_CREAT(dir, path, excl, mode, &vn);
 
-        // VOP_DECREF(dir);
     } else {
         result = vfs_lookup(path, &vn);
     }
@@ -96,7 +95,6 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
 
         result = VOP_CREAT(dir, path, excl, mode, &vn);
 
-        // VOP_DECREF(dir);
     }
 
     if (result) {

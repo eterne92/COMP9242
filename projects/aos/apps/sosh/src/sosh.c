@@ -88,7 +88,6 @@ static int cat(int argc, char **argv)
     assert(fd >= 0);
 
     while ((num_read = read(fd, buf, BUF_SIZ)) > 0) {
-        printf("read one round\n");
         num_written = write(stdout_fd, buf, num_read);
     }
 
@@ -334,6 +333,9 @@ int main(void)
     bp = buf;
     done = 0;
     new = 1;
+
+    in = open("a", O_RDWR);
+    close(in);
 
     printf("\n[SOS Starting]\n");
 

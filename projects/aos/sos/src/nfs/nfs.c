@@ -271,7 +271,7 @@ _nfs_getdirentry(struct vnode *v, struct uio *uio)
 		memcpy(buf, (void *)sos_vaddr, n);
 		uio->uio_resid -= n;
 		user_vaddr += n;
-		n = uio->len - n;
+		n = uio->length - n;
 	}
 	// opendir at bootstrap and keep it open or open when getdirent is called
 	//struct nfsdirent *entry = nfs_readdir(nf->context, XXX);

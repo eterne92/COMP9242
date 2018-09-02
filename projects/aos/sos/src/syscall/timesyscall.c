@@ -12,6 +12,7 @@ void _sos_sys_time_stamp(void)
 
 static void sleep_callback(uint64_t id, void *data)
 {
+    (void)id;
     seL4_CPtr reply = (seL4_CPtr)data;
     syscall_reply(reply, 0, 0);
 }
@@ -20,5 +21,5 @@ void _sos_sys_usleep(void)
 {
     int msec = (int)seL4_GetMR(1) * 1000;
     seL4_CPtr reply = get_cur_proc()->reply;
-    register_timer(msec, sleep_callback, reply, F, ONE_SHOT);
+    register_timer(msec, sleep_callback, (void *)reply, F, ONE_SHOT);
 }

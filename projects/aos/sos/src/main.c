@@ -662,6 +662,8 @@ int main(void)
 
     printf("\nSOS Starting...\n");
 
+    set_boottime();
+
     NAME_THREAD(seL4_CapInitThreadTCB, "SOS:root");
 
     /* Initialise the cspace manager, ut manager and dma */

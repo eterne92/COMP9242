@@ -181,6 +181,6 @@ int64_t sos_sys_time_stamp(void)
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, SOS_SYS_TIMESTAMP);
     seL4_Call(SOS_IPC_EP_CAP, tag);
-    int ret = seL4_GetMR(0);
+    int64_t ret = seL4_GetMR(0);
     return ret;
 }

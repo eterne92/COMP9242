@@ -43,6 +43,7 @@ void handle_syscall(seL4_Word badge, int num_args);
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);
 
+void set_boottime(void);
 
 void _sos_sys_time_stamp(void);
 

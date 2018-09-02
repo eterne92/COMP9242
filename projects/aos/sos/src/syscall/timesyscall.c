@@ -4,10 +4,18 @@
 #include <clock/timestamp.h>
 #include <sel4/sel4.h>
 
+static seL4_Word boottime;
+
+void set_boottime(void){
+    boottime = timestamp_us(timestamp_get_freq());
+}
+
 void _sos_sys_time_stamp(void)
 {
     seL4_CPtr reply = get_cur_proc()->reply;
-    syscall_reply(reply, timestamp_us(timestamp_get_freq()), 0);
+    seL4_Word t = timestamp_us(timestamp_get_freq());
+
+    syscall_reply(reply, t - boottime, 0);
 }
 
 static void sleep_callback(uint64_t id, void *data)

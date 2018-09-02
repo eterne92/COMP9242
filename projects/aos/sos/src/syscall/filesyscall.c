@@ -237,18 +237,25 @@ void *_sys_stat(proc *cur_proc)
 void *_sys_close(proc *cur_proc) 
 {
 	printf("in close\n");
-
 	seL4_Word fd = seL4_GetMR(1);
-
     struct openfile *file;
     int result = filetable_get(cur_proc->openfile_table, fd, &file);
-    if(result != 0){
-        syscall_reply(cur_proc->reply, 0, 0);
+
+    /* check if the file's in range before calling placeat */
+	if (!filetable_okfd(cur_proc->openfile_table, fd)) {
+		syscall_reply(cur_proc->reply, -1, EBADF);
         return NULL;
-    }
-    printf("close find file %p\n", file);
-    openfile_decref(file);
-    printf("close done\n");
+	}
+	/* place null in the filetable and get the file previously there */
+	filetable_placeat(cur_proc->reply, NULL, fd, &file);
+
+	if (file == NULL) {
+		/* oops, it wasn't open, that's an error */
+		syscall_reply(cur_proc->reply, -1, EBADF);
+        return NULL;
+	}
+	/* drop the reference */
+	openfile_decref(file);
 	syscall_reply(cur_proc->reply, 0, 0);
 	return NULL;
 }

@@ -310,7 +310,7 @@ dev_lookup(struct vnode *dir,
 	 * Anything else is an error.
 	 * Increment the ref count of the vnode before returning it.
 	 */
-	VOP_INCREF(dir);
+	// VOP_INCREF(dir);
 	*result = dir;
 	return 0;
 }

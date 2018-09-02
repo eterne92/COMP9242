@@ -84,6 +84,7 @@ static int con_eachopen(struct device *dev, int openflags)
 
 static void putchar_to_user(void)
 {
+    printf("putchar\n");
     struct uio *uio = the_console->uio;
     if (uio->vaddr == 0) {
         /* shouldn't handle this call */
@@ -103,21 +104,25 @@ static void putchar_to_user(void)
         --uio->uio_resid;
         if (uio->uio_resid == 0) {
             // finish reading
+            printf("finish reading\n");
             the_console->uio = NULL;
-            syscall_reply(the_console->proc->reply, idx + 1, 0);
+            // syscall_reply(the_console->proc->reply, idx + 1, 0);
             return;
         } else if (c == '\n') {
+            printf("finish reading\n");
             the_console->uio = NULL;
-            syscall_reply(the_console->proc->reply, idx + 1, 0);
+            // syscall_reply(the_console->proc->reply, idx + 1, 0);
             return;
         }
         ++idx;
     }
+    printf("putchar out\n");
 }
 
 static void read_handler(struct serial *serial, char c)
 {
     (void)serial;
+    printf("handler called\n");
     if (the_console->n < BUFFER_SIZE) {
         the_console->console_buffer[the_console->cs_gotchars_tail] = c;
         the_console->cs_gotchars_tail = (the_console->cs_gotchars_tail + 1) % BUFFER_SIZE;
@@ -145,33 +150,41 @@ static int con_io(struct device *dev, struct uio *uio)
         // putchar_to_user(uio);
         the_console->uio = uio;
         putchar_to_user();
+        while(the_console->uio != NULL){
+            yield(NULL);
+        }
+        printf("done reading\n");
     } else {
         while (uio->uio_resid > 0) {
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 
             if (sos_vaddr == 0) {
-                printf("handle vm fault\n");
                 handle_page_fault(uio->proc, user_vaddr, 0);
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             }
 
             // send n bytes
             count = n;
-            for (int i = 0; i < 75000; i++)
-                ;
+            // for (int i = 0; i < 75000; i++)
+                // ;
             nbytes = serial_send(the_console->serial, (char *)sos_vaddr, n);
-            while (nbytes < count) {
-                count -= nbytes;
-                for (int i = 0; i < 75000; i++)
-                    ;
-                nbytes = serial_send(the_console->serial, (char *)(sos_vaddr + (n - count)), count);
+            // while (nbytes < count) {
+            //     count -= nbytes;
+            //     // for (int i = 0; i < 75000; i++)
+            //         // ;
+            //     nbytes = serial_send(the_console->serial, (char *)(sos_vaddr + (n - count)), count);
+            // }
+            if(nbytes < count){
+                printf("should never happen if serial is there\n");
+                return;
             }
             uio->uio_resid -= n;
             user_vaddr += n;
             n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
-            yield(NULL);
+            if(uio->uio_resid != 0){
+                yield(NULL);
+            }
         }
-        syscall_reply(uio->proc->reply, uio->length, 0);
     }
     return 0;
 }

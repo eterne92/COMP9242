@@ -57,6 +57,7 @@ struct nfs_fs {
 
 struct nfs_cb {
 	struct nfsfh *handle;
+	void *data;
 	int status;
 };
 

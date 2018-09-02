@@ -23,13 +23,13 @@ static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
 
 
-void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno)
+void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
 {
     seL4_MessageInfo_t reply_msg;
     reply_msg = seL4_MessageInfo_new(0, 0, 0, 2);
     /* Set the first (and only) word in the message to 0 */
     seL4_SetMR(0, ret);
-    seL4_SetMR(1, errno);
+    seL4_SetMR(1, err);
     /* Send the reply to the saved reply capability. */
     seL4_Send(reply, reply_msg);
     /* Free the slot we allocated for the reply - it is now empty, as the reply
@@ -108,7 +108,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    printf("SYSCALL NO.%d IS CALLED\n", syscall_number);
+    printf("SYSCALL NO.%d IS CALLED, cap saved as %ld\n", syscall_number, reply);
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -123,7 +123,9 @@ void handle_syscall(seL4_Word badge, int num_args)
     //     cspace_free_slot(global_cspace, reply);
     //     break;
     case SOS_SYS_OPEN:{
-        _sys_open(cur_proc);
+        coro c = coroutine((coro_t)&_sys_open);
+        resume(c, cur_proc);
+        create_coroutine(c);
         break;
     }
     case SOS_SYS_READ:{

@@ -38,6 +38,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <picoro/picoro.h>
 
 static struct vnode *bootfs_vnode = NULL;
 
@@ -50,6 +51,7 @@ void change_bootfs(struct vnode *newvn)
 
     oldvn = bootfs_vnode;
     bootfs_vnode = newvn;
+    printf("boot_vnode is %p\n", bootfs_vnode);
 
     if (oldvn != NULL) {
         VOP_DECREF(oldvn);
@@ -127,9 +129,13 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
     }
 
     length = strlen(path);
-	result = vfs_getroot(path, startvn);
+	result = vfs_getroot(path, &vn);
 	if (result == ENODEV) {
 		/* it's our nfs fs system */
+        while(bootfs_vnode == NULL){
+            yield(NULL);
+        }
+        printf("we are nfs yeha!\n");
 		*startvn = bootfs_vnode;
 		*subpath = path;
 		return 0;
@@ -137,6 +143,7 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
 	else if(result != 0){
 		return result;
 	}
+    *startvn = vn;
 	*subpath = &path[length];
     return 0;
 }
@@ -159,9 +166,10 @@ int vfs_lookparent(char *path, struct vnode **retval,
         return result;
     }
 
-    VOP_DECREF(startvn);
+    // VOP_DECREF(startvn);
 
     *retval = startvn;
+    printf("start vn in lookparent %p\n", startvn);
 
     return result;
 }
@@ -175,9 +183,12 @@ int vfs_lookup(char *path, struct vnode **retval)
     if (result) {
         return result;
     }
+    printf("startvn is %p\n", startvn);
 
     result = VOP_LOOKUP(startvn, path, retval);
 
-    VOP_DECREF(startvn);
+    printf("return val is retval %p\n", *retval);
+    printf("result is %d\n", result);
+
     return result;
 }

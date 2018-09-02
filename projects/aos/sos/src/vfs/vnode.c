@@ -107,7 +107,7 @@ vnode_decref(struct vnode *vn)
 	}
 
 	struct vnode *newvn;
-	vfs_lookup("console:", &newvn);
+	vfs_lookup("console", &newvn);
 	if(vn == newvn){
 		VOP_RECLAIM(vn);
 	}

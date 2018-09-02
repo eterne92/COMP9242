@@ -191,8 +191,8 @@ int vfs_unmountall(void);
 #define VFSINLINE INLINE
 #endif
 
-DECLARRAY(vnode, INLINE);
-DEFARRAY(vnode, INLINE);
+DECLARRAY(vnode, VFSINLINE);
+DEFARRAY(vnode, VFSINLINE);
 
 /*
  * Global one-big-lock for all filesystem operations.

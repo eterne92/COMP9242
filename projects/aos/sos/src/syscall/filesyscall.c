@@ -92,6 +92,7 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
         /* set the offset to the updated offset in the uio */
         file->of_offset = my_uio.uio_offset;
     }
+    printf("new offset is %d\n", file->of_offset);
 
     filetable_put(cur_proc->openfile_table, fd, file);
 
@@ -100,6 +101,7 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
      * minus how much is left in it.
      */
     *retval = size - my_uio.uio_resid;
+    printf("retval is %d, resid %d, size %d\n", *retval, my_uio.uio_resid, size);
 
     return 0;
 
@@ -108,6 +110,22 @@ fail:
     return result;
 }
 
+int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags){
+    int fd;
+    int ret;
+	struct openfile *file;
+	ret = openfile_open(path, openflags, 0, &file);
+    if(ret){
+        return -1;
+    }
+    ret = filetable_place(cur_proc->openfile_table, file, &fd);
+    if (ret) {
+        openfile_decref(file);
+        return -1;
+    }
+    printf("got fd is %d\n", fd);
+    return fd;
+}
 /*
  * open() - get the path with copyinstr, then use openfile_open and
  * filetable_place to do the real work.
@@ -118,8 +136,7 @@ void *_sys_open(proc *cur_proc) {
 	int ret = -1;
 	seL4_Word path = seL4_GetMR(1);
 	seL4_Word openflags = seL4_GetMR(2);
-	seL4_Word mode = seL4_GetMR(3);
-	struct openfile *file;
+	// seL4_Word mode = seL4_GetMR(3);
 	if ((openflags & allflags) != openflags) {
         /* unknown flags were set */
         syscall_reply(cur_proc->reply, ret, -1);
@@ -129,24 +146,16 @@ void *_sys_open(proc *cur_proc) {
 	if(path_length == -1) {
 		syscall_reply(cur_proc->reply, ret, -1);
 	}
+    printf("got name of %s, openflags %d\n", str, openflags);
 
-	ret = openfile_open(str, openflags, (mode_t) mode, &file);
-    if (ret) {
+    ret = _sys_do_open(cur_proc, str, openflags);
+
+
+    if (ret < 0) {
 		syscall_reply(cur_proc->reply, ret, -1);
     }
 
-    /*
-     * Place the file in our process's file table, which gives us
-     * the result file descriptor.
-     */
-    int fd;
-    ret = filetable_place(cur_proc->openfile_table, file, &fd);
-    if (ret) {
-        openfile_decref(file);
-		syscall_reply(cur_proc->reply, -1, -1);
-    }
-
-	syscall_reply(cur_proc->reply, fd, 0);
+	syscall_reply(cur_proc->reply, ret, 0);
 	return NULL;
 }
 
@@ -158,11 +167,14 @@ void *_sys_read(proc *cur_proc) {
 	seL4_Word length = seL4_GetMR(3);
 	size_t ret;
 
-	if(validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
+
+	bool valid = validate_virtual_address(cur_proc->as, vaddr, length, READ);
+    if(valid){
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ, O_WRONLY, &ret);
+        printf("ret val is %ld\n", ret);
         syscall_reply(cur_proc->reply, ret, 0);
 	} else {
-		syscall_reply(cur_proc->reply, -1, EFAULT);
+		syscall_reply(cur_proc->reply, 0, EFAULT);
 	}
 	return NULL;
 }
@@ -173,12 +185,13 @@ void *_sys_write(proc *cur_proc) {
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
     size_t ret;
-
-	if(validate_virtual_address(cur_proc->as, vaddr, length, WRITE)) {
+    bool valid = validate_virtual_address(cur_proc->as, vaddr, length, WRITE);
+    printf("valid %d\n", valid);
+	if(valid){
 		_sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
         syscall_reply(cur_proc->reply, ret, 0);
 	} else {
-		syscall_reply(cur_proc->reply, -1, EFAULT);
+		syscall_reply(cur_proc->reply, 0, EFAULT);
 	}
 	return NULL;
 }
@@ -236,21 +249,21 @@ void *_sys_close(proc *cur_proc)
 
 void *_sys_getdirent(proc *cur_proc)
 {
-    int pos = (int)seL4_GetMR(1);
-    char *path = (char *) seL4_GetMR(2);
-    size_t nbytes = (size_t)seL4_GetMR(3);
-    if (validate_virtual_address(cur_proc->as, vaddr, length, READ)) {
-         struct vnode *vn;
-        int ret, errno = 0;
-        vfs_lookup(str, &vn);
-        struct uio my_uio;
-        uio_init(&my_uio, (seL4_Word) path, nbytes, 0, UIO_READ, cur_proc);
-        ret = VOP_GETDIRENTRY(vn, &my_uio);
-        errno = !ret ? 0 : -1;
-        syscall_reply(cur_proc->reply, ret, errno);
-    } else {
-        syscall_reply(cur_proc->reply, -1, EFAULT);
-    }
+    // int pos = (int)seL4_GetMR(1);
+    // char *path = (char *) seL4_GetMR(2);
+    // size_t nbytes = (size_t)seL4_GetMR(3);
+    // if (validate_virtual_address(cur_proc->as, path, nbytes, READ)) {
+    //      struct vnode *vn;
+    //     int ret, errno = 0;
+    //     vfs_lookup(str, &vn);
+    //     struct uio my_uio;
+    //     uio_init(&my_uio, (seL4_Word) path, nbytes, 0, UIO_READ, cur_proc);
+    //     ret = VOP_GETDIRENTRY(vn, &my_uio);
+    //     errno = !ret ? 0 : -1;
+    //     syscall_reply(cur_proc->reply, ret, errno);
+    // } else {
+    //     syscall_reply(cur_proc->reply, -1, EFAULT);
+    // }
    
     return NULL;
 }

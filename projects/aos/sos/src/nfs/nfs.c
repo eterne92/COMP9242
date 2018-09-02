@@ -170,7 +170,12 @@ static void nfs_read_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 {
 	struct nfs_cb *cb = private_data;
 	cb->status = status;
-	cb->handle = data;
+	if(status <= 0){
+		cb->data = NULL;
+		return;
+	}
+	memcpy(cb->data, data, status);
+	cb->data = NULL;
 }
 /*
  * VOP_READ
@@ -187,6 +192,7 @@ _nfs_read(struct vnode *v, struct uio *uio)
 
 	assert(uio->uio_rw==UIO_READ);
 
+	printf("try read a nfs file\n");
 	/* read frame by frame */
 	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
@@ -196,7 +202,9 @@ _nfs_read(struct vnode *v, struct uio *uio)
     }
 
 	while (uio->uio_resid > 0) {
+		printf("start one round\n");
 		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+		printf("sos_vaddr is %p, try to read %d\n", sos_vaddr, n);
 
 		if (sos_vaddr == 0) {
 			printf("handle vm fault\n");
@@ -208,39 +216,40 @@ _nfs_read(struct vnode *v, struct uio *uio)
 		count = n;
 		cb.status = 0;
 		cb.handle = nv->handle;
+		cb.data = (void *) sos_vaddr;
 
 		result = nfs_pread_async(nf->context,nv->handle,uio->uio_offset, 
 								 count, nfs_read_cb, &cb);
 		if(result){
-			syscall_reply(uio->proc->reply, -1, 0);
+			printf("read failed with result as %d\n", result);
 			return result;
 		}
 		/* wait until callback done */
-		while(cb.status == 0){
+		while(cb.data){
 			yield(NULL);
 		}
+		printf("async read returns with status %d\n", cb.status);
 		/* callback got sth wrong */
 		if(cb.status < 0){
-			syscall_reply(uio->proc->reply, -1, 0);
-			return 0;
+			return cb.status;
 		}
 
 		nbytes = cb.status;
 		/* use handle to get the return data pointer */
-		ret_data = cb.handle;
-		memcpy((void *) sos_vaddr, ret_data, nbytes);
-		if(nbytes < count){
-			/* it's over */
-			uio->uio_resid -= nbytes;
-			syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
-		}
 
 		uio->uio_resid -= nbytes;
+		uio->uio_offset += nbytes;
 		user_vaddr += n;
 		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+
+		if(nbytes < count){
+			/* it's over */
+			printf("read is over\n");
+			return 0;
+		}
+
 		yield(NULL);
 	}
-	syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
 	return 0;
 }
 
@@ -289,6 +298,7 @@ static void nfs_write_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 	(void) data;
 	struct nfs_cb *cb = private_data;
 	cb->status = status;
+	cb->data = NULL;
 }
 
 /*
@@ -327,36 +337,34 @@ _nfs_write(struct vnode *v, struct uio *uio)
 		count = n;
 		cb.status = 0;
 		cb.handle = nv->handle;
+		cb.data = nv->handle;
 
 		result = nfs_pwrite_async(nf->context,nv->handle,uio->uio_offset, 
 								count, (void *) sos_vaddr, nfs_write_cb, &cb);
 		if(result){
-			syscall_reply(uio->proc->reply, -1, 0);
 			return result;
 		}
 		/* wait until callback done */
-		while(cb.status == 0){
+		while(cb.data != NULL){
 			yield(NULL);
 		}
 		/* callback got sth wrong */
 		if(cb.status < 0){
-			syscall_reply(uio->proc->reply, -1, 0);
-			return 0;
+			return cb.status;
 		}
 
 		nbytes = cb.status;
-		if(nbytes < count){
-			/* it's over */
-			uio->uio_resid -= nbytes;
-			syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
-		}
-
 		uio->uio_resid -= nbytes;
+		uio->uio_offset += nbytes;
 		user_vaddr += n;
 		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+		if(nbytes < count){
+			/* it's over */
+			return 0;
+		}
+
 		yield(NULL);
 	}
-	syscall_reply(uio->proc->reply, uio->length - uio->uio_resid, 0);
 	return 0;
 }
 
@@ -520,7 +528,9 @@ _nfs_lookup(struct vnode *root, char *pathname, struct vnode **ret)
 	struct nfs_vnode *newguy;
 	int result;
 
+	printf("start lookup\n");
 	result = nfs_loadvnode(root, pathname, false, &newguy);
+	printf("lookup result is %d\n", result);
 	if(result != 0){
 		return result;
 	}
@@ -884,14 +894,14 @@ nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode
 	}
 
 	/* Didn't have one; create it */
-
+	printf("didn't find a vn, creat = %d\n", creat);
 	/* async open file */
 	struct nfs_cb cb;
 	cb.handle = NULL;
 	cb.status = 0;
 
 	if(creat){
-		result = nfs_creat_async(nf->context, name, O_RDWR, nfs_creat_cb, &cb);
+		result = nfs_creat_async(nf->context, name, 777, nfs_creat_cb, &cb);
 	}
 	else{
 		result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_cb, &cb);
@@ -907,6 +917,7 @@ nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode
 		yield(NULL);
 	}
 
+	printf("cb.handle = %p, cb.status = %p\n", cb.handle, cb.status);
 	/* something wrong with open callback */
 	if(cb.status != 0){
 		*ret = NULL;

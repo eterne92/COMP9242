@@ -41,7 +41,7 @@ typedef struct proc proc;
 void run_coroutine(void *arg);
 void handle_syscall(seL4_Word badge, int num_args);
 
-void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word errno);
+void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);
 
 
 void _sos_sys_time_stamp(void);
@@ -49,6 +49,7 @@ void _sos_sys_time_stamp(void);
 void _sos_sys_usleep(void);
 /* file syscalls */
 
+int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags);
 void *_sys_open(proc *cur_proc);
 void *_sys_read(proc *cur_proc);
 void *_sys_write(proc *cur_proc);

@@ -87,7 +87,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
 {
 
     while (1) {
-        seL4_Word badge = 0;
+        seL4_Word badge;
         seL4_Word label;
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
@@ -147,7 +147,6 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 ZF_LOGF("The SOS skeleton does not know how to handle faults!");
             }
         }
-        // resume
     }
 }
 
@@ -437,6 +436,9 @@ bool start_first_process(char *app_name, seL4_CPtr ep)
     printf("Starting ttytest at %p\n", (void *)context.pc);
     err = seL4_TCB_WriteRegisters(tty_test_process.tcb, 1, 0, 2, &context);
     ZF_LOGE_IF(err, "Failed to write registers");
+    _sys_do_open(&tty_test_process, "console", 1);
+    _sys_do_open(&tty_test_process, "console", 1);
+    _sys_do_open(&tty_test_process, "console", 1);
     return err == seL4_NoError;
 }
 

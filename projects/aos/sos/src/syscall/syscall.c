@@ -122,32 +122,38 @@ void handle_syscall(seL4_Word badge, int num_args)
     //      * capability was consumed by the send. */
     //     cspace_free_slot(global_cspace, reply);
     //     break;
-    case SOS_SYS_OPEN:{
+    case SOS_SYS_OPEN: {
         coro c = coroutine((coro_t)&_sys_open);
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
-    case SOS_SYS_READ:{
+    case SOS_SYS_READ: {
         coro c = coroutine((coro_t)&_sys_read);
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
-    case SOS_SYS_WRITE:{
+    case SOS_SYS_WRITE: {
         coro c = coroutine((coro_t)&_sys_write);
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
-    case SOS_SYS_STAT:{
+    case SOS_SYS_STAT: {
         coro c = coroutine((coro_t)&_sys_stat);
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
-    case SOS_SYS_CLOSE:{
+    case SOS_SYS_CLOSE: {
         coro c = coroutine((coro_t)&_sys_close);
+        resume(c, cur_proc);
+        create_coroutine(c);
+        break;
+    }
+    case SOS_SYS_GET_DIRDENTS: {
+        coro c = coroutine((coro_t)_sys_getdirent);
         resume(c, cur_proc);
         create_coroutine(c);
         break;
@@ -177,7 +183,8 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
 }
 
-void _sys_brk(proc *cur_proc){
+void _sys_brk(proc *cur_proc)
+{
     seL4_Error err;
     seL4_Word newbrk = seL4_GetMR(1);
     as_region *region;
@@ -202,7 +209,8 @@ void _sys_brk(proc *cur_proc){
     syscall_reply(cur_proc->reply, ret, 0);
 }
 
-void _sys_mmap(proc *cur_proc){
+void _sys_mmap(proc *cur_proc)
+{
     printf("mmap called\n");
     seL4_Error err;
     as_region *region;
@@ -222,7 +230,8 @@ void _sys_mmap(proc *cur_proc){
     syscall_reply(cur_proc->reply, region->vaddr, 0);
 }
 
-void _sys_munmap(proc *cur_proc){
+void _sys_munmap(proc *cur_proc)
+{
     printf("munmap called\n");
     seL4_Word ret;
     as_region *region = cur_proc->as->regions;

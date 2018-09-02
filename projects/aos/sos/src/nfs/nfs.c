@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,30 +29,28 @@
 
 /* wrapper of nfs */
 
-
-#include <autoconf.h>
-#include "../vfs/type.h"
-#include <errno.h>
-#include <fcntl.h>
-#include "../vfs/stat.h"
+#include "nfs.h"
+#include "../pagetable.h"
+#include "../syscall/syscall.h"
 #include "../vfs/array.h"
+#include "../vfs/stat.h"
+#include "../vfs/type.h"
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
-#include "../pagetable.h"
 #include "nfsfs.h"
-#include "nfs.h"
-#include "../syscall/syscall.h"
-#include <picoro/picoro.h>
+#include <autoconf.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <nfsc/libnfs.h>
+#include <picoro/picoro.h>
 #include <string.h>
 
-
 #ifndef SOS_NFS_DIR
-#  ifdef CONFIG_SOS_NFS_DIR
-#    define SOS_NFS_DIR CONFIG_SOS_NFS_DIR
-#  else
-#    define SOS_NFS_DIR ""
-#  endif
+#ifdef CONFIG_SOS_NFS_DIR
+#define SOS_NFS_DIR CONFIG_SOS_NFS_DIR
+#else
+#define SOS_NFS_DIR ""
+#endif
 #endif
 
 struct nfs_vnode *nfs_vn = NULL;
@@ -60,28 +58,43 @@ struct nfs_vnode *nfs_vn = NULL;
 void nfs_mount_cb(int status, UNUSED struct nfs_context *nfs, void *data,
                   UNUSED void *private_data);
 
-static int nfs_loadvnode(struct vnode *root, const char *name, bool creat,struct nfs_vnode **ret);
+static int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
+                         struct nfs_vnode **ret);
 
-static void nfs_open_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+static void nfs_open_creat_cb(int status, UNUSED struct nfs_context *nfs,
+                              void *data,
+                              void *private_data)
 {
-	struct nfs_cb *cb = private_data;
-	if(status != 0){
-		cb->status = status;
-		cb->handle = NULL;
-	}
-	cb->handle = data;
+    struct nfs_cb *cb = private_data;
+    cb->status = status;
+    cb->handle = !status ? data : NULL;
+
 }
-
+/*
 static void nfs_creat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+                         void *private_data)
 {
-	struct nfs_cb *cb = private_data;
-	if(status != 0){
-		cb->status = status;
-		cb->handle = NULL;
-	}
-	cb->handle = data;
+    struct nfs_cb *cb = private_data;
+    cb->status = status;
+    cb->handle = !status ? data : NULL;
+
+    if (status != 0) {
+        cb->status = status;
+        cb->handle = NULL;
+    } else {
+        cb->handle = data;
+    }
+
+}
+*/
+
+static void nfs_opendir_cb(int status, UNUSED struct nfs_context *nfs,
+                           void *data,
+                           void *private_data)
+{
+    struct nfs_cb *cb = private_data;
+    cb->status = status;
+    cb->data = !status ? data : NULL;
 }
 
 //
@@ -91,510 +104,487 @@ static void nfs_creat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 /*
  * VOP_EACHOPEN on files
  */
-static
-int
-_nfs_eachopen(struct vnode *v, int openflags)
+static int _nfs_eachopen(struct vnode *v, int openflags)
 {
-	(void)v;
-	(void)openflags;
-	return 0;
+    (void)v;
+    (void)openflags;
+    return 0;
 }
 
-
 static void nfs_close_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+                         void *private_data)
 {
-	(void) data;
-	struct nfs_cb *cb = private_data;
-	printf("cb close is called with cb->handle is %p\n", cb->handle);
-	cb->handle = NULL;
-	cb->status = status;
+    (void)data;
+    struct nfs_cb *cb = private_data;
+    printf("cb close is called with cb->handle is %p\n", cb->handle);
+    cb->handle = NULL;
+    cb->status = status;
 }
 
 /*
  * VOP_RECLAIM
  *
  */
-static
-int
-_nfs_reclaim(struct vnode *v)
+static int _nfs_reclaim(struct vnode *v)
 {
-	struct nfs_vnode *nv = v->vn_data;
-	struct nfs_fs *nf = v->vn_fs->fs_data;
-	struct nfs_cb cb;
-	unsigned ix, i, num;
-	int result;
+    struct nfs_vnode *nv = v->vn_data;
+    struct nfs_fs *nf = v->vn_fs->fs_data;
+    struct nfs_cb cb;
+    unsigned ix, i, num;
+    int result;
 
-	cb.status = 0;
-	cb.handle = nv->handle;
+    cb.status = 0;
+    cb.handle = nv->handle;
 
-	result = nfs_close_async(nf->context, cb.handle, nfs_close_cb, &cb);
-	if (result) {
-		return result;
-	}
-	printf("start to destroy vn\n");
+    result = nfs_close_async(nf->context, cb.handle, nfs_close_cb, &cb);
+    if (result) {
+        return result;
+    }
+    printf("start to destroy vn\n");
 
-	num = vnodearray_num(nf->nfs_vnodes);
-	ix = num;
-	for (i=0; i<num; i++) {
-		struct vnode *vx;
+    num = vnodearray_num(nf->nfs_vnodes);
+    ix = num;
+    for (i = 0; i < num; i++) {
+        struct vnode *vx;
 
-		vx = vnodearray_get(nf->nfs_vnodes, i);
-		if (vx == v) {
-			ix = i;
-			break;
-		}
-	}
-	if (ix == num) {
-		/* should never hanppen */
-		assert(false);
-	}
+        vx = vnodearray_get(nf->nfs_vnodes, i);
+        if (vx == v) {
+            ix = i;
+            break;
+        }
+    }
+    if (ix == num) {
+        /* should never hanppen */
+        assert(false);
+    }
 
-	printf("vn remove\n");
-	vnodearray_remove(nf->nfs_vnodes, ix);
-	printf("vn cleanup\n");
-	vnode_cleanup(&nv->nv_v);
+    printf("vn remove\n");
+    vnodearray_remove(nf->nfs_vnodes, ix);
+    printf("vn cleanup\n");
+    vnode_cleanup(&nv->nv_v);
 
-	free(nv);
+    free(nv);
 
-	printf("cb.handle is %p\n", cb.handle);
-	/* should not got something wrong, but we still track it */
+    printf("cb.handle is %p\n", cb.handle);
+    /* should not got something wrong, but we still track it */
 
-	while(cb.handle != NULL){
-		yield(NULL);
-	}
+    while (cb.handle != NULL) {
+        yield(NULL);
+    }
 
-	if(cb.status != 0){
-		return cb.status;
-	}
+    if (cb.status != 0) {
+        return cb.status;
+    }
 
-	printf("done real vn_reclaim\n");
+    printf("done real vn_reclaim\n");
 
-	return 0;
+    return 0;
 }
 
 static void nfs_read_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+                        void *private_data)
 {
-	struct nfs_cb *cb = private_data;
-	cb->status = status;
-	if(status <= 0){
-		cb->data = NULL;
-		return;
-	}
-	memcpy(cb->data, data, status);
-	cb->data = NULL;
+    struct nfs_cb *cb = private_data;
+    cb->status = status;
+    if (status <= 0) {
+        cb->data = NULL;
+        return;
+    }
+    memcpy(cb->data, data, status);
+    cb->data = NULL;
 }
 /*
  * VOP_READ
  */
-static
-int
-_nfs_read(struct vnode *v, struct uio *uio)
+static int _nfs_read(struct vnode *v, struct uio *uio)
 {
-	struct nfs_vnode *nv = v->vn_data;
-	struct nfs_fs *nf = v->vn_fs->fs_data;
-	struct nfs_cb cb;
-	void *ret_data;
-	int result;
+    struct nfs_vnode *nv = v->vn_data;
+    struct nfs_fs *nf = v->vn_fs->fs_data;
+    struct nfs_cb cb;
+    void *ret_data;
+    int result;
 
-	assert(uio->uio_rw==UIO_READ);
+    assert(uio->uio_rw == UIO_READ);
 
-	printf("try read a nfs file\n");
-	/* read frame by frame */
-	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+    printf("try read a nfs file\n");
+    /* read frame by frame */
+    seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-	int nbytes = 0, count;
+    int nbytes = 0, count;
     if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
 
-	while (uio->uio_resid > 0) {
-		printf("start one round\n");
-		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-		printf("sos_vaddr is %p, try to read %d\n", sos_vaddr, n);
+    while (uio->uio_resid > 0) {
+        printf("start one round\n");
+        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+        printf("sos_vaddr is %p, try to read %d\n", sos_vaddr, n);
 
-		if (sos_vaddr == 0) {
-			printf("handle vm fault\n");
-			handle_page_fault(uio->proc, user_vaddr, 0);
-			sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-		}
+        if (sos_vaddr == 0) {
+            printf("handle vm fault\n");
+            handle_page_fault(uio->proc, user_vaddr, 0);
+            sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+        }
 
-		// read n bytes
-		count = n;
-		cb.status = 0;
-		cb.handle = nv->handle;
-		cb.data = (void *) sos_vaddr;
+        // read n bytes
+        count = n;
+        cb.status = 0;
+        cb.handle = nv->handle;
+        cb.data = (void *)sos_vaddr;
 
-		result = nfs_pread_async(nf->context,nv->handle,uio->uio_offset, 
-								 count, nfs_read_cb, &cb);
-		if(result){
-			printf("read failed with result as %d\n", result);
-			return result;
-		}
-		/* wait until callback done */
-		while(cb.data){
-			yield(NULL);
-		}
-		printf("async read returns with status %d\n", cb.status);
-		/* callback got sth wrong */
-		if(cb.status < 0){
-			return cb.status;
-		}
+        result = nfs_pread_async(nf->context, nv->handle, uio->uio_offset,
+                                 count, nfs_read_cb, &cb);
+        if (result) {
+            printf("read failed with result as %d\n", result);
+            return result;
+        }
+        /* wait until callback done */
+        while (cb.data) {
+            yield(NULL);
+        }
+        printf("async read returns with status %d\n", cb.status);
+        /* callback got sth wrong */
+        if (cb.status < 0) {
+            return cb.status;
+        }
 
-		nbytes = cb.status;
-		/* use handle to get the return data pointer */
+        nbytes = cb.status;
+        /* use handle to get the return data pointer */
 
-		uio->uio_resid -= nbytes;
-		uio->uio_offset += nbytes;
-		user_vaddr += n;
-		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+        uio->uio_resid -= nbytes;
+        uio->uio_offset += nbytes;
+        user_vaddr += n;
+        n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
 
-		if(nbytes < count){
-			/* it's over */
-			printf("read is over\n");
-			return 0;
-		}
+        if (nbytes < count) {
+            /* it's over */
+            printf("read is over\n");
+            return 0;
+        }
 
-		yield(NULL);
-	}
-	return 0;
+        yield(NULL);
+    }
+    return 0;
 }
 
 /*
  * VOP_READDIR
  */
-static
-int
-_nfs_getdirentry(struct vnode *v, struct uio *uio)
+static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
 {
-	struct nfs_vnode *nv = v->vn_data;
-	struct nfs_fs *nf = v->vn_fs->fs_data;
-	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
-	char buf[NAME_MAX];
-	int ret;
-	// calculate the remaining number of bytes within the current page
-	// first read n bytes then keep reading until uio_resid == 0
-	size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-	if (uio->uio_resid < n) {
+    struct nfs_vnode *nv = v->vn_data;
+    struct nfs_fs *nf = v->vn_fs->fs_data;
+    seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+    struct nfs_cb cb;
+    memset(&cb, 0, sizeof(struct nfs_cb));
+    char path[NAME_MAX + 1];
+    int ret, pos;
+    pos = uio->uio_offset;
+
+    // need to make sure the path value is SOS_NFS_DIR or ""
+    ret = nfs_opendir_async(nf->context, SOS_NFS_DIR, nfs_opendir_cb, &cb);
+    if (ret) {
+        printf("opendir failed with status %d\n", cb.status);
+        return ret;
+    }
+    while (cb.status == 0 && cb.data == NULL) {
+        yield(NULL);
+    }
+    if (cb.status) {
+        printf("getdirent failed with status %d\n", cb.status);
+        return cb.status;
+    }
+    struct nfsdir *dir = cb->data;
+    // now do the actual getdirent
+    struct nfsdirent *entry = nfs_readdir(nf->context, dir);
+    for (int i = 0; i < pos; ++i) entry = entry->next;
+
+    // calculate the remaining number of bytes within the current page
+    // first read n bytes then keep reading until uio_resid == 0
+    size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
+    if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
-	while (uio->uio_resid > 0) {
-		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-		if (!sos_vaddr) {
-			handle_page_fault(uio->proc, user_vaddr, 0);
+	int offset = 0;
+    while (uio->uio_resid > 0) {
+        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+        if (!sos_vaddr) {
+            handle_page_fault(uio->proc, user_vaddr, 0);
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-		}
-		memcpy(buf, (void *)sos_vaddr, n);
-		uio->uio_resid -= n;
-		user_vaddr += n;
-		n = uio->length - n;
-	}
-	// opendir at bootstrap and keep it open or open when getdirent is called
-	//struct nfsdirent *entry = nfs_readdir(nf->context, XXX);
-	(void) v;
-	(void) uio;
-	(void) nv;
-	(void) nf;
+        }
+        memcpy((void *)sos_vaddr, entry->name + offset, n);
+        uio->uio_resid -= n;
+        user_vaddr += n;
+		offset += n;
+        n = uio->length - n;
+    }
+    nfs_closedir(nf->context, dir);
 
-	return 0;
+    return 0;
 }
 
 static void nfs_write_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+                         void *private_data)
 {
-	(void) data;
-	struct nfs_cb *cb = private_data;
-	cb->status = status;
-	cb->data = NULL;
+    (void)data;
+    struct nfs_cb *cb = private_data;
+    cb->status = status;
+    cb->data = NULL;
 }
 
 /*
  * VOP_WRITE
  */
 
-static
-int
-_nfs_write(struct vnode *v, struct uio *uio)
+static int _nfs_write(struct vnode *v, struct uio *uio)
 {
-	struct nfs_vnode *nv = v->vn_data;
-	struct nfs_fs *nf = v->vn_fs->fs_data;
-	struct nfs_cb cb;
-	int result;
+    struct nfs_vnode *nv = v->vn_data;
+    struct nfs_fs *nf = v->vn_fs->fs_data;
+    struct nfs_cb cb;
+    int result;
 
-	assert(uio->uio_rw==UIO_WRITE);
+    assert(uio->uio_rw == UIO_WRITE);
 
-	/* read frame by frame */
-	seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
+    /* read frame by frame */
+    seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-	int nbytes = 0, count;
+    int nbytes = 0, count;
     if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
 
-	while (uio->uio_resid > 0) {
-		sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+    while (uio->uio_resid > 0) {
+        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 
-		if (sos_vaddr == 0) {
-			printf("handle vm fault\n");
-			handle_page_fault(uio->proc, user_vaddr, 0);
-			sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-		}
+        if (sos_vaddr == 0) {
+            printf("handle vm fault\n");
+            handle_page_fault(uio->proc, user_vaddr, 0);
+            sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+        }
 
-		// read n bytes
-		count = n;
-		cb.status = 0;
-		cb.handle = nv->handle;
-		cb.data = nv->handle;
+        // read n bytes
+        count = n;
+        cb.status = 0;
+        cb.handle = nv->handle;
+        cb.data = nv->handle;
 
-		result = nfs_pwrite_async(nf->context,nv->handle,uio->uio_offset, 
-								count, (void *) sos_vaddr, nfs_write_cb, &cb);
-		if(result){
-			return result;
-		}
-		/* wait until callback done */
-		while(cb.data != NULL){
-			yield(NULL);
-		}
-		/* callback got sth wrong */
-		if(cb.status < 0){
-			return cb.status;
-		}
+        result = nfs_pwrite_async(nf->context, nv->handle, uio->uio_offset,
+                                  count, (void *)sos_vaddr, nfs_write_cb, &cb);
+        if (result) {
+            return result;
+        }
+        /* wait until callback done */
+        while (cb.data != NULL) {
+            yield(NULL);
+        }
+        /* callback got sth wrong */
+        if (cb.status < 0) {
+            return cb.status;
+        }
 
-		nbytes = cb.status;
-		uio->uio_resid -= nbytes;
-		uio->uio_offset += nbytes;
-		user_vaddr += n;
-		n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
-		if(nbytes < count){
-			/* it's over */
-			return 0;
-		}
+        nbytes = cb.status;
+        uio->uio_resid -= nbytes;
+        uio->uio_offset += nbytes;
+        user_vaddr += n;
+        n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
+        if (nbytes < count) {
+            /* it's over */
+            return 0;
+        }
 
-		yield(NULL);
-	}
-	return 0;
+        yield(NULL);
+    }
+    return 0;
 }
 
 /*
  * VOP_IOCTL
  */
-static
-int
-_nfs_ioctl(struct vnode *v, int op, void *data)
+static int _nfs_ioctl(struct vnode *v, int op, void *data)
 {
-	/*
-	 * No ioctls.
-	 */
+    /*
+     * No ioctls.
+     */
 
-	(void)v;
-	(void)op;
-	(void)data;
+    (void)v;
+    (void)op;
+    (void)data;
 
-	return EINVAL;
+    return EINVAL;
 }
 
 static void nfs_stat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
-						void *private_data)
+                        void *private_data)
 {
-	struct nfs_cb *cb = private_data;
-	printf("stat is up\n");
-	cb->status = status;
-	struct stat *statbuf = cb->data;
-	struct nfs_stat_64 *retstat = data;
-	statbuf->st_atime = retstat->nfs_atime;
-	statbuf->st_ctime = retstat->nfs_ctime;
-	statbuf->st_size = retstat->nfs_size;
-	statbuf->st_mode = retstat->nfs_mode;
-	printf("stat is done\n");
+    struct nfs_cb *cb = private_data;
+    printf("stat is up\n");
+    cb->status = status;
+    struct stat *statbuf = cb->data;
+    struct nfs_stat_64 *retstat = data;
+    statbuf->st_atime = retstat->nfs_atime;
+    statbuf->st_ctime = retstat->nfs_ctime;
+    statbuf->st_size = retstat->nfs_size;
+    statbuf->st_mode = retstat->nfs_mode;
+    printf("stat is done\n");
 }
 /*
  * VOP_STAT
  */
-static
-int
-_nfs_stat(struct vnode *v, struct stat *statbuf)
+static int _nfs_stat(struct vnode *v, struct stat *statbuf)
 {
-	struct nfs_vnode *nv = v->vn_data;
-	struct nfs_fs *nf = v->vn_fs->fs_data;
-	struct nfs_cb cb;
-	int result;
-	struct nfs_stat_64 retstat;
+    struct nfs_vnode *nv = v->vn_data;
+    struct nfs_fs *nf = v->vn_fs->fs_data;
+    struct nfs_cb cb;
+    int result;
+    struct nfs_stat_64 retstat;
 
-	cb.status = 1;
-	cb.handle = NULL;
-	cb.data = statbuf;
+    cb.status = 1;
+    cb.handle = NULL;
+    cb.data = statbuf;
 
-	result = nfs_fstat64_async(nf->context, nv->handle, nfs_stat_cb, &cb);
-	if (result) {
-		return result;
-	}
+    result = nfs_fstat64_async(nf->context, nv->handle, nfs_stat_cb, &cb);
+    if (result) {
+        return result;
+    }
 
-	while(cb.status > 0){
-		yield(NULL);
-	}
+    while (cb.status > 0) {
+        yield(NULL);
+    }
 
-
-	if(cb.status != 0){
-		return cb.status;
-	}
-
-
-	// statbuf->st_atime = retstat.nfs_atime;
-	// statbuf->st_ctime = retstat.nfs_ctime;
-	// statbuf->st_size = retstat.nfs_size;
-	// statbuf->st_mode = retstat.nfs_mode;
-
-
-	return 0;
+    if (cb.status != 0) {
+        return cb.status;
+    }
+    return 0;
 }
 
 /*
  * VOP_GETTYPE for files
  */
-static
-int
-_nfs_file_gettype(struct vnode *v, uint32_t *result)
+static int _nfs_file_gettype(struct vnode *v, uint32_t *result)
 {
-	(void)v;
-	*result = 1; /* plain file */
-	return 0;
+    (void)v;
+    *result = 1; /* plain file */
+    return 0;
 }
 
 /*
  * VOP_GETTYPE for directories
  */
-static
-int
-_nfs_dir_gettype(struct vnode *v, uint32_t *result)
+static int _nfs_dir_gettype(struct vnode *v, uint32_t *result)
 {
-	(void)v;
-	(void)result;
-	// *result = S_IFDIR;
-	/* there is no dir */
-	return -1;
+    (void)v;
+    (void)result;
+    // *result = S_IFDIR;
+    /* there is no dir */
+    return -1;
 }
 
 /*
  * VOP_ISSEEKABLE
  */
-static
-bool
-_nfs_isseekable(struct vnode *v)
+static bool _nfs_isseekable(struct vnode *v)
 {
-	(void)v;
-	return true;
+    (void)v;
+    return true;
 }
 
 /*
  * VOP_FSYNC
  */
-static
-int
-_nfs_fsync(struct vnode *v)
+static int _nfs_fsync(struct vnode *v)
 {
-	(void)v;
-	return 0;
+    (void)v;
+    return 0;
 }
 
 /*
  * VOP_TRUNCATE
  */
-static
-int
-_nfs_truncate(struct vnode *v, off_t len)
+static int _nfs_truncate(struct vnode *v, off_t len)
 {
-	// struct nfs_vnode *ev = v->vn_data;
-	// return emu_trunc(ev->ev_emu, ev->ev_handle, len);
-	(void) v;
-	(void) len;
-	/* trunc not support */
-	return -1;
+    // struct nfs_vnode *ev = v->vn_data;
+    // return emu_trunc(ev->ev_emu, ev->ev_handle, len);
+    (void)v;
+    (void)len;
+    /* trunc not support */
+    return -1;
 }
 
 /*
  * VOP_CREAT
  */
 /* nfs have a flat filesystem, so no dir needed, dir vnode is always root */
-static
-int
-_nfs_creat(struct vnode *root, const char *name, bool excl, mode_t mode,
-	    struct vnode **ret)
+static int _nfs_creat(struct vnode *root, const char *name, bool excl,
+                      mode_t mode,
+                      struct vnode **ret)
 {
-	(void) mode;
-	(void) excl;
-	struct nfs_vnode *newguy;
-	int result;
+    (void)mode;
+    (void)excl;
+    struct nfs_vnode *newguy;
+    int result;
 
-	result = nfs_loadvnode(root, name, true, &newguy);
-	if(result != 0){
-		return result;
-	}
+    result = nfs_loadvnode(root, name, true, &newguy);
+    if (result != 0) {
+        return result;
+    }
 
-	*ret = &newguy->nv_v;
-	return 0;
+    *ret = &newguy->nv_v;
+    return 0;
 }
 
 /*
  * VOP_LOOKUP
  */
-static
-int
-_nfs_lookup(struct vnode *root, char *pathname, struct vnode **ret)
+static int _nfs_lookup(struct vnode *root, char *pathname, struct vnode **ret)
 {
-	struct nfs_vnode *newguy;
-	int result;
+    struct nfs_vnode *newguy;
+    int result;
 
-	printf("start lookup\n");
-	result = nfs_loadvnode(root, pathname, false, &newguy);
-	printf("lookup result is %d\n", result);
-	if(result != 0){
-		return result;
-	}
+    printf("start lookup\n");
+    result = nfs_loadvnode(root, pathname, false, &newguy);
+    printf("lookup result is %d\n", result);
+    if (result != 0) {
+        return result;
+    }
 
-	*ret = &newguy->nv_v;
-	return 0;
+    *ret = &newguy->nv_v;
+    return 0;
 }
 
 /*
  * VOP_LOOKPARENT
  */
-static
-int
-_nfs_lookparent(struct vnode *dir, char *pathname, struct vnode **ret,
-		 char *buf, size_t len)
+static int _nfs_lookparent(struct vnode *dir, char *pathname,
+                           struct vnode **ret,
+                           char *buf, size_t len)
 {
-	(void) dir;
-	(void) pathname;
-	(void) ret;
-	(void) buf;
-	(void) len;
-	/* should never call lookparent now */
-	return -1;
+    (void)dir;
+    (void)pathname;
+    (void)ret;
+    (void)buf;
+    (void)len;
+    /* should never call lookparent now */
+    return -1;
 }
 
 /*
  * VOP_NAMEFILE
  */
-static
-int
-_nfs_namefile(struct vnode *v, struct uio *uio)
+static int _nfs_namefile(struct vnode *v, struct uio *uio)
 {
-	(void) v;
-	(void) uio;
-	return ENOSYS;
+    (void)v;
+    (void)uio;
+    return ENOSYS;
 }
 
 /*
  * VOP_MMAP
  */
 /* TODO: done it later */
-static
-int
-_nfs_mmap(struct vnode *v)
+static int _nfs_mmap(struct vnode *v)
 {
-	(void)v;
-	return ENOSYS;
+    (void)v;
+    return ENOSYS;
 }
 
 //////////////////////////////
@@ -603,64 +593,52 @@ _nfs_mmap(struct vnode *v)
  * Bits not implemented at all on nfs
  */
 
-static
-int
-_nfs_symlink(struct vnode *v, const char *contents, const char *name)
+static int _nfs_symlink(struct vnode *v, const char *contents, const char *name)
 {
-	(void)v;
-	(void)contents;
-	(void)name;
-	return ENOSYS;
+    (void)v;
+    (void)contents;
+    (void)name;
+    return ENOSYS;
 }
 
-static
-int
-_nfs_mkdir(struct vnode *v, const char *name, mode_t mode)
+static int _nfs_mkdir(struct vnode *v, const char *name, mode_t mode)
 {
-	(void)v;
-	(void)name;
-	(void)mode;
-	return ENOSYS;
+    (void)v;
+    (void)name;
+    (void)mode;
+    return ENOSYS;
 }
 
-static
-int
-_nfs_link(struct vnode *v, const char *name, struct vnode *target)
+static int _nfs_link(struct vnode *v, const char *name, struct vnode *target)
 {
-	(void)v;
-	(void)name;
-	(void)target;
-	return ENOSYS;
+    (void)v;
+    (void)name;
+    (void)target;
+    return ENOSYS;
 }
 
-static
-int
-_nfs_remove(struct vnode *v, const char *name)
+static int _nfs_remove(struct vnode *v, const char *name)
 {
-	(void)v;
-	(void)name;
-	return ENOSYS;
+    (void)v;
+    (void)name;
+    return ENOSYS;
 }
 
-static
-int
-_nfs_rmdir(struct vnode *v, const char *name)
+static int _nfs_rmdir(struct vnode *v, const char *name)
 {
-	(void)v;
-	(void)name;
-	return ENOSYS;
+    (void)v;
+    (void)name;
+    return ENOSYS;
 }
 
-static
-int
-_nfs_rename(struct vnode *v1, const char *n1,
-	     struct vnode *v2, const char *n2)
+static int _nfs_rename(struct vnode *v1, const char *n1,
+                       struct vnode *v2, const char *n2)
 {
-	(void)v1;
-	(void)n1;
-	(void)v2;
-	(void)n2;
-	return ENOSYS;
+    (void)v1;
+    (void)n1;
+    (void)v2;
+    (void)n2;
+    return ENOSYS;
 }
 
 //////////////////////////////
@@ -678,136 +656,114 @@ _nfs_rename(struct vnode *v1, const char *n1,
  * problem but is otherwise not very appealing.
  */
 
-static
-int
-_nfs_void_op_isdir(struct vnode *v)
+static int _nfs_void_op_isdir(struct vnode *v)
 {
-	(void)v;
-	return EISDIR;
+    (void)v;
+    return EISDIR;
 }
 
-static
-int
-_nfs_uio_op_isdir(struct vnode *v, struct uio *uio)
+static int _nfs_uio_op_isdir(struct vnode *v, struct uio *uio)
 {
-	(void)v;
-	(void)uio;
-	return EISDIR;
+    (void)v;
+    (void)uio;
+    return EISDIR;
 }
 
-static
-int
-_nfs_uio_op_notdir(struct vnode *v, struct uio *uio)
+static int _nfs_uio_op_notdir(struct vnode *v, struct uio *uio)
 {
-	(void)v;
-	(void)uio;
-	return ENOTDIR;
+    (void)v;
+    (void)uio;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_name_op_notdir(struct vnode *v, const char *name)
+static int _nfs_name_op_notdir(struct vnode *v, const char *name)
 {
-	(void)v;
-	(void)name;
-	return ENOTDIR;
+    (void)v;
+    (void)name;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_readlink_notlink(struct vnode *v, struct uio *uio)
+static int _nfs_readlink_notlink(struct vnode *v, struct uio *uio)
 {
-	(void)v;
-	(void)uio;
-	return EINVAL;
+    (void)v;
+    (void)uio;
+    return EINVAL;
 }
 
-static
-int
-_nfs_creat_notdir(struct vnode *v, const char *name, bool excl, mode_t mode,
-		   struct vnode **retval)
+static int _nfs_creat_notdir(struct vnode *v, const char *name, bool excl,
+                             mode_t mode,
+                             struct vnode **retval)
 {
-	(void)v;
-	(void)name;
-	(void)excl;
-	(void)mode;
-	(void)retval;
-	return ENOTDIR;
+    (void)v;
+    (void)name;
+    (void)excl;
+    (void)mode;
+    (void)retval;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_symlink_notdir(struct vnode *v, const char *contents, const char *name)
+static int _nfs_symlink_notdir(struct vnode *v, const char *contents,
+                               const char *name)
 {
-	(void)v;
-	(void)contents;
-	(void)name;
-	return ENOTDIR;
+    (void)v;
+    (void)contents;
+    (void)name;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_mkdir_notdir(struct vnode *v, const char *name, mode_t mode)
+static int _nfs_mkdir_notdir(struct vnode *v, const char *name, mode_t mode)
 {
-	(void)v;
-	(void)name;
-	(void)mode;
-	return ENOTDIR;
+    (void)v;
+    (void)name;
+    (void)mode;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_link_notdir(struct vnode *v, const char *name, struct vnode *target)
+static int _nfs_link_notdir(struct vnode *v, const char *name,
+                            struct vnode *target)
 {
-	(void)v;
-	(void)name;
-	(void)target;
-	return ENOTDIR;
+    (void)v;
+    (void)name;
+    (void)target;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_rename_notdir(struct vnode *v1, const char *n1,
-		    struct vnode *v2, const char *n2)
+static int _nfs_rename_notdir(struct vnode *v1, const char *n1,
+                              struct vnode *v2, const char *n2)
 {
-	(void)v1;
-	(void)n1;
-	(void)v2;
-	(void)n2;
-	return ENOTDIR;
+    (void)v1;
+    (void)n1;
+    (void)v2;
+    (void)n2;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_lookup_notdir(struct vnode *v, char *pathname, struct vnode **result)
+static int _nfs_lookup_notdir(struct vnode *v, char *pathname,
+                              struct vnode **result)
 {
-	(void)v;
-	(void)pathname;
-	(void)result;
-	return ENOTDIR;
+    (void)v;
+    (void)pathname;
+    (void)result;
+    return ENOTDIR;
 }
 
-static
-int
-_nfs_lookparent_notdir(struct vnode *v, char *pathname, struct vnode **result,
-			char *buf, size_t len)
+static int _nfs_lookparent_notdir(struct vnode *v, char *pathname,
+                                  struct vnode **result,
+                                  char *buf, size_t len)
 {
-	(void)v;
-	(void)pathname;
-	(void)result;
-	(void)buf;
-	(void)len;
-	return ENOTDIR;
+    (void)v;
+    (void)pathname;
+    (void)result;
+    (void)buf;
+    (void)len;
+    return ENOTDIR;
 }
 
-
-static
-int
-_nfs_truncate_isdir(struct vnode *v, off_t len)
+static int _nfs_truncate_isdir(struct vnode *v, off_t len)
 {
-	(void)v;
-	(void)len;
-	return ENOTDIR;
+    (void)v;
+    (void)len;
+    return ENOTDIR;
 }
 
 //////////////////////////////
@@ -816,158 +772,154 @@ _nfs_truncate_isdir(struct vnode *v, off_t len)
  * Function table for nfs files.
  */
 static const struct vnode_ops nfs_fileops = {
-	.vop_magic = VOP_MAGIC,	/* mark this a valid vnode ops table */
+    .vop_magic = VOP_MAGIC, /* mark this a valid vnode ops table */
 
-	.vop_eachopen = _nfs_eachopen,
-	.vop_reclaim = _nfs_reclaim,
+    .vop_eachopen = _nfs_eachopen,
+    .vop_reclaim = _nfs_reclaim,
 
-	.vop_read = _nfs_read,
-	.vop_readlink = _nfs_readlink_notlink,
-	.vop_getdirentry = _nfs_uio_op_notdir,
-	.vop_write = _nfs_write,
-	.vop_ioctl = _nfs_ioctl,
-	.vop_stat = _nfs_stat,
-	.vop_gettype = _nfs_file_gettype,
-	.vop_isseekable = _nfs_isseekable,
-	.vop_fsync = _nfs_fsync,
-	.vop_mmap = _nfs_mmap,
-	.vop_truncate = _nfs_truncate,
-	.vop_namefile = _nfs_uio_op_notdir,
+    .vop_read = _nfs_read,
+    .vop_readlink = _nfs_readlink_notlink,
+    .vop_getdirentry = _nfs_uio_op_notdir,
+    .vop_write = _nfs_write,
+    .vop_ioctl = _nfs_ioctl,
+    .vop_stat = _nfs_stat,
+    .vop_gettype = _nfs_file_gettype,
+    .vop_isseekable = _nfs_isseekable,
+    .vop_fsync = _nfs_fsync,
+    .vop_mmap = _nfs_mmap,
+    .vop_truncate = _nfs_truncate,
+    .vop_namefile = _nfs_uio_op_notdir,
 
-	.vop_creat = _nfs_creat_notdir,
-	.vop_symlink = _nfs_symlink_notdir,
-	.vop_mkdir = _nfs_mkdir_notdir,
-	.vop_link = _nfs_link_notdir,
-	.vop_remove = _nfs_name_op_notdir,
-	.vop_rmdir = _nfs_name_op_notdir,
-	.vop_rename = _nfs_rename_notdir,
+    .vop_creat = _nfs_creat_notdir,
+    .vop_symlink = _nfs_symlink_notdir,
+    .vop_mkdir = _nfs_mkdir_notdir,
+    .vop_link = _nfs_link_notdir,
+    .vop_remove = _nfs_name_op_notdir,
+    .vop_rmdir = _nfs_name_op_notdir,
+    .vop_rename = _nfs_rename_notdir,
 
-	.vop_lookup = _nfs_lookup_notdir,
-	.vop_lookparent = _nfs_lookparent_notdir,
+    .vop_lookup = _nfs_lookup_notdir,
+    .vop_lookparent = _nfs_lookparent_notdir,
 };
 
 /*
  * Function table for nfs directories.
  */
 static const struct vnode_ops nfs_dirops = {
-	.vop_magic = VOP_MAGIC,	/* mark this a valid vnode ops table */
+    .vop_magic = VOP_MAGIC, /* mark this a valid vnode ops table */
 
-	.vop_eachopen = _nfs_eachopen,
-	.vop_reclaim = _nfs_reclaim,
+    .vop_eachopen = _nfs_eachopen,
+    .vop_reclaim = _nfs_reclaim,
 
-	.vop_read = _nfs_uio_op_isdir,
-	.vop_readlink = _nfs_uio_op_isdir,
-	.vop_getdirentry = _nfs_getdirentry,
-	.vop_write = _nfs_uio_op_isdir,
-	.vop_ioctl = _nfs_ioctl,
-	.vop_stat = _nfs_stat,
-	.vop_gettype = _nfs_dir_gettype,
-	.vop_isseekable = _nfs_isseekable,
-	.vop_fsync = _nfs_void_op_isdir,
-	.vop_mmap = _nfs_void_op_isdir,
-	.vop_truncate = _nfs_truncate_isdir,
-	.vop_namefile = _nfs_namefile,
+    .vop_read = _nfs_uio_op_isdir,
+    .vop_readlink = _nfs_uio_op_isdir,
+    .vop_getdirentry = _nfs_getdirentry,
+    .vop_write = _nfs_uio_op_isdir,
+    .vop_ioctl = _nfs_ioctl,
+    .vop_stat = _nfs_stat,
+    .vop_gettype = _nfs_dir_gettype,
+    .vop_isseekable = _nfs_isseekable,
+    .vop_fsync = _nfs_void_op_isdir,
+    .vop_mmap = _nfs_void_op_isdir,
+    .vop_truncate = _nfs_truncate_isdir,
+    .vop_namefile = _nfs_namefile,
 
-	.vop_creat = _nfs_creat,
-	.vop_symlink = _nfs_symlink,
-	.vop_mkdir = _nfs_mkdir,
-	.vop_link = _nfs_link,
-	.vop_remove = _nfs_remove,
-	.vop_rmdir = _nfs_rmdir,
-	.vop_rename = _nfs_rename,
+    .vop_creat = _nfs_creat,
+    .vop_symlink = _nfs_symlink,
+    .vop_mkdir = _nfs_mkdir,
+    .vop_link = _nfs_link,
+    .vop_remove = _nfs_remove,
+    .vop_rmdir = _nfs_rmdir,
+    .vop_rename = _nfs_rename,
 
-	.vop_lookup = _nfs_lookup,
-	.vop_lookparent = _nfs_lookparent,
+    .vop_lookup = _nfs_lookup,
+    .vop_lookparent = _nfs_lookparent,
 };
 
 /*
  * Function to load a vnode into memory.
  */
-int
-nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode **ret)
+int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
+                  struct nfs_vnode **ret)
 {
-	struct vnode *v;
-	struct nfs_vnode *nv;
-	unsigned i, num;
-	int result;
+    struct vnode *v;
+    struct nfs_vnode *nv;
+    unsigned i, num;
+    int result;
 
-	struct nfs_fs *nf = root->vn_fs->fs_data;
+    struct nfs_fs *nf = root->vn_fs->fs_data;
 
-	num = vnodearray_num(nf->nfs_vnodes);
-	for (i=0; i<num; i++) {
-		v = vnodearray_get(nf->nfs_vnodes, i);
-		nv = v->vn_data;
-		if (strcmp(name, nv->filename) == 0) {
-			/* Found */
-			if(creat){
-				/* shouldn't create sth already exist */
-				return EINVAL;
-			}
-			VOP_INCREF(&nv->nv_v);
+    num = vnodearray_num(nf->nfs_vnodes);
+    for (i = 0; i < num; i++) {
+        v = vnodearray_get(nf->nfs_vnodes, i);
+        nv = v->vn_data;
+        if (strcmp(name, nv->filename) == 0) {
+            /* Found */
+            if (creat) {
+                /* shouldn't create sth already exist */
+                return EINVAL;
+            }
+            VOP_INCREF(&nv->nv_v);
 
-			*ret = nv;
-			return 0;
-		}
-	}
+            *ret = nv;
+            return 0;
+        }
+    }
 
-	/* Didn't have one; create it */
-	printf("didn't find a vn, creat = %d\n", creat);
-	/* async open file */
-	struct nfs_cb cb;
-	cb.handle = NULL;
-	cb.status = 0;
+    /* Didn't have one; create it */
+    printf("didn't find a vn, creat = %d\n", creat);
+    /* async open file */
+    struct nfs_cb cb;
+    cb.handle = NULL;
+    cb.status = 0;
 
-	if(creat){
-		result = nfs_creat_async(nf->context, name, 0666, nfs_creat_cb, &cb);
-	}
-	else{
-		result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_cb, &cb);
-	}
+    if (creat) {
+        result = nfs_creat_async(nf->context, name, 0666, nfs_open_creat_cb, &cb);
+    } else {
+        result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_creat_cb, &cb);
+    }
 
-	if (result)
-	{
-		return result;
-	}
-	/* wait until callback is done */
-	while (cb.handle == NULL && cb.status == 0)
-	{
-		yield(NULL);
-	}
+    if (result) {
+        return result;
+    }
+    /* wait until callback is done */
+    while (cb.handle == NULL && cb.status == 0) {
+        yield(NULL);
+    }
 
-	printf("cb.handle = %p, cb.status = %p\n", cb.handle, cb.status);
-	/* something wrong with open callback */
-	if(cb.status != 0){
-		*ret = NULL;
-		return cb.status;
-	}
-	/* init a nfs_vnode */
-	nv = malloc(sizeof(struct nfs_vnode));
-	if (nv==NULL) {
-		return ENOMEM;
-	}
+    printf("cb.handle = %p, cb.status = %p\n", cb.handle, cb.status);
+    /* something wrong with open callback */
+    if (cb.status != 0) {
+        *ret = NULL;
+        return cb.status;
+    }
+    /* init a nfs_vnode */
+    nv = malloc(sizeof(struct nfs_vnode));
+    if (nv == NULL) {
+        return ENOMEM;
+    }
 
-	nv->handle = cb.handle;
-	strcpy(nv->filename, name);
+    nv->handle = cb.handle;
+    strcpy(nv->filename, name);
 
-	/* since we do root node seperately, this node is always a file node */
-	result = vnode_init(&nv->nv_v, &nfs_fileops, &nf->nfs_fsdata, nv);
-	if (result) {
-		free(nv);
-		return result;
-	}
+    /* since we do root node seperately, this node is always a file node */
+    result = vnode_init(&nv->nv_v, &nfs_fileops, &nf->nfs_fsdata, nv);
+    if (result) {
+        free(nv);
+        return result;
+    }
 
-	result = vnodearray_add(nf->nfs_vnodes, &nv->nv_v, NULL);
-	if (result) {
-		/* note: vnode_cleanup undoes vnode_init - it does not kfree */
-		vnode_cleanup(&nv->nv_v);
-		free(nv);
-		return result;
-	}
+    result = vnodearray_add(nf->nfs_vnodes, &nv->nv_v, NULL);
+    if (result) {
+        /* note: vnode_cleanup undoes vnode_init - it does not kfree */
+        vnode_cleanup(&nv->nv_v);
+        free(nv);
+        return result;
+    }
 
-	*ret = nv;
-	return 0;
+    *ret = nv;
+    return 0;
 }
-
 
 ////////////////////////////////////////////////////////////
 //
@@ -977,104 +929,95 @@ nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode
 /*
  * FSOP_SYNC
  */
-static
-int
-nfs_sync(struct fs *fs)
+static int nfs_sync(struct fs *fs)
 {
-	(void)fs;
-	return 0;
+    (void)fs;
+    return 0;
 }
 
 /*
  * FSOP_GETVOLNAME
  */
-static
-const char *
-nfs_getvolname(struct fs *fs)
+static const char *nfs_getvolname(struct fs *fs)
 {
-	/* We don't have a volume name beyond the device name */
-	(void)fs;
-	return NULL;
+    /* We don't have a volume name beyond the device name */
+    (void)fs;
+    return NULL;
 }
 
 /*
  * FSOP_GETROOT
  */
-static
-int
-nfs_getroot(struct fs *fs, struct vnode **ret)
+static int nfs_getroot(struct fs *fs, struct vnode **ret)
 {
-	assert(fs != NULL);
-	assert(nfs_vn != NULL);
-	VOP_INCREF(&nfs_vn->nv_v);
-	*ret = &nfs_vn->nv_v;
-	return 0;
+    assert(fs != NULL);
+    assert(nfs_vn != NULL);
+    VOP_INCREF(&nfs_vn->nv_v);
+    *ret = &nfs_vn->nv_v;
+    return 0;
 }
 
 /*
  * FSOP_UNMOUNT
  */
-static
-int
-nfs_unmount(struct fs *fs)
+static int nfs_unmount(struct fs *fs)
 {
-	/* Always prohibit unmount, as we're not really "mounted" */
-	(void)fs;
-	return EBUSY;
+    /* Always prohibit unmount, as we're not really "mounted" */
+    (void)fs;
+    return EBUSY;
 }
 
 /*
  * Function table for the nfs file system.
  */
 static const struct fs_ops nfs_fsops = {
-	.fsop_sync = nfs_sync,
-	.fsop_getvolname = nfs_getvolname,
-	.fsop_getroot = nfs_getroot,
-	.fsop_unmount =nfs_unmount,
+    .fsop_sync = nfs_sync,
+    .fsop_getvolname = nfs_getvolname,
+    .fsop_getroot = nfs_getroot,
+    .fsop_unmount = nfs_unmount,
 };
-
 
 void change_bootfs(struct vnode *newvn);
 
-void nfs_mount_cb(int status, struct nfs_context *nfs, void *data, UNUSED void *private_data)
+void nfs_mount_cb(int status, struct nfs_context *nfs, void *data,
+                  UNUSED void *private_data)
 {
-	if (status < 0) {
+    if (status < 0) {
         ZF_LOGF("mount/mnt call failed with \"%s\"\n", (char *)data);
     }
 
     printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
-	struct vnode *vn;
-	vn = nfs_bootstrap(nfs);
-	change_bootfs(vn);
-	
+    struct vnode *vn;
+    vn = nfs_bootstrap(nfs);
+    change_bootfs(vn);
 }
 
 struct vnode *nfs_bootstrap(struct nfs_context *context)
 {
-	nfs_vn = (struct nfs_vnode *)malloc(sizeof(struct nfs_vnode));
-	if (!nfs_vn) {
-		printf("Out of Memory!");
-		assert(false);
-		return NULL;
-	}
-	struct nfs_fs *fs = (struct nfs_fs *)malloc(sizeof(fs));
-	if (!fs) {
-		free(nfs_vn);
-		printf("Out of Memory!");
-		assert(false);
-		return NULL;
-	}
-	fs->nfs_vnodes = vnodearray_create();
-	if (!fs->nfs_vnodes) {
-		free(nfs_vn);
-		free(fs);
-		printf("Out of Memory!");
-		assert(false);
-		return NULL;
-	}
-	fs->nfs_fsdata.fs_ops = &nfs_fsops;
-	fs->nfs_fsdata.fs_data = fs;
-	fs->context = context;
-	vnode_init(&nfs_vn->nv_v, &nfs_dirops, &fs->nfs_fsdata, nfs_vn);
-	return &nfs_vn->nv_v;
+    nfs_vn = (struct nfs_vnode *)malloc(sizeof(struct nfs_vnode));
+    if (!nfs_vn) {
+        printf("Out of Memory!");
+        assert(false);
+        return NULL;
+    }
+    struct nfs_fs *fs = (struct nfs_fs *)malloc(sizeof(fs));
+    if (!fs) {
+        free(nfs_vn);
+        printf("Out of Memory!");
+        assert(false);
+        return NULL;
+    }
+    fs->nfs_vnodes = vnodearray_create();
+    if (!fs->nfs_vnodes) {
+        free(nfs_vn);
+        free(fs);
+        printf("Out of Memory!");
+        assert(false);
+        return NULL;
+    }
+    fs->nfs_fsdata.fs_ops = &nfs_fsops;
+    fs->nfs_fsdata.fs_data = fs;
+    fs->context = context;
+    vnode_init(&nfs_vn->nv_v, &nfs_dirops, &fs->nfs_fsdata, nfs_vn);
+    return &nfs_vn->nv_v;
 }

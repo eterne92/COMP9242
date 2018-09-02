@@ -51,13 +51,21 @@ void _sos_sys_usleep(void);
 /* file syscalls */
 
 int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags);
+
 void *_sys_open(proc *cur_proc);
+
 void *_sys_read(proc *cur_proc);
+
 void *_sys_write(proc *cur_proc);
+
 void *_sys_close(proc *cur_proc);
+
+void *_sys_getdirent(proc *cur_proc);
 
 void *_sys_stat(proc *cur_proc);
 
 void _sys_brk(proc *cur_proc);
+
 void _sys_mmap(proc *cur_proc);
+
 void _sys_munmap(proc *cur_proc);

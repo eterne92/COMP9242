@@ -398,8 +398,15 @@ static void nfs_stat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 						void *private_data)
 {
 	struct nfs_cb *cb = private_data;
+	printf("stat is up\n");
 	cb->status = status;
-	cb->handle = data;
+	struct stat *statbuf = cb->data;
+	struct nfs_stat_64 *retstat = data;
+	statbuf->st_atime = retstat->nfs_atime;
+	statbuf->st_ctime = retstat->nfs_ctime;
+	statbuf->st_size = retstat->nfs_size;
+	statbuf->st_mode = retstat->nfs_mode;
+	printf("stat is done\n");
 }
 /*
  * VOP_STAT
@@ -412,16 +419,18 @@ _nfs_stat(struct vnode *v, struct stat *statbuf)
 	struct nfs_fs *nf = v->vn_fs->fs_data;
 	struct nfs_cb cb;
 	int result;
+	struct nfs_stat_64 retstat;
 
-	cb.status = 0;
+	cb.status = 1;
 	cb.handle = NULL;
+	cb.data = statbuf;
 
 	result = nfs_fstat64_async(nf->context, nv->handle, nfs_stat_cb, &cb);
 	if (result) {
 		return result;
 	}
 
-	while(cb.status == 0 && cb.handle == NULL){
+	while(cb.status > 0){
 		yield(NULL);
 	}
 
@@ -430,12 +439,12 @@ _nfs_stat(struct vnode *v, struct stat *statbuf)
 		return cb.status;
 	}
 
-	struct nfs_stat_64 *retstat = (struct nfs_stat_64 *)cb.handle;
 
-	statbuf->st_atime = retstat->nfs_atime;
-	statbuf->st_ctime = retstat->nfs_ctime;
-	statbuf->st_size = retstat->nfs_size;
-	statbuf->st_mode = retstat->nfs_mode;
+	// statbuf->st_atime = retstat.nfs_atime;
+	// statbuf->st_ctime = retstat.nfs_ctime;
+	// statbuf->st_size = retstat.nfs_size;
+	// statbuf->st_mode = retstat.nfs_mode;
+
 
 	return 0;
 }
@@ -909,7 +918,7 @@ nfs_loadvnode(struct vnode *root, const char *name, bool creat, struct nfs_vnode
 	cb.status = 0;
 
 	if(creat){
-		result = nfs_creat_async(nf->context, name, 0777, nfs_creat_cb, &cb);
+		result = nfs_creat_async(nf->context, name, 0666, nfs_creat_cb, &cb);
 	}
 	else{
 		result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_cb, &cb);

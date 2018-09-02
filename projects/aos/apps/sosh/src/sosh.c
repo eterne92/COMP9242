@@ -334,10 +334,8 @@ int main(void)
     done = 0;
     new = 1;
 
-    in = open("a", O_RDWR);
-    close(in);
-
     printf("\n[SOS Starting]\n");
+
 
     while (!done) {
         if (new) {
@@ -440,6 +438,7 @@ int main(void)
             if (sos_stat(argv[0], &sbuf) != 0) {
                 printf("Command \"%s\" not found\n", argv[0]);
             } else if (!(sbuf.st_fmode & FM_EXEC)) {
+                prstat(argv[0]);
                 printf("File \"%s\" not executable\n", argv[0]);
             } else {
                 /* Execute the program */

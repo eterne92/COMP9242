@@ -140,8 +140,12 @@ void handle_syscall(seL4_Word badge, int num_args)
         create_coroutine(c);
         break;
     }
-    case SOS_SYS_STAT:
+    case SOS_SYS_STAT:{
+        coro c = coroutine((coro_t)&_sys_stat);
+        resume(c, cur_proc);
+        create_coroutine(c);
         break;
+    }
     case SOS_SYS_CLOSE:{
         coro c = coroutine((coro_t)&_sys_close);
         resume(c, cur_proc);

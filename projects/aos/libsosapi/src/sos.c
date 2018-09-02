@@ -90,6 +90,7 @@ int sos_getdirent(int pos, char *name, size_t nbyte)
 
 int sos_stat(const char *path, sos_stat_t *buf)
 {
+    printf("in stat\n");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 2);

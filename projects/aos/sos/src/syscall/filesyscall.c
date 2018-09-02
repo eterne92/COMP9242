@@ -64,7 +64,6 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size, enum u
     /* better be a valid file descriptor */
     result = filetable_get(cur_proc->openfile_table, fd, &file);
     if (result) {
-        printf("fd wrong\n");
         return result;
     }
 
@@ -113,6 +112,7 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags){
     int fd;
     int ret;
 	struct openfile *file;
+    printf("got name as %s\n", path);
 	ret = openfile_open(path, openflags, 0, &file);
     if(ret){
         return -1;
@@ -130,7 +130,6 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags){
  * filetable_place to do the real work.
  */
 void *_sys_open(proc *cur_proc) {
-	printf("in open\n");
 	const int allflags = O_ACCMODE | O_CREAT | O_EXCL | O_TRUNC | O_APPEND | O_NOCTTY;
 	int ret = -1;
 	seL4_Word path = seL4_GetMR(1);
@@ -139,11 +138,13 @@ void *_sys_open(proc *cur_proc) {
 	if ((openflags & allflags) != openflags) {
         /* unknown flags were set */
         syscall_reply(cur_proc->reply, ret, -1);
+        return NULL;
     }
 	char str[257];
 	int path_length = copyinstr(cur_proc, (char *) path, str, 256);
 	if(path_length == -1) {
 		syscall_reply(cur_proc->reply, ret, -1);
+        return NULL;
 	}
 
     ret = _sys_do_open(cur_proc, str, openflags);
@@ -151,6 +152,7 @@ void *_sys_open(proc *cur_proc) {
 
     if (ret < 0) {
 		syscall_reply(cur_proc->reply, ret, -1);
+        return NULL;
     }
 
 	syscall_reply(cur_proc->reply, ret, 0);
@@ -159,7 +161,6 @@ void *_sys_open(proc *cur_proc) {
 
 
 void *_sys_read(proc *cur_proc) {
-	printf("in read\n");
 	seL4_Word fd = seL4_GetMR(1);
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
@@ -173,7 +174,9 @@ void *_sys_read(proc *cur_proc) {
         if(result){
             syscall_reply(cur_proc->reply, 0, EFAULT);
         }
-        syscall_reply(cur_proc->reply, ret, 0);
+        else{
+            syscall_reply(cur_proc->reply, ret, 0);
+        }
 	} else {
 		syscall_reply(cur_proc->reply, 0, EFAULT);
 	}
@@ -181,19 +184,21 @@ void *_sys_read(proc *cur_proc) {
 }
 
 void *_sys_write(proc *cur_proc) {
-	printf("in write\n");
 	seL4_Word fd = seL4_GetMR(1);
 	seL4_Word vaddr = seL4_GetMR(2);
 	seL4_Word length = seL4_GetMR(3);
     size_t ret;
     int result;
     bool valid = validate_virtual_address(cur_proc->as, vaddr, length, WRITE);
+
 	if(valid){
 		result = _sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE, O_RDONLY, &ret);
         if(result){
             syscall_reply(cur_proc->reply, 0, EFAULT);
         }
-        syscall_reply(cur_proc->reply, ret, 0);
+        else{
+            syscall_reply(cur_proc->reply, ret, 0);
+        }
 	} else {
 		syscall_reply(cur_proc->reply, 0, EFAULT);
 	}
@@ -212,13 +217,21 @@ void *_sys_stat(proc *cur_proc)
 	if(path_length == -1) {
 		ret = -1;
 		syscall_reply(cur_proc->reply, ret, 0);
+        return NULL;
 	}
     struct vnode *vn;
-    vfs_lookup(str, &vn);
+    printf("got str is %s\n", str);
+    result = vfs_lookup(str, &vn);
+    if(result){
+		ret = -1;
+		syscall_reply(cur_proc->reply, ret, 0);
+        return NULL;
+    }
 	VOP_GETTYPE(vn, &result);
 	ret = VOP_STAT(vn, &st);
 	seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 7);
     /* Set the first (and only) word in the message to 0 */
+    printf("stat ret is %d\n", st.st_size);
     seL4_SetMR(0, ret);
     seL4_SetMR(1, errno);
 	seL4_SetMR(2, result);
@@ -239,7 +252,7 @@ void *_sys_close(proc *cur_proc)
 	printf("in close\n");
 	seL4_Word fd = seL4_GetMR(1);
     struct openfile *file;
-    int result = filetable_get(cur_proc->openfile_table, fd, &file);
+    int result;
 
     /* check if the file's in range before calling placeat */
 	if (!filetable_okfd(cur_proc->openfile_table, fd)) {
@@ -247,7 +260,7 @@ void *_sys_close(proc *cur_proc)
         return NULL;
 	}
 	/* place null in the filetable and get the file previously there */
-	filetable_placeat(cur_proc->reply, NULL, fd, &file);
+	filetable_placeat(cur_proc->openfile_table, NULL, fd, &file);
 
 	if (file == NULL) {
 		/* oops, it wasn't open, that's an error */

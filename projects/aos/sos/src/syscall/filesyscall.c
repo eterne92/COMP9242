@@ -12,41 +12,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 
-/* only used to copy string size less then 256 */
-/* so we won't go through too many frame */
-static int copyinstr(proc *proc, const char *src, char *dest, size_t length)
-{
-    /* get region */
-    as_region *region = vaddr_get_region(cur_proc->as, (seL4_Word)src);
-    /* not valid */
-    if (region == NULL) {
-        return -1;
-    }
-
-    seL4_Word left_size = region->vaddr + region->size - (seL4_Word)region->vaddr;
-    seL4_Word vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)src);
-    seL4_Word top = (vaddr & PAGE_FRAME) + PAGE_SIZE_4K;
-    size_t i = 0;
-    size_t j = 0;
-    while (i < left_size && i < length) {
-        char c = *(char *)(vaddr + j);
-        dest[i] = c;
-        /* copy end */
-        if (c == 0) {
-            return i;
-        }
-        i++;
-        j++;
-        if ((vaddr + j) >= top) {
-            vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)src + i);
-            j = 0;
-        }
-    }
-    if (dest[i - 1] != 0) {
-        return -1;
-    }
-    return i;
-}
 
 /*
  * Common logic for read and write.
@@ -144,7 +109,7 @@ void *_sys_open(proc *cur_proc)
         return NULL;
     }
     char str[NAME_MAX + 1];
-    int path_length = copyinstr(cur_proc, (char *)path, str, 256);
+    int path_length = copystr(cur_proc, (char *)path, str, NAME_MAX + 1, COPYIN);
     if (path_length == -1) {
         syscall_reply(cur_proc->reply, ret, -1);
         return NULL;
@@ -215,7 +180,7 @@ void *_sys_stat(proc *cur_proc)
     int ret;
     seL4_Word path = seL4_GetMR(1);
     char str[NAME_MAX + 1];
-    int path_length = copyinstr(cur_proc, (char *)path, str, 256);
+    int path_length = copystr(cur_proc, (char *)path, str, NAME_MAX + 1, COPYIN);
     if (path_length == -1) {
         ret = -1;
         syscall_reply(cur_proc->reply, ret, 0);
@@ -274,6 +239,8 @@ void *_sys_close(proc *cur_proc)
     return NULL;
 }
 
+struct vnode *get_bootfs_vnode(void);
+
 void *_sys_getdirent(proc *cur_proc)
 {
     int pos = (int)seL4_GetMR(1);
@@ -283,7 +250,7 @@ void *_sys_getdirent(proc *cur_proc)
         struct vnode *vn;
 
         int ret, err = 0;
-        vfs_lookup("", &vn);
+        vn = get_bootfs_vnode();
         struct uio my_uio;
         uio_init(&my_uio, path, nbytes, pos, UIO_READ, cur_proc);
         ret = VOP_GETDIRENTRY(vn, &my_uio);

@@ -42,6 +42,11 @@
 
 static struct vnode *bootfs_vnode = NULL;
 
+struct vnode *get_bootfs_vnode(void)
+{
+    return bootfs_vnode;
+}
+
 /*
  * Helper function for actually changing bootfs_vnode.
  */

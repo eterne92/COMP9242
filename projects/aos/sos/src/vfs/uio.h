@@ -59,6 +59,9 @@
 #include <sel4/sel4.h>
 #include "../proc.h"
 
+#define COPYIN UIO_WRITE
+#define COPYOUT UIO_READ
+
 /* Direction. */
 enum uio_rw {
     UIO_READ,  /* From kernel to uio_seg */
@@ -75,5 +78,7 @@ struct uio {
 };
 
 void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos, enum uio_rw rw, proc *proc);
+
+int copystr(proc *proc, char * user, char *sos, size_t length, enum uio_rw rw);
 
 #endif /* _UIO_H_ */

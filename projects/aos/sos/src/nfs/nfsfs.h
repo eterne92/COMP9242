@@ -47,6 +47,7 @@ struct nfs_vnode {
 	struct vnode nv_v;		/* abstract vnode structure */
 	struct nfsfh *handle;		/* file handle */
 	char filename[NAME_MAX + 1];
+	int lock;
 };
 
 struct nfs_fs {

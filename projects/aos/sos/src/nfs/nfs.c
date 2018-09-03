@@ -115,7 +115,6 @@ static void nfs_close_cb(int status, UNUSED struct nfs_context *nfs, void *data,
 {
     (void)data;
     struct nfs_cb *cb = private_data;
-    printf("cb close is called with cb->handle is %p\n", cb->handle);
     cb->handle = NULL;
     cb->status = status;
 }
@@ -139,7 +138,6 @@ static int _nfs_reclaim(struct vnode *v)
     if (result) {
         return result;
     }
-    printf("start to destroy vn\n");
 
     num = vnodearray_num(nf->nfs_vnodes);
     ix = num;
@@ -157,14 +155,11 @@ static int _nfs_reclaim(struct vnode *v)
         assert(false);
     }
 
-    printf("vn remove\n");
     vnodearray_remove(nf->nfs_vnodes, ix);
-    printf("vn cleanup\n");
     vnode_cleanup(&nv->nv_v);
 
     free(nv);
 
-    printf("cb.handle is %p\n", cb.handle);
     /* should not got something wrong, but we still track it */
 
     while (cb.handle != NULL) {
@@ -175,7 +170,6 @@ static int _nfs_reclaim(struct vnode *v)
         return cb.status;
     }
 
-    printf("done real vn_reclaim\n");
 
     return 0;
 }
@@ -204,7 +198,11 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
 
     assert(uio->uio_rw == UIO_READ);
 
-    printf("try read a nfs file\n");
+    while(nv->lock == 1){
+        yield(NULL);
+    }
+    nv->lock = 1;
+
     /* read frame by frame */
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
@@ -214,12 +212,9 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     }
 
     while (uio->uio_resid > 0) {
-        printf("start one round\n");
         sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-        printf("sos_vaddr is %p, try to read %ld\n", (void *)sos_vaddr, n);
 
         if (sos_vaddr == 0) {
-            printf("handle vm fault\n");
             handle_page_fault(uio->proc, user_vaddr, 0);
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
         }
@@ -233,16 +228,16 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         result = nfs_pread_async(nf->context, nv->handle, uio->uio_offset,
                                  count, nfs_read_cb, &cb);
         if (result) {
-            printf("read failed with result as %d\n", result);
+    nv->lock = 0;
             return result;
         }
         /* wait until callback done */
         while (cb.data) {
             yield(NULL);
         }
-        printf("async read returns with status %d\n", cb.status);
         /* callback got sth wrong */
         if (cb.status < 0) {
+    nv->lock = 0;
             return cb.status;
         }
 
@@ -255,13 +250,14 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
 
         if (nbytes < count) {
+    nv->lock = 0;
             /* it's over */
-            printf("read is over\n");
             return 0;
         }
 
         yield(NULL);
     }
+    nv->lock = 0;
     return 0;
 }
 
@@ -279,45 +275,31 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
     pos = uio->uio_offset;
 
     // need to make sure the path value is SOS_NFS_DIR or ""
-    ret = nfs_opendir_async(nf->context, SOS_NFS_DIR, nfs_opendir_cb, &cb);
+    ret = nfs_opendir_async(nf->context, "", nfs_opendir_cb, &cb);
     if (ret) {
-        printf("opendir failed with status %d\n", cb.status);
         return ret;
     }
     while (cb.status == 0 && cb.data == NULL) {
         yield(NULL);
     }
     if (cb.status) {
-        printf("getdirent failed with status %d\n", cb.status);
         return cb.status;
     }
     struct nfsdir *dir = cb.data;
     // now do the actual getdirent
-    struct nfsdirent *entry = nfs_readdir(nf->context, dir);
-    for (int i = 0; i < pos; ++i) entry = entry->next;
 
-    // calculate the remaining number of bytes within the current page
-    // first read n bytes then keep reading until uio_resid == 0
-    size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
-    if (uio->uio_resid < n) {
-        n = uio->uio_resid;
+    struct nfsdirent *entry = nfs_readdir(nf->context, dir);
+
+    for (int i = 0; i < pos; ++i) entry = entry->next;
+    if(entry == NULL){
+        return 0;
     }
-    int offset = 0;
-    while (uio->uio_resid > 0) {
-        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-        if (!sos_vaddr) {
-            handle_page_fault(uio->proc, user_vaddr, 0);
-            sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-        }
-        memcpy((void *)sos_vaddr, entry->name + offset, n);
-        uio->uio_resid -= n;
-        user_vaddr += n;
-        offset += n;
-        n = uio->length - n;
-    }
+
+
+    ret = copystr(uio->proc, (char *)uio->vaddr, entry->name, strlen(entry->name) + 1, COPYOUT);
     nfs_closedir(nf->context, dir);
 
-    return 0;
+    return ret;
 }
 
 static void nfs_write_cb(int status, UNUSED struct nfs_context *nfs, void *data,
@@ -342,7 +324,13 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
 
     assert(uio->uio_rw == UIO_WRITE);
 
+    while(nv->lock == 1){
+        yield(NULL);
+    }
+    nv->lock = 1;
+
     /* read frame by frame */
+
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
     int nbytes = 0, count;
@@ -354,7 +342,6 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 
         if (sos_vaddr == 0) {
-            printf("handle vm fault\n");
             handle_page_fault(uio->proc, user_vaddr, 0);
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
         }
@@ -368,6 +355,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         result = nfs_pwrite_async(nf->context, nv->handle, uio->uio_offset,
                                   count, (void *)sos_vaddr, nfs_write_cb, &cb);
         if (result) {
+            nv->lock = 0;
             return result;
         }
         /* wait until callback done */
@@ -376,6 +364,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* callback got sth wrong */
         if (cb.status < 0) {
+            nv->lock = 0;
             return cb.status;
         }
 
@@ -386,11 +375,14 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
         if (nbytes < count) {
             /* it's over */
+            nv->lock = 0;
             return 0;
         }
 
         yield(NULL);
     }
+
+    nv->lock = 0;
     return 0;
 }
 
@@ -414,7 +406,6 @@ static void nfs_stat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
                         void *private_data)
 {
     struct nfs_cb *cb = private_data;
-    printf("stat is up\n");
     cb->status = status;
     struct stat *statbuf = cb->data;
     struct nfs_stat_64 *retstat = data;
@@ -422,7 +413,6 @@ static void nfs_stat_cb(int status, UNUSED struct nfs_context *nfs, void *data,
     statbuf->st_ctime = retstat->nfs_ctime;
     statbuf->st_size = retstat->nfs_size;
     statbuf->st_mode = retstat->nfs_mode;
-    printf("stat is done\n");
 }
 /*
  * VOP_STAT
@@ -536,9 +526,7 @@ static int _nfs_lookup(struct vnode *root, char *pathname, struct vnode **ret)
     struct nfs_vnode *newguy;
     int result;
 
-    printf("start lookup\n");
     result = nfs_loadvnode(root, pathname, false, &newguy);
-    printf("lookup result is %d\n", result);
     if (result != 0) {
         return result;
     }
@@ -863,7 +851,6 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     }
 
     /* Didn't have one; create it */
-    printf("didn't find a vn, creat = %d\n", creat);
     /* async open file */
     struct nfs_cb cb;
     cb.handle = NULL;
@@ -883,7 +870,6 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
         yield(NULL);
     }
 
-    printf("cb.handle = %p, cb.status = %d\n", cb.handle, cb.status);
     /* something wrong with open callback */
     if (cb.status != 0) {
         *ret = NULL;
@@ -896,6 +882,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     }
 
     nv->handle = cb.handle;
+    nv->lock = 0;
     strcpy(nv->filename, name);
 
     /* since we do root node seperately, this node is always a file node */

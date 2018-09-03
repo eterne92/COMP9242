@@ -28,6 +28,8 @@
  */
 
 #include "uio.h"
+#include "../addrspace.h"
+#include "../pagetable.h"
 /*
  * Convenience function to initialize an iovec and uio for kernel I/O.
  */
@@ -41,4 +43,50 @@ void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
     u->uio_resid = len;
     u->uio_rw = rw;
     u->proc = proc;
+}
+
+
+
+/* only used to copy string size less then a frame */
+/* so we won't go through too many frame */
+int copystr(proc *proc, char * user, char *sos, size_t length, enum uio_rw rw)
+{
+    /* get region */
+    as_region *region = vaddr_get_region(cur_proc->as, (seL4_Word)user);
+    /* not valid */
+    if (region == NULL) {
+        return -1;
+    }
+
+    seL4_Word left_size = region->vaddr + region->size - (seL4_Word)region->vaddr;
+    seL4_Word vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)user);
+    seL4_Word top = (vaddr & PAGE_FRAME) + PAGE_SIZE_4K;
+    size_t i = 0;
+    size_t j = 0;
+    char c = 0;
+    while (i < left_size && i < length) {
+        if(rw == COPYIN){
+            c = *(char *)(vaddr + j);
+            sos[i] = c;
+        }
+        else{
+            c = sos[i];
+            *(char *)(vaddr + j) = c;
+            printf("in copyout str, c is %c\n", c);
+        }
+        /* copy end */
+        if (c == 0) {
+            return i;
+        }
+        i++;
+        j++;
+        if ((vaddr + j) >= top) {
+            vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)user + i);
+            j = 0;
+        }
+    }
+    if (c != 0) {
+        return -1;
+    }
+    return i;
 }

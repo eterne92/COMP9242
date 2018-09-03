@@ -27,5 +27,5 @@ typedef struct proc {
 extern cspace_t *global_cspace;
 extern proc *cur_proc;
 
-proc *set_cur_proc(proc *p);
+void set_cur_proc(proc *p);
 proc *get_cur_proc(void);

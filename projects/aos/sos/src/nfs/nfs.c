@@ -201,7 +201,6 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     struct nfs_vnode *nv = v->vn_data;
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
-    void *ret_data;
     int result;
 
     assert(uio->uio_rw == UIO_READ);
@@ -218,7 +217,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     while (uio->uio_resid > 0) {
         printf("start one round\n");
         sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-        printf("sos_vaddr is %p, try to read %d\n", sos_vaddr, n);
+        printf("sos_vaddr is %p, try to read %ld\n", (void *)sos_vaddr, n);
 
         if (sos_vaddr == 0) {
             printf("handle vm fault\n");
@@ -272,12 +271,11 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
  */
 static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
 {
-    struct nfs_vnode *nv = v->vn_data;
+    //struct nfs_vnode *nv = v->vn_data;
     struct nfs_fs *nf = v->vn_fs->fs_data;
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     struct nfs_cb cb;
     memset(&cb, 0, sizeof(struct nfs_cb));
-    char path[NAME_MAX + 1];
     int ret, pos;
     pos = uio->uio_offset;
 
@@ -436,8 +434,7 @@ static int _nfs_stat(struct vnode *v, struct stat *statbuf)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
-    struct nfs_stat_64 retstat;
-
+    // struct nfs_stat_64 retstat;
     cb.status = 1;
     cb.handle = NULL;
     cb.data = statbuf;
@@ -887,7 +884,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
         yield(NULL);
     }
 
-    printf("cb.handle = %p, cb.status = %p\n", cb.handle, cb.status);
+    printf("cb.handle = %p, cb.status = %d\n", cb.handle, cb.status);
     /* something wrong with open callback */
     if (cb.status != 0) {
         *ret = NULL;

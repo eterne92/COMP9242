@@ -1,6 +1,6 @@
 #include "proc.h"
 
-proc *set_cur_proc(proc *p)
+void set_cur_proc(proc *p)
 {
     cur_proc = p;
 }

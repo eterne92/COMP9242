@@ -82,7 +82,7 @@ long sys_mmap(va_list ap)
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 7);
     seL4_SetMR(0, SOS_SYSCALL_MMAP);
-    seL4_SetMR(1, addr);
+    seL4_SetMR(1, (seL4_Word)addr);
     seL4_SetMR(2, length);
     seL4_SetMR(3, prot);
     seL4_SetMR(4, flags);
@@ -109,7 +109,7 @@ long sys_munmap(va_list ap){
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 3);
     seL4_SetMR(0, SOS_SYSCALL_MUNMAP);
-    seL4_SetMR(1, base);
+    seL4_SetMR(1, (seL4_Word)base);
     seL4_SetMR(2, length);
     seL4_Call(SOS_IPC_EP_CAP, tag);
     seL4_Word ret = seL4_GetMR(0);

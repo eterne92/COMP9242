@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 /* only used to copy string size less then 256 */
 /* so we won't go through too many frame */
@@ -142,7 +143,7 @@ void *_sys_open(proc *cur_proc)
         syscall_reply(cur_proc->reply, ret, -1);
         return NULL;
     }
-    char str[257];
+    char str[NAME_MAX+1];
     int path_length = copyinstr(cur_proc, (char *)path, str, 256);
     if (path_length == -1) {
         syscall_reply(cur_proc->reply, ret, -1);
@@ -213,7 +214,7 @@ void *_sys_stat(proc *cur_proc)
     mode_t result;
     int ret;
     seL4_Word path = seL4_GetMR(1);
-    char str[257];
+    char str[NAME_MAX + 1];
     int path_length = copyinstr(cur_proc, (char *)path, str, 256);
     if (path_length == -1) {
         ret = -1;
@@ -232,7 +233,7 @@ void *_sys_stat(proc *cur_proc)
     ret = VOP_STAT(vn, &st);
     seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 7);
     /* Set the first (and only) word in the message to 0 */
-    printf("stat ret is %d\n", st.st_size);
+    printf("stat ret is %ld\n", st.st_size);
     seL4_SetMR(0, ret);
     seL4_SetMR(1, errno);
     seL4_SetMR(2, result);
@@ -253,7 +254,6 @@ void *_sys_close(proc *cur_proc)
     printf("in close\n");
     seL4_Word fd = seL4_GetMR(1);
     struct openfile *file;
-    int result;
 
     /* check if the file's in range before calling placeat */
     if (!filetable_okfd(cur_proc->openfile_table, fd)) {
@@ -277,20 +277,15 @@ void *_sys_close(proc *cur_proc)
 void *_sys_getdirent(proc *cur_proc)
 {
     int pos = (int)seL4_GetMR(1);
-    char *path = (char *)seL4_GetMR(2);
+    seL4_Word path = seL4_GetMR(2);
     size_t nbytes = (size_t)seL4_GetMR(3);
     if (validate_virtual_address(cur_proc->as, path, nbytes, READ)) {
         struct vnode *vn;
-        char str[257];
-        int path_length = copyinstr(cur_proc, (char *)path, str, 256);
-        if (path_length == -1) {
-            syscall_reply(cur_proc->reply, -1, EFAULT);
-            return NULL;
-        }
+        
         int ret, err = 0;
-        vfs_lookup(str, &vn);
+        vfs_lookup("", &vn);
         struct uio my_uio;
-        uio_init(&my_uio, (seL4_Word)path, nbytes, pos, UIO_READ, cur_proc);
+        uio_init(&my_uio, path, nbytes, pos, UIO_READ, cur_proc);
         ret = VOP_GETDIRENTRY(vn, &my_uio);
         err = !ret ? 0 : EFAULT;
         syscall_reply(cur_proc->reply, ret, err);

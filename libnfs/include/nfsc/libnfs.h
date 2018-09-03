@@ -24,12 +24,12 @@
 #define _LIBNFS_H_
 
 #include <stdint.h>
-// #if defined(__ANDROID__) || defined(AROS) \
-//  || ( defined(__APPLE__) && defined(__MACH__) )
+#if defined(__ANDROID__) || defined(AROS) \
+ || ( defined(__APPLE__) && defined(__MACH__) )
 #include <sys/time.h>
-// #else
-// #include <time.h>
-// #endif
+#else
+#include <time.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,8 +40,7 @@ extern "C" {
 #define LIBNFS_FEATURE_DEBUG
 #define NFS_BLKSIZE 4096
 #define NFS_PAGECACHE_DEFAULT_TTL 5
-#define __NEED_struct_timeval
-#define __NEED_suseconds_t
+
 
 struct nfs_context;
 struct rpc_context;

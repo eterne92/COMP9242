@@ -143,7 +143,7 @@ void *_sys_open(proc *cur_proc)
         syscall_reply(cur_proc->reply, ret, -1);
         return NULL;
     }
-    char str[NAME_MAX+1];
+    char str[NAME_MAX + 1];
     int path_length = copyinstr(cur_proc, (char *)path, str, 256);
     if (path_length == -1) {
         syscall_reply(cur_proc->reply, ret, -1);
@@ -281,7 +281,7 @@ void *_sys_getdirent(proc *cur_proc)
     size_t nbytes = (size_t)seL4_GetMR(3);
     if (validate_virtual_address(cur_proc->as, path, nbytes, READ)) {
         struct vnode *vn;
-        
+
         int ret, err = 0;
         vfs_lookup("", &vn);
         struct uio my_uio;

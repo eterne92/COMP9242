@@ -33,7 +33,6 @@
 #include "../pagetable.h"
 #include "../syscall/syscall.h"
 #include "../vfs/array.h"
-//#include "../vfs/type.h"
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
 #include "nfsfs.h"
@@ -303,7 +302,7 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
     if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
-	int offset = 0;
+    int offset = 0;
     while (uio->uio_resid > 0) {
         sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
         if (!sos_vaddr) {
@@ -313,7 +312,7 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
         memcpy((void *)sos_vaddr, entry->name + offset, n);
         uio->uio_resid -= n;
         user_vaddr += n;
-		offset += n;
+        offset += n;
         n = uio->length - n;
     }
     nfs_closedir(nf->context, dir);

@@ -6,7 +6,8 @@
 
 static seL4_Word boottime;
 
-void set_boottime(void){
+void set_boottime(void)
+{
     boottime = timestamp_us(timestamp_get_freq());
 }
 

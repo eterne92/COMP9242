@@ -32,7 +32,7 @@
  */
 
 #include <errno.h>
-#include "stat.h"
+#include <sys/stat.h>
 #include "uio.h"
 #include "../proc.h"
 #include "vfs.h"

@@ -33,14 +33,14 @@
 #include "../pagetable.h"
 #include "../syscall/syscall.h"
 #include "../vfs/array.h"
-#include "../vfs/stat.h"
-#include "../vfs/type.h"
+//#include "../vfs/type.h"
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
 #include "nfsfs.h"
 #include <autoconf.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <nfsc/libnfs.h>
 #include <picoro/picoro.h>
 #include <string.h>
@@ -294,7 +294,7 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
         printf("getdirent failed with status %d\n", cb.status);
         return cb.status;
     }
-    struct nfsdir *dir = cb->data;
+    struct nfsdir *dir = cb.data;
     // now do the actual getdirent
     struct nfsdirent *entry = nfs_readdir(nf->context, dir);
     for (int i = 0; i < pos; ++i) entry = entry->next;

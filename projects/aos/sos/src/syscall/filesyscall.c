@@ -1,7 +1,6 @@
 #include "../addrspace.h"
 #include "../pagetable.h"
 #include "../proc.h"
-#include "../vfs/stat.h"
 #include "../vfs/uio.h"
 #include "../vfs/vfs.h"
 #include "../vfs/vnode.h"
@@ -10,6 +9,7 @@
 #include "syscall.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 /* only used to copy string size less then 256 */
 /* so we won't go through too many frame */
@@ -201,10 +201,9 @@ void *_sys_write(proc *cur_proc)
             syscall_reply(cur_proc->reply, ret, 0);
         }
     } else {
-        syscall_nfs_cbly, 0, EFAULT);
+        syscall_reply(cur_proc->reply, 0, EFAULT);
     }
     return NULL;
-    nfs_cb
 }
 
 void *_sys_stat(proc *cur_proc)
@@ -282,13 +281,19 @@ void *_sys_getdirent(proc *cur_proc)
     size_t nbytes = (size_t)seL4_GetMR(3);
     if (validate_virtual_address(cur_proc->as, path, nbytes, READ)) {
         struct vnode *vn;
-        int ret, errno = 0;
+        char str[257];
+        int path_length = copyinstr(cur_proc, (char *)path, str, 256);
+        if (path_length == -1) {
+            syscall_reply(cur_proc->reply, -1, EFAULT);
+            return NULL;
+        }
+        int ret, err = 0;
         vfs_lookup(str, &vn);
         struct uio my_uio;
         uio_init(&my_uio, (seL4_Word)path, nbytes, pos, UIO_READ, cur_proc);
         ret = VOP_GETDIRENTRY(vn, &my_uio);
-        errno = !ret ? 0 : EFAULT;
-        syscall_reply(cur_proc->reply, ret, errno);
+        err = !ret ? 0 : EFAULT;
+        syscall_reply(cur_proc->reply, ret, err);
     } else {
         syscall_reply(cur_proc->reply, -1, EFAULT);
     }

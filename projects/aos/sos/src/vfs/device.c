@@ -35,12 +35,12 @@
  */
 #include <errno.h>
 #include <fcntl.h>
-#include "stat.h"
+#include <sys/stat.h>
 #include "uio.h"
 #include "vnode.h"
 #include "device.h"
 #include <stdint.h>
-#include "type.h"
+#include <sys/types.h>
 
 /*
  * Called for each open().

@@ -32,7 +32,8 @@
 
 
 #include "array.h"
-#include "type.h"
+//#include "type.h"
+#include <sys/types.h>
 #include <stdbool.h>
 
 /*

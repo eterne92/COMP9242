@@ -30,7 +30,7 @@
 #ifndef _VNODE_H_
 #define _VNODE_H_
 
-#include "type.h"
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdbool.h>
 

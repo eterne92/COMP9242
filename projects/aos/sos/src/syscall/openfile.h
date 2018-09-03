@@ -34,7 +34,7 @@
 #ifndef _OPENFILE_H_
 #define _OPENFILE_H_
 
-#include "../vfs/type.h"
+#include <sys/types.h>
 /*
  * Structure for open files.
  *

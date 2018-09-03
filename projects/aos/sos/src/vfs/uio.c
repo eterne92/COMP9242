@@ -49,7 +49,7 @@ void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
 
 /* only used to copy string size less then a frame */
 /* so we won't go through too many frame */
-int copystr(proc *proc, char * user, char *sos, size_t length, enum uio_rw rw)
+int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw)
 {
     /* get region */
     as_region *region = vaddr_get_region(cur_proc->as, (seL4_Word)user);
@@ -65,11 +65,10 @@ int copystr(proc *proc, char * user, char *sos, size_t length, enum uio_rw rw)
     size_t j = 0;
     char c = 0;
     while (i < left_size && i < length) {
-        if(rw == COPYIN){
+        if (rw == COPYIN) {
             c = *(char *)(vaddr + j);
             sos[i] = c;
-        }
-        else{
+        } else {
             c = sos[i];
             *(char *)(vaddr + j) = c;
             printf("in copyout str, c is %c\n", c);

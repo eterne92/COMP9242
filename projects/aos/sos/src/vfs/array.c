@@ -29,7 +29,6 @@
 
 #define ARRAYINLINE
 
-//#include "type.h"
 #include <sys/types.h>
 #include <errno.h>
 #include "array.h"

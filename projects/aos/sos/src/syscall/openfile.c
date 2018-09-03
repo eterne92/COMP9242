@@ -32,7 +32,6 @@
  */
 
 #include "openfile.h"
-#include "../vfs/type.h"
 #include "../vfs/vfs.h"
 #include <assert.h>
 #include <errno.h>

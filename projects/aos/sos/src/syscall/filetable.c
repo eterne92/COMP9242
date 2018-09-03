@@ -31,7 +31,6 @@
  * File tables.
  */
 
-#include "../vfs/type.h"
 #include "filetable.h"
 #include "openfile.h"
 #include <assert.h>

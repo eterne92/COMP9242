@@ -3,6 +3,11 @@
 #include "frametable.h"
 #include "mapping.h"
 
+
+#define PRESENT (50 << 1)
+#define PAGE_RW (51 << 1)
+#define OFFSET 0xffffffffffff
+
 typedef struct page_table {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
@@ -84,7 +89,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
     (void)fault_info;
-    int frame;
+    seL4_Word frame;
     seL4_CPtr vspace = cur_proc->vspace;
     as_region *region = cur_proc->as->regions;
     bool execute, read, write;
@@ -97,13 +102,24 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
             read = region->flags & RG_R;
             write = region->flags & RG_W;
             // write to a read-only page
-            if (get_cap_from_vaddr(cur_proc->pt, vaddr) == 0) {
+            frame = get_frame_from_vaddr(cur_proc->pt, vaddr);
+            if (frame == 0) {
                 /* it's a vm fault without page */
                 // allocate a frame
                 frame = frame_alloc(NULL);
                 // map it
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-            } else {
+            } else if(frame & PRESENT){
+                /* the page is still there */
+            } else if((frame & PRESENT) == 0){
+                seL4_Word offset = frame & OFFSET;
+
+                frame = frame_alloc(NULL);
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+
+                err = load_page(offset, vaddr & PAGE_FRAME);
+            } else
+            {
                 /* it's a vm fault with permmision */
                 /* for now it's segment fault */
                 /* later it will be copy on write */
@@ -126,6 +142,8 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame;
     pt_cap->cap[offset] = entry->slot;
+    FRAME_CLEAR_BIT(entry->frame, PIN);
+    FRAME_SET_BIT(entry->frame, CLOCK);
 }
 
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)

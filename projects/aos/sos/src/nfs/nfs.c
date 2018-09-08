@@ -255,7 +255,6 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
             return 0;
         }
 
-        yield(NULL);
     }
     nv->lock = 0;
     return 0;
@@ -378,8 +377,6 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
             nv->lock = 0;
             return 0;
         }
-
-        yield(NULL);
     }
 
     nv->lock = 0;

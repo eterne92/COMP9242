@@ -2,7 +2,6 @@
 #include "mapping.h"
 #include <stdlib.h>
 
-#define FRAME_BASE 0xA000000000
 #define UNTYPE_MEMEORY 0x1
 #define FREE_MEMORY 0x2
 #define USED_MEMORY 0x3
@@ -10,10 +9,12 @@
 
 /* TODO: frame reference count */
 
-#define MOST_FREE 500
+#define MOST_FREE 0
 
 frame_table_t frame_table;
 static cspace_t *root_cspace;
+
+static unsigned first_available_frame;
 
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
 {
@@ -73,6 +74,7 @@ void initialize_frame_table(cspace_t *cspace)
     }
     printf("initial frametable done part I\n");
     printf("there is %lu frames\nframetable n_pages %lu\n", n_frames, n_pages);
+    first_available_frame = n_pages;
     for (size_t i = n_pages; i < n_frames; ++i) {
         frame_table.frames[i].ut = NULL;
         frame_table.frames[i].next = i + 1;
@@ -99,6 +101,8 @@ int frame_alloc(seL4_Word *vaddr)
         if (vaddr) {
             *vaddr = _vaddr;
         }
+
+        FRAME_SET_BIT(page, PIN);
         return page;
     }
     /* otherwise we need to get one from untyped mem */
@@ -129,6 +133,7 @@ int frame_alloc(seL4_Word *vaddr)
     if (vaddr) {
         *vaddr = _vaddr;
     }
+    FRAME_SET_BIT(page, PIN);
     return page;
 }
 
@@ -189,6 +194,7 @@ void frame_free(int frame)
     frame_table.frames[frame].flag = FREE_MEMORY;
     frame_table.free = frame;
     frame_table.num_frees++;
+    FRAME_SET_BIT(frame, PIN);
     if (frame_table.num_frees > MOST_FREE) {
         free_to_untype(frame);
     }

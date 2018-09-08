@@ -7,6 +7,10 @@
 
 #define FRAME_BASE 0xA000000000
 
+#define PIN 3
+#define CLOCK 4
+#define FRAME_SET_BIT(x, bit) (frame_table.frames[x].flag |= (1 << bit))
+#define FRAME_CLEAR_BIT(x, bit) (frame_table.frames[x].flag &= ~(1 << bit))
 typedef struct frame_table_obj {
     ut_t *ut;
     int next;

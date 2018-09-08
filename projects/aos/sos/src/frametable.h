@@ -11,9 +11,11 @@
 #define CLOCK 4
 #define FRAME_SET_BIT(x, bit) (frame_table.frames[x].flag |= (1 << bit))
 #define FRAME_CLEAR_BIT(x, bit) (frame_table.frames[x].flag &= ~(1 << bit))
+#define FRAME_GET_BIT(x, bit) (((frame_table.frames[x].flag >> bit) & 1u) )
 #define PID 0xFF0
 #define GET_PID(flag) ((flag & PID) >> 4)
 #define SET_PID(x, pid) (frame_table.frames[x].flag |= (pid << 4))
+
 typedef struct frame_table_obj {
     ut_t *ut;
     int next;
@@ -32,6 +34,8 @@ typedef struct frame_table {
 
 // declaration of frame table
 extern frame_table_t frame_table;
+
+extern unsigned first_available_frame;
 
 void initialize_frame_table(cspace_t *cspace);
 

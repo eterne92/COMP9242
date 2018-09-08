@@ -4,8 +4,8 @@
 #include "mapping.h"
 
 
-#define PRESENT (50 << 1)
-#define PAGE_RW (51 << 1)
+#define PRESENT (1lu << 50)
+#define PAGE_RW (1lu << 51)
 #define OFFSET 0xffffffffffff
 
 typedef struct page_table {
@@ -65,7 +65,8 @@ page_table_t *initialize_page_table(void)
     return page_frame != -1 ? (page_table_t *)page_table_addr : NULL;
 }
 
-seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry, int level, seL4_Word vaddr)
+seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
+                                   int level, seL4_Word vaddr)
 {
     int offset;
     page_table_t *pt;
@@ -84,7 +85,8 @@ seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
     return seL4_NoError;
 }
 
-seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_info)
+seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
+                             seL4_Word fault_info)
 {
     // need to figure out which process triggered the page fault
     // right now, there is only one process (tty_test)
@@ -108,23 +110,25 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
                 // allocate a frame
                 frame = frame_alloc(NULL);
                 // map it
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-            } else if(frame & PRESENT){
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                                    vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+            } else if (frame & PRESENT) {
                 /* the page is still there */
                 frame = frame & OFFSET;
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                                    vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
 
-            } else if((frame & PRESENT) == 0){
+            } else if (!(frame & PRESENT)) {
+                // page is in swapping file
                 seL4_Word offset = frame & OFFSET;
-
                 frame = frame_alloc(NULL);
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-                if(err){
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                                    vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+                if (err) {
                     return err;
                 }
                 err = load_page(offset, vaddr & PAGE_FRAME);
-            } else
-            {
+            } else {
                 /* it's a vm fault with permmision */
                 /* for now it's segment fault */
                 /* later it will be copy on write */
@@ -139,10 +143,12 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
     return -1;
 }
 
-void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entry, seL4_Word vaddr)
+void update_level_4_page_table_entry(page_table_t *table,
+                                     page_table_entry *entry, seL4_Word vaddr)
 {
     /* save backend frame in level 4 shadow page table */
-    page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
+    page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
+                       4);
     page_table_cap *pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word)pt);
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame | PRESENT;
@@ -155,20 +161,19 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
 
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
 {
-    int frame;
+    seL4_CPtr slot;
     int offset;
     page_table_t *pt;
+    page_table_cap *pt_cap;
     pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
     /* we haven't got that vaddr yet */
     if (pt == NULL) {
         return 0;
     }
+    pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word)pt);
     offset = get_offset(vaddr, 4);
-    frame = pt->page_obj_addr[offset];
-    if (frame == 0) {
-        return 0;
-    }
-    return frame_table.frames[frame].frame_cap;
+    slot = pt_cap->cap[offset];
+    return slot;
 }
 
 seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr)

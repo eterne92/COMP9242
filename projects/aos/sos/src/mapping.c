@@ -26,15 +26,18 @@
  * @param empty  an empty slot to retype into a pt
  * @return 0 on success
  */
-static seL4_Error retype_map_pt(cspace_t *cspace, seL4_CPtr vspace, seL4_Word vaddr, seL4_CPtr ut, seL4_CPtr empty)
+static seL4_Error retype_map_pt(cspace_t *cspace, seL4_CPtr vspace,
+                                seL4_Word vaddr, seL4_CPtr ut, seL4_CPtr empty)
 {
 
-    seL4_Error err = cspace_untyped_retype(cspace, ut, empty, seL4_ARM_PageTableObject, seL4_PageBits);
+    seL4_Error err = cspace_untyped_retype(cspace, ut, empty,
+                                           seL4_ARM_PageTableObject, seL4_PageBits);
     if (err) {
         return err;
     }
 
-    return seL4_ARM_PageTable_Map(empty, vspace, vaddr, seL4_ARM_Default_VMAttributes);
+    return seL4_ARM_PageTable_Map(empty, vspace, vaddr,
+                                  seL4_ARM_Default_VMAttributes);
 }
 
 /**
@@ -45,15 +48,18 @@ static seL4_Error retype_map_pt(cspace_t *cspace, seL4_CPtr vspace, seL4_Word va
  * @param empty  an empty slot to retype into a pd
  * @return 0 on success
  */
-static seL4_Error retype_map_pd(cspace_t *cspace, seL4_CPtr vspace, seL4_Word vaddr, seL4_CPtr ut, seL4_CPtr empty)
+static seL4_Error retype_map_pd(cspace_t *cspace, seL4_CPtr vspace,
+                                seL4_Word vaddr, seL4_CPtr ut, seL4_CPtr empty)
 {
 
-    seL4_Error err = cspace_untyped_retype(cspace, ut, empty, seL4_ARM_PageDirectoryObject, seL4_PageBits);
+    seL4_Error err = cspace_untyped_retype(cspace, ut, empty,
+                                           seL4_ARM_PageDirectoryObject, seL4_PageBits);
     if (err) {
         return err;
     }
 
-    return seL4_ARM_PageDirectory_Map(empty, vspace, vaddr, seL4_ARM_Default_VMAttributes);
+    return seL4_ARM_PageDirectory_Map(empty, vspace, vaddr,
+                                      seL4_ARM_Default_VMAttributes);
 }
 
 /**
@@ -64,20 +70,24 @@ static seL4_Error retype_map_pd(cspace_t *cspace, seL4_CPtr vspace, seL4_Word va
  * @param empty  an empty slot to retype into a pud
  * @return 0 on success
  */
-static seL4_Error retype_map_pud(cspace_t *cspace, seL4_CPtr vspace, seL4_Word vaddr, seL4_CPtr ut,
-    seL4_CPtr empty)
+static seL4_Error retype_map_pud(cspace_t *cspace, seL4_CPtr vspace,
+                                 seL4_Word vaddr, seL4_CPtr ut,
+                                 seL4_CPtr empty)
 {
 
-    seL4_Error err = cspace_untyped_retype(cspace, ut, empty, seL4_ARM_PageUpperDirectoryObject, seL4_PageBits);
+    seL4_Error err = cspace_untyped_retype(cspace, ut, empty,
+                                           seL4_ARM_PageUpperDirectoryObject, seL4_PageBits);
     if (err) {
         return err;
     }
-    return seL4_ARM_PageUpperDirectory_Map(empty, vspace, vaddr, seL4_ARM_Default_VMAttributes);
+    return seL4_ARM_PageUpperDirectory_Map(empty, vspace, vaddr,
+                                           seL4_ARM_Default_VMAttributes);
 }
 
-static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr,
-    seL4_CapRights_t rights, seL4_ARM_VMAttributes attr,
-    seL4_CPtr *free_slots, seL4_Word *used)
+static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
+                                 seL4_CPtr vspace, seL4_Word vaddr,
+                                 seL4_CapRights_t rights, seL4_ARM_VMAttributes attr,
+                                 seL4_CPtr *free_slots, seL4_Word *used)
 {
     /* Attempt the mapping */
     seL4_Error err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
@@ -128,25 +138,30 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPt
     return err;
 }
 
-seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr,
-    seL4_CapRights_t rights, seL4_ARM_VMAttributes attr,
-    seL4_CPtr free_slots[MAPPING_SLOTS], seL4_Word *used)
+seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap,
+                            seL4_CPtr vspace, seL4_Word vaddr,
+                            seL4_CapRights_t rights, seL4_ARM_VMAttributes attr,
+                            seL4_CPtr free_slots[MAPPING_SLOTS], seL4_Word *used)
 {
     if (cspace == NULL) {
         ZF_LOGE("Invalid arguments");
         return -1;
     }
-    return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, free_slots, used);
+    return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr,
+                          free_slots, used);
 }
 
-seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr,
-    seL4_CapRights_t rights, seL4_ARM_VMAttributes attr)
+seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace,
+                     seL4_Word vaddr,
+                     seL4_CapRights_t rights, seL4_ARM_VMAttributes attr)
 {
-    return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, NULL, NULL);
+    return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, NULL,
+                          NULL);
 }
 
-seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
-    seL4_ARM_VMAttributes attr)
+seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
+                         seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
+                         seL4_ARM_VMAttributes attr)
 {
     /* allign vaddr */
     vaddr = vaddr & PAGE_FRAME;
@@ -201,7 +216,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4
             // level 4
             level = 4;
             err = retype_map_pt(cspace, vspace, vaddr, ut->cap, slot);
-            /* only need one page in level 4 shadow page table */
+            /* only need two page in level 4 shadow page table */
             page_frame = frame_n_alloc(&page_table_addr, 2);
             frame_array[i] = page_frame;
             if (page_frame == -1) {
@@ -290,8 +305,9 @@ void *sos_map_device(cspace_t *cspace, uintptr_t addr, size_t size)
         }
 
         /* retype */
-        seL4_Error err = cspace_untyped_retype(cspace, ut->cap, frame, seL4_ARM_SmallPageObject,
-            seL4_PageBits);
+        seL4_Error err = cspace_untyped_retype(cspace, ut->cap, frame,
+                                               seL4_ARM_SmallPageObject,
+                                               seL4_PageBits);
         if (err != seL4_NoError) {
             ZF_LOGE("Failed to retype %lx", ut->cap);
             cspace_free_slot(cspace, frame);
@@ -299,7 +315,8 @@ void *sos_map_device(cspace_t *cspace, uintptr_t addr, size_t size)
         }
 
         /* map */
-        err = map_frame(cspace, frame, seL4_CapInitThreadVSpace, device_virt, seL4_AllRights, false);
+        err = map_frame(cspace, frame, seL4_CapInitThreadVSpace, device_virt,
+                        seL4_AllRights, false);
         if (err != seL4_NoError) {
             ZF_LOGE("Failed to map device frame at %p", (void *)device_virt);
             cspace_delete(cspace, frame);

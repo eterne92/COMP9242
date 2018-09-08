@@ -19,9 +19,9 @@ typedef struct page_table page_table_t;
 
 typedef struct page_table_entry {
     seL4_CPtr slot;
-    seL4_Word table_addr; /* virtual address of the shadow page table */
-    ut_t *ut; /* capability of hardware page table object */
-    seL4_Word frame;
+    seL4_Word table_addr;     /* virtual address of the shadow page table */
+    ut_t *ut;                 /* capability of hardware page table object */
+    seL4_Word frame;          /* idx of the underlying frame table */
 } page_table_entry;
 
 /*
@@ -78,3 +78,12 @@ seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
  * return SOS's virtual address
  */
 seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
+
+/*
+ * load page from swapping file 
+ * @param offset       the offset of the swapping file where page resides
+ * @param vaddr        virtual address that triggered page fault (user level)
+ * 
+ * return 0 on success
+ */
+seL4_Error load_page(seL4_Word offset, seL4_Word vaddr);

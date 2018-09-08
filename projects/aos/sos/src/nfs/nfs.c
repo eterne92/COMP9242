@@ -198,7 +198,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
 
     assert(uio->uio_rw == UIO_READ);
 
-    while(nv->lock == 1){
+    while (nv->lock == 1) {
         yield(NULL);
     }
     nv->lock = 1;
@@ -228,7 +228,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         result = nfs_pread_async(nf->context, nv->handle, uio->uio_offset,
                                  count, nfs_read_cb, &cb);
         if (result) {
-    nv->lock = 0;
+            nv->lock = 0;
             return result;
         }
         /* wait until callback done */
@@ -237,7 +237,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         }
         /* callback got sth wrong */
         if (cb.status < 0) {
-    nv->lock = 0;
+            nv->lock = 0;
             return cb.status;
         }
 
@@ -250,7 +250,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
 
         if (nbytes < count) {
-    nv->lock = 0;
+            nv->lock = 0;
             /* it's over */
             return 0;
         }
@@ -267,7 +267,6 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
 {
     //struct nfs_vnode *nv = v->vn_data;
     struct nfs_fs *nf = v->vn_fs->fs_data;
-    seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     struct nfs_cb cb;
     memset(&cb, 0, sizeof(struct nfs_cb));
     int ret, pos;
@@ -290,12 +289,13 @@ static int _nfs_getdirentry(struct vnode *v, struct uio *uio)
     struct nfsdirent *entry = nfs_readdir(nf->context, dir);
 
     for (int i = 0; i < pos; ++i) entry = entry->next;
-    if(entry == NULL){
+    if (entry == NULL) {
         return 0;
     }
 
 
-    ret = copystr(uio->proc, (char *)uio->vaddr, entry->name, strlen(entry->name) + 1, COPYOUT);
+    ret = copystr(uio->proc, (char *)uio->vaddr, entry->name,
+                  strlen(entry->name) + 1, COPYOUT);
     nfs_closedir(nf->context, dir);
 
     return ret;
@@ -323,7 +323,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
 
     assert(uio->uio_rw == UIO_WRITE);
 
-    while(nv->lock == 1){
+    while (nv->lock == 1) {
         yield(NULL);
     }
     nv->lock = 1;

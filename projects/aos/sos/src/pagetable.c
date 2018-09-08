@@ -111,12 +111,17 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr, seL4_Word fault_in
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
             } else if(frame & PRESENT){
                 /* the page is still there */
+                frame = frame & OFFSET;
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+
             } else if((frame & PRESENT) == 0){
                 seL4_Word offset = frame & OFFSET;
 
                 frame = frame_alloc(NULL);
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace, vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-
+                if(err){
+                    return err;
+                }
                 err = load_page(offset, vaddr & PAGE_FRAME);
             } else
             {
@@ -140,10 +145,12 @@ void update_level_4_page_table_entry(page_table_t *table, page_table_entry *entr
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
     page_table_cap *pt_cap = (page_table_cap *)get_page_table_cap((seL4_Word)pt);
     int offset = get_offset(vaddr, 4);
-    pt->page_obj_addr[offset] = entry->frame;
+    pt->page_obj_addr[offset] = entry->frame | PRESENT;
     pt_cap->cap[offset] = entry->slot;
     FRAME_CLEAR_BIT(entry->frame, PIN);
     FRAME_SET_BIT(entry->frame, CLOCK);
+    frame_table.frames[entry->frame].vaddr = vaddr;
+    /* TODO: SETPID */
 }
 
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)

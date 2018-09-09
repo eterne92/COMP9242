@@ -12,10 +12,6 @@ static struct vnode *swap_file;
 static unsigned header = 0;
 static unsigned tail = 0;
 
-static void update_free_list(seL4_Word offset)
-{
-
-}
 
 void initialize_swapping_file(void)
 {
@@ -25,20 +21,19 @@ void initialize_swapping_file(void)
 seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
 {
     int result = 0;
-    struct uio my_uio;
+    struct uio u_uio;
+    struct uio k_uio;
     struct proc *cur_proc = get_cur_proc();
     unsigned tmp = 0;
-    //seL4_Word buf = get_sos_virtual_address(cur_proc->pt, vaddr);
-    uio_uinit(&my_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ, cur_proc);
-    result = VOP_READ(swap_file, &my_uio);
+    uio_uinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ, cur_proc);
+    result = VOP_READ(swap_file, &u_uio);
     if (!result) {
         // update free list
         tmp = header;
         header = offset / PAGE_SIZE_4K;
-        // how to write tmp back to swapping file ?
-        // cannot just use the address of stack variable tmp
-        // since the underlying VOP_WRITE will look for a SOS virtual
-        // address which is not part of the SOS image
+        uio_kinit(&k_uio, &tmp, sizeof(unsigned), offset, UIO_WRITE);
+        VOP_WRITE(swap_file, &k_uio);
+
     }
     return result;
 }
@@ -50,7 +45,9 @@ seL4_Error try_swap_out(void)
     struct proc *cur_proc = get_cur_proc();
     seL4_Word addr = 0;
     page_table_entry entry;
-    struct uio my_uio;
+    struct uio u_uio;
+    struct uio k_uio;
+    unsigned tmp = 0;
     // still need to figure out the actual size of all the frames
     // no need to go all the way down to the length since many of them
     // have already been retyped into page table object or thread control block
@@ -67,14 +64,17 @@ seL4_Error try_swap_out(void)
                                                        frame_table.frames[i].vaddr));
             } else {
                 // victim found
-
-                addr = get_sos_virtual_address(cur_proc->pt, frame_table.frames[i].vaddr);
+                // read the free list header from the swapping file
+                uio_kinit(&k_uio, &tmp, sizeof(unsigned), header * PAGE_SIZE_4K, UIO_READ);
+                VOP_READ(swap_file, &k_uio);
                 // update the present bit & offset
 
-                uio_uinit(&my_uio, addr, PAGE_SIZE_4K, header * PAGE_SIZE_4K, UIO_WRITE, cur_proc);
-                VOP_WRITE(swap_file, &my_uio);
+                // write out the page into disk
+                uio_uinit(&u_uio, addr, PAGE_SIZE_4K, header * PAGE_SIZE_4K, UIO_WRITE,
+                          cur_proc);
+                VOP_WRITE(swap_file, &u_uio);
 
-                // same issue here how to maintian the free list
+                header = tmp;
                 err = seL4_NoError;
             }
         }

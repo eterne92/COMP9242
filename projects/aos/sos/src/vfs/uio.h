@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,21 +64,33 @@
 
 /* Direction. */
 enum uio_rw {
-    UIO_READ,  /* From kernel to uio_seg */
-    UIO_WRITE, /* From uio_seg to kernel */
+    UIO_READ,    /* From kernel to uio_seg */
+    UIO_WRITE,   /* From uio_seg to kernel */
+};
+
+/* Source/destination. */
+enum uio_seg {
+    UIO_USERISPACE,    /* User process code. */
+    UIO_USERSPACE,     /* User process data. */
+    UIO_SYSSPACE,      /* Kernel. */
 };
 
 struct uio {
     seL4_Word vaddr;
-    size_t length;       /* number of bytes to transfer   */
-    size_t uio_offset;  /* Desired offset into object    */
-    size_t uio_resid;   /* Remaining amt of data to xfer */
-    enum uio_rw uio_rw; /* Whether op is a read or write */
+    size_t length;              /* number of bytes to transfer   */
+    size_t uio_offset;          /* Desired offset into object    */
+    size_t uio_resid;           /* Remaining amt of data to xfer */
+    enum uio_rw uio_rw;         /* Whether op is a read or write */
+    enum uio_seg uio_segflg;
     proc *proc;
 };
 
-void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos, enum uio_rw rw, proc *proc);
+void uio_uinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
+               enum uio_rw rw, proc *proc);
 
-int copystr(proc *proc, char * user, char *sos, size_t length, enum uio_rw rw);
+void uio_kinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
+               enum uio_rw rw);
+
+int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw);
 
 #endif /* _UIO_H_ */

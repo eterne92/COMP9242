@@ -48,13 +48,11 @@ get_property(apps GLOBAL PROPERTY apps_property)
 MakeCPIO(archive.o "${apps}")
 
 # add any new c files here
-add_executable(sos EXCLUDE_FROM_ALL crt/sel4_crt0.S src/bootstrap.c src/dma.c src/elf.c src/frametable.c src/main.c
+add_executable(sos EXCLUDE_FROM_ALL crt/sel4_crt0.S src/bootstrap.c src/dma.c src/elf.c src/frametable.c 
                src/addrspace.c src/pagetable.c src/proc.c src/mapping.c src/network.c src/ut.c src/tests.c 
-               src/nfs/nfs.c
-               src/syscall/timesyscall.c src/syscall/filesyscall.c src/syscall/syscall.c 
-               src/syscall/filetable.c src/syscall/openfile.c
+               src/nfs/nfs.c src/swap.c src/syscall/timesyscall.c src/syscall/filesyscall.c src/syscall/syscall.c 
+               src/syscall/filetable.c src/syscall/openfile.c src/drivers/uart.c src/sys/time.c src/main.c
                src/sys/backtrace.c src/sys/exit.c src/sys/morecore.c src/sys/stdio.c src/sys/thread.c 
-               src/sys/time.c src/drivers/uart.c 
                src/vfs/device.c src/vfs/console.c src/vfs/uio.c src/vfs/vfslist.c src/vfs/vfslookup.c 
                src/vfs/vnode.c src/vfs/vfsfail.c src/vfs/vfscwd.c src/vfs/vfspath.c src/vfs/array.c 
                archive.o src/sos.lds)

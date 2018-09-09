@@ -14,7 +14,7 @@
 frame_table_t frame_table;
 static cspace_t *root_cspace;
 
-static unsigned first_available_frame;
+unsigned first_available_frame;
 
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
 {
@@ -34,7 +34,8 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
     }
 
     /* now do the retype */
-    seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type, seL4_PageBits);
+    seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type,
+                                           seL4_PageBits);
     // ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
         ut_free(ut, seL4_PageBits);
@@ -54,7 +55,8 @@ void initialize_frame_table(cspace_t *cspace)
     size_t n_frames = ut_size() / PAGE_SIZE_4K;
     frame_table.length = (int)n_frames;
     // the number of pages consumed by frame table
-    size_t n_pages = (n_frames * sizeof(frame_table_obj) + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
+    size_t n_pages = (n_frames * sizeof(frame_table_obj) + PAGE_SIZE_4K - 1) /
+                     PAGE_SIZE_4K;
     frame_table.untyped = (uint32_t)n_pages;
     for (size_t i = 0; i < n_pages; ++i) {
         seL4_CPtr frame_cap;
@@ -64,7 +66,7 @@ void initialize_frame_table(cspace_t *cspace)
         }
         // ZF_LOGF_IF(ut == NULL, "Failed to allocate frame table page");
         map_frame(cspace, frame_cap, seL4_CapInitThreadVSpace,
-            vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
+                  vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
         // ZF_LOGF_IFERR(err, "Failed to map frame table pages");
         frame_table.frames[i].ut = ut;
         frame_table.frames[i].next = -1;
@@ -118,7 +120,7 @@ int frame_alloc(seL4_Word *vaddr)
     }
     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
     map_frame(root_cspace, frame_cap, seL4_CapInitThreadVSpace,
-        _vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
+              _vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
     /*
     if(err != seL4_NoError) {
         return -1;

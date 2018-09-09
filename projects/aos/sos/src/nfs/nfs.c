@@ -212,11 +212,14 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     }
 
     while (uio->uio_resid > 0) {
-        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-
-        if (sos_vaddr == 0) {
-            handle_page_fault(uio->proc, user_vaddr, 0);
+        if (uio->uio_segflg == UIO_USERSPACE) {
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+            if (sos_vaddr == 0) {
+                handle_page_fault(uio->proc, user_vaddr, 0);
+                sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+            }
+        } else {
+            sos_vaddr = uio->vaddr;
         }
 
         // read n bytes
@@ -338,11 +341,15 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
     }
 
     while (uio->uio_resid > 0) {
-        sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
-
-        if (sos_vaddr == 0) {
-            handle_page_fault(uio->proc, user_vaddr, 0);
+        if (uio->uio_segflg == UIO_USERSPACE) {
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+
+            if (sos_vaddr == 0) {
+                handle_page_fault(uio->proc, user_vaddr, 0);
+                sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
+            }
+        } else {
+            sos_vaddr = uio->vaddr;
         }
 
         // read n bytes

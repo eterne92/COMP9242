@@ -34,15 +34,28 @@
  * Convenience function to initialize an iovec and uio for kernel I/O.
  */
 
-void uio_init(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
-              enum uio_rw rw, proc *proc)
+void uio_uinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
+               enum uio_rw rw, proc *proc)
 {
     u->vaddr = vaddr;
     u->length = len;
     u->uio_offset = pos;
     u->uio_resid = len;
     u->uio_rw = rw;
+    u->uio_segflg = UIO_USERSPACE;
     u->proc = proc;
+}
+
+void uio_kinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
+               enum uio_rw rw)
+{
+    u->vaddr = vaddr;
+    u->length = len;
+    u->uio_offset = pos;
+    u->uio_resid = len;
+    u->uio_rw = rw;
+    u->uio_segflg = UIO_SYSSPACE;
+    u->proc = NULL;
 }
 
 

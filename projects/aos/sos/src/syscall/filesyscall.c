@@ -44,7 +44,7 @@ static int _sys_readwrite(proc *cur_proc, int fd, void *buf, size_t size,
     /* set up a uio with the buffer, its size, and the current offset */
 
     struct uio my_uio;
-    uio_init(&my_uio, (seL4_Word)buf, size, pos, rw, cur_proc);
+    uio_uinit(&my_uio, (seL4_Word)buf, size, pos, rw, cur_proc);
 
     /* do the read or write */
     result = (rw == UIO_READ) ? VOP_READ(file->of_vnode,
@@ -252,7 +252,7 @@ void *_sys_getdirent(proc *cur_proc)
         int ret, err = 0;
         vn = get_bootfs_vnode();
         struct uio my_uio;
-        uio_init(&my_uio, path, nbytes, pos, UIO_READ, cur_proc);
+        uio_uinit(&my_uio, path, nbytes, pos, UIO_READ, cur_proc);
         ret = VOP_GETDIRENTRY(vn, &my_uio);
         err = !ret ? 0 : EFAULT;
         syscall_reply(cur_proc->reply, ret, err);

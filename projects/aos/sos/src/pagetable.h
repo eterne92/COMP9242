@@ -79,6 +79,7 @@ seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
  */
 seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
 
+
 /*
  * load page from swapping file 
  * @param offset       the offset of the swapping file where page resides

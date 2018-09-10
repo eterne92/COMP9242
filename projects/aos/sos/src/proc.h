@@ -4,6 +4,8 @@
 
 #include "ut.h"
 
+typedef unsigned pid_t;
+
 typedef struct page_table page_table_t;
 typedef struct addrspace addrspace;
 typedef struct filetable filetable;
@@ -29,3 +31,5 @@ extern proc *cur_proc;
 
 void set_cur_proc(proc *p);
 proc *get_cur_proc(void);
+
+proc *get_process(pid_t pid);

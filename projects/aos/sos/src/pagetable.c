@@ -12,13 +12,14 @@ typedef struct page_table {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
 
+typedef struct page_table_cap {
+    seL4_Word cap[PAGE_TABLE_SIZE];
+} page_table_cap;
+
 typedef struct page_table_ut {
     ut_t *ut[PAGE_TABLE_SIZE];
 } page_table_ut;
 
-typedef struct page_table_cap {
-    seL4_Word cap[PAGE_TABLE_SIZE];
-} page_table_cap;
 
 /* find out the frame contains the ut / cap */
 static page_table_cap *get_page_table_cap(seL4_Word page_table)
@@ -198,4 +199,15 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr)
         return (FRAME_BASE + frame * PAGE_SIZE_4K) + (vaddr & PAGE_MASK_4K);
     }
     return 0;
+}
+
+void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
+                        seL4_Word file_offset)
+{
+    page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
+                       4);
+    int offset = get_offset(vaddr, 4);
+    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset & ~
+                                (PRESENT);
+    FRAME_CLEAR_BIT(pt->page_obj_addr[offset], PIN);
 }

@@ -9,3 +9,12 @@ proc *get_cur_proc(void)
 {
     return cur_proc;
 }
+
+
+/*
+ *
+*/
+proc *get_process(pid_t pid)
+{
+    return cur_proc;
+}

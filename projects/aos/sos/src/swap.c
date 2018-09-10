@@ -31,7 +31,7 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
         // update free list
         tmp = header;
         header = offset / PAGE_SIZE_4K;
-        uio_kinit(&k_uio, &tmp, sizeof(unsigned), offset, UIO_WRITE);
+        uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), offset, UIO_WRITE);
         VOP_WRITE(swap_file, &k_uio);
 
     }
@@ -42,8 +42,8 @@ seL4_Error try_swap_out(void)
 {
     int clock_bit, pin_bit;
     seL4_Error err = seL4_NotEnoughMemory;
-    struct proc *cur_proc = get_cur_proc();
-    seL4_Word addr = 0;
+    struct proc *process;
+    seL4_Word addr = 0, file_offset;
     page_table_entry entry;
     struct uio u_uio;
     struct uio k_uio;
@@ -57,25 +57,30 @@ seL4_Error try_swap_out(void)
         pin_bit = FRAME_GET_BIT(i, PIN);
         if (!pin_bit) {
             clock_bit = FRAME_GET_BIT(i, CLOCK);
+            process = get_process(GET_PID(frame_table.frames[i].flag));
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(i, CLOCK);
-                seL4_ARM_Page_Unmap(get_cap_from_vaddr(cur_proc->pt,
+                seL4_ARM_Page_Unmap(get_cap_from_vaddr(process->pt,
                                                        frame_table.frames[i].vaddr));
             } else {
                 // victim found
+                file_offset = header * PAGE_SIZE_4K;
                 // read the free list header from the swapping file
-                uio_kinit(&k_uio, &tmp, sizeof(unsigned), header * PAGE_SIZE_4K, UIO_READ);
+                uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), file_offset, UIO_READ);
                 VOP_READ(swap_file, &k_uio);
                 // update the present bit & offset
-
+                update_page_status(process->pt, frame_table.frames[i].vaddr, false,
+                                   file_offset);
                 // write out the page into disk
-                uio_uinit(&u_uio, addr, PAGE_SIZE_4K, header * PAGE_SIZE_4K, UIO_WRITE,
-                          cur_proc);
+                uio_uinit(&u_uio, addr, PAGE_SIZE_4K, file_offset, UIO_WRITE, process);
                 VOP_WRITE(swap_file, &u_uio);
 
                 header = tmp;
+                // free the frame
+                frame_free(i);
                 err = seL4_NoError;
+                break;
             }
         }
     }

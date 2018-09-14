@@ -51,7 +51,7 @@ static const kernel_frame_t BOOT_RODATA kernel_devices[] = {
 /* NOTE: Regions are not allowed to be adjacent! */
 
 static const p_region_t BOOT_RODATA avail_p_regs[] = {
-    { .start = physBase, .end = 0x80000000 }
+    { .start = physBase, .end = 0x4000000 }
 };
 
 static const p_region_t BOOT_RODATA dev_p_regs[] = {

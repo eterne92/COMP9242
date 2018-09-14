@@ -64,6 +64,7 @@ static void nfs_open_creat_cb(int status, UNUSED struct nfs_context *nfs,
                               void *data,
                               void *private_data)
 {
+    printf("nfs try open\n");
     struct nfs_cb *cb = private_data;
     cb->status = status;
     cb->handle = !status ? data : NULL;
@@ -361,6 +362,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         result = nfs_pwrite_async(nf->context, nv->handle, uio->uio_offset,
                                   count, (void *)sos_vaddr, nfs_write_cb, &cb);
         if (result) {
+    printf("lock release\n");
             nv->lock = 0;
             return result;
         }
@@ -370,6 +372,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* callback got sth wrong */
         if (cb.status < 0) {
+    printf("lock release\n");
             nv->lock = 0;
             return cb.status;
         }
@@ -381,11 +384,12 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
         if (nbytes < count) {
             /* it's over */
+    printf("lock release\n");
             nv->lock = 0;
             return 0;
         }
     }
-
+    printf("lock release\n");
     nv->lock = 0;
     return 0;
 }
@@ -514,6 +518,7 @@ static int _nfs_creat(struct vnode *root, const char *name, bool excl,
     int result;
 
     result = nfs_loadvnode(root, name, true, &newguy);
+    printf("nfs_load done\n");
     if (result != 0) {
         return result;
     }
@@ -854,6 +859,8 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
         }
     }
 
+    printf("not found vnode\n");
+
     /* Didn't have one; create it */
     /* async open file */
     struct nfs_cb cb;
@@ -861,6 +868,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     cb.status = 0;
 
     if (creat) {
+        printf("%p, %s, %p\n", nf->context, name, &cb);
         result = nfs_creat_async(nf->context, name, 0666, nfs_open_creat_cb, &cb);
     } else {
         result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_creat_cb, &cb);
@@ -873,6 +881,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     while (cb.handle == NULL && cb.status == 0) {
         yield(NULL);
     }
+    printf("nfs open done\n");
 
     /* something wrong with open callback */
     if (cb.status != 0) {
@@ -977,6 +986,9 @@ void nfs_mount_cb(int status, struct nfs_context *nfs, void *data,
     struct vnode *vn;
     vn = nfs_bootstrap(nfs);
     change_bootfs(vn);
+    
+    initialize_swapping_file();
+
 }
 
 struct vnode *nfs_bootstrap(struct nfs_context *context)

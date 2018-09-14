@@ -14,7 +14,7 @@ proc *get_cur_proc(void)
 /*
  *
 */
-proc *get_process(pid_t pid)
+proc *get_process(unsigned pid)
 {
     return cur_proc;
 }

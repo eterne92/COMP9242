@@ -8,6 +8,8 @@
 #define PAGE_RW (1lu << 51)
 #define OFFSET 0xffffffffffff
 
+extern cspace_t *global_cspace;
+
 typedef struct page_table {
     seL4_Word page_obj_addr[PAGE_TABLE_SIZE];
 } page_table_t;
@@ -105,7 +107,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
             read = region->flags & RG_R;
             write = region->flags & RG_W;
             // write to a read-only page
-            frame = get_frame_from_vaddr(cur_proc->pt, vaddr);
+            frame = _get_frame_from_vaddr(cur_proc->pt, vaddr);
             if (frame == 0) {
                 /* it's a vm fault without page */
                 // allocate a frame
@@ -121,6 +123,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
 
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
+                printf("frame is %ld, with vaddr as %p\n", frame, vaddr);
                 seL4_Word offset = frame & OFFSET;
                 frame = frame_alloc(NULL);
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
@@ -154,16 +157,19 @@ void update_level_4_page_table_entry(page_table_t *table,
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame | PRESENT;
     pt_cap->cap[offset] = entry->slot;
-    FRAME_CLEAR_BIT(entry->frame, PIN);
+    if(vaddr != USERIPCBUFFER){
+        FRAME_CLEAR_BIT(entry->frame, PIN);
+    }
     FRAME_SET_BIT(entry->frame, CLOCK);
     frame_table.frames[entry->frame].vaddr = vaddr;
     /* TODO: SETPID */
+    // printf("frame %d, vaddr %d\n", entry->frame, vaddr);
 }
 
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
 {
     seL4_CPtr slot;
-    int offset;
+    seL4_Word offset;
     page_table_t *pt;
     page_table_cap *pt_cap;
     pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
@@ -177,10 +183,14 @@ seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
     return slot;
 }
 
-seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr)
+seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr){
+    return (_get_frame_from_vaddr(table, vaddr) & (~PRESENT));
+}
+
+seL4_Word _get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr)
 {
-    int frame;
-    int offset;
+    seL4_Word frame;
+    seL4_Word offset;
     page_table_t *pt;
     pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr, 4);
     /* we haven't got that vaddr yet */
@@ -206,8 +216,14 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
 {
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
                        4);
+    assert(pt);
     int offset = get_offset(vaddr, 4);
-    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset & ~
-                                (PRESENT);
-    FRAME_CLEAR_BIT(pt->page_obj_addr[offset], PIN);
+    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset & 
+                                (~PRESENT);
+    seL4_Word cap = get_cap_from_vaddr(table, vaddr);
+    printf("cap %d\n", cap);
+    seL4_Error err = seL4_ARM_Page_Unmap(cap);
+    assert(err == 0);
+    cspace_delete(global_cspace, cap);
+    cspace_free_slot(global_cspace, cap);
 }

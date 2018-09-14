@@ -98,9 +98,15 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
         /* Assume the error was because we are missing a paging structure */
         ut_t *ut = ut_alloc_4k_untyped(NULL);
         if (ut == NULL) {
-            ZF_LOGE("Out of 4k untyped");
-            return -1;
+            try_swap_out();
+            ut = ut_alloc_4k_untyped(NULL);
+            // ZF_LOGE("Out of 4k untyped");
+            // return -1;
+            assert(ut);
+            printf("get ut\n");
+            printf("failed is %d\n",failed);
         }
+        
 
         /* figure out which cptr to use to retype into*/
         seL4_CPtr slot;
@@ -168,6 +174,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
 
     /* copy frame_cap into a new cap */
     seL4_CPtr origin_cap = frame_table.frames[frame].frame_cap;
+    printf("FRAME_CAP is %ld\n", origin_cap);
     seL4_CPtr frame_cap = cspace_alloc_slot(cspace);
     if (frame_cap == seL4_CapNull) {
         ZF_LOGE("OUT OF CAP\n");
@@ -177,6 +184,10 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
         ZF_LOGE("FAILE TO COPY CAP, SOMETHING WRONG!");
     }
     err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
+    if(frame == 77){
+        printf("frame_cap is %d at mapping for 77\n", frame_cap);
+        printf("origin_cap is %d at mapping for 77\n", origin_cap);
+    }
 
     page_table_entry entry;
     ut_t *ut_array[MAPPING_SLOTS] = { 0, 0, 0 };
@@ -190,9 +201,13 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
         /* Assume the error was because we are missing a paging structure */
         ut_t *ut = ut_alloc_4k_untyped(NULL);
         if (ut == NULL) {
-            ZF_LOGE("Out of 4k untyped");
-            err = -1;
-            goto cleanup;
+            // ZF_LOGE("Out of 4k untyped");
+            // err = -1;
+            // goto cleanup;
+            seL4_Error err = try_swap_out();
+            assert(err == seL4_NoError);
+            ut_t *ut = ut_alloc_4k_untyped(NULL);
+            assert(ut != NULL);
         }
 
         /* figure out which cptr to use to retype into*/

@@ -1,5 +1,6 @@
 #include "frametable.h"
 #include "mapping.h"
+#include "pagetable.h"
 #include <stdlib.h>
 
 #define UNTYPE_MEMEORY 0x1
@@ -9,34 +10,48 @@
 
 /* TODO: frame reference count */
 
-#define MOST_FREE 0
+#define MOST_FREE 30
 
 frame_table_t frame_table;
 static cspace_t *root_cspace;
 
 unsigned first_available_frame;
 
+unsigned th;
+
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
 {
     /* Allocate the object */
-    ut_t *ut = ut_alloc_4k_untyped(NULL);
+    // ut_t *ut = ut_alloc_4k_untyped(NULL);
+    ut_t *ut;
+    // if(th > 2000){
+    ut = ut_alloc_4k_untyped(NULL);
     if (ut == NULL) {
-        // ZF_LOGE("No untyped pages");
-        return NULL;
+        /* try page */
+        seL4_Error err = try_swap_out();
+        assert(err == seL4_NoError);
+        ut = ut_alloc_4k_untyped(NULL);
+        assert(ut != NULL);
     }
+    // else{
+
+    //     ut = ut_alloc_4k_untyped(NULL);
+    //     if(ut == NULL){
+    //         return NULL;
+    //     }
+    // }
 
     /* allocate a slot to retype the memory for object into */
     *cptr = cspace_alloc_slot(root_cspace);
     if (*cptr == seL4_CapNull) {
         ut_free(ut, seL4_PageBits);
-        // ZF_LOGE("Failed to allocate slot");
         return NULL;
     }
-
+    // if(flag == 1)
+    // printf("root_cspace %p, ut->cap %d, cptr %p\n", root_cspace, ut->cap, *cptr);
     /* now do the retype */
     seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type,
                                            seL4_PageBits);
-    // ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
         ut_free(ut, seL4_PageBits);
         cspace_free_slot(root_cspace, *cptr);
@@ -81,10 +96,12 @@ void initialize_frame_table(cspace_t *cspace)
         frame_table.frames[i].ut = NULL;
         frame_table.frames[i].next = i + 1;
         frame_table.frames[i].flag = UNTYPE_MEMEORY;
+        FRAME_SET_BIT(i, PIN);
     }
     frame_table.frames[n_frames - 1].next = -1;
     /* we are using water mark, so there is no free frame at first */
     frame_table.free = -1;
+    frame_table.max = n_frames - n_pages + 1;
     printf("initial frametable done part II\n");
     return;
 }
@@ -93,20 +110,23 @@ int frame_alloc(seL4_Word *vaddr)
 {
     seL4_Word _vaddr;
     int page = frame_table.free;
-    if (page > 0) {
-        /* we got a free frame, just use it */
-        _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
-        frame_table.free = frame_table.frames[page].next;
-        frame_table.num_frees--;
-        memset((void *)_vaddr, 0, PAGE_SIZE_4K);
-        frame_table.frames[page].next = -1;
-        if (vaddr) {
-            *vaddr = _vaddr;
-        }
+    // if (page > 0) {
+    //     /* we got a free frame, just use it */
+    //     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
+    //     frame_table.free = frame_table.frames[page].next;
+    //     frame_table.num_frees--;
+    //     memset((void *)_vaddr, 0, PAGE_SIZE_4K);
+    //     frame_table.frames[page].next = -1;
+    //     if (vaddr) {
+    //         *vaddr = _vaddr;
+    //     }
 
-        FRAME_SET_BIT(page, PIN);
-        return page;
-    }
+    //     FRAME_SET_BIT(page, PIN);
+    //     if(page > frame_table.max){
+    //         frame_table.max = page;
+    //     }
+    //     return page;
+    // }
     /* otherwise we need to get one from untyped mem */
     page = frame_table.untyped;
     seL4_CPtr frame_cap;
@@ -116,6 +136,9 @@ int frame_alloc(seL4_Word *vaddr)
     if (ut == NULL) {
         // out of memory
         /* TODO: try pageout */
+        if(vaddr != NULL){
+            *vaddr = _vaddr;
+        }
         return -1;
     }
     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
@@ -130,6 +153,8 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.frames[page].flag = USED_MEMORY;
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.untyped = frame_table.frames[page].next;
+    printf("FRAME CAP IS %ld\n", frame_table.frames[page].frame_cap);
+    printf("PAGE IS %d\n", page);
 
     memset((void *)_vaddr, 0, PAGE_SIZE_4K);
     frame_table.frames[page].next = -1;
@@ -137,6 +162,9 @@ int frame_alloc(seL4_Word *vaddr)
         *vaddr = _vaddr;
     }
     FRAME_SET_BIT(page, PIN);
+    if(page > frame_table.max){
+        frame_table.max = page;
+    }
     return page;
 }
 
@@ -177,6 +205,7 @@ void frame_n_free(int frames)
 static void free_to_untype(int frame)
 {
     /* ut_free this frame */
+    seL4_ARM_Page_Unmap(frame_table.frames[frame].frame_cap);
     cspace_delete(root_cspace, frame_table.frames[frame].frame_cap);
     cspace_free_slot(root_cspace, frame_table.frames[frame].frame_cap);
     ut_free(frame_table.frames[frame].ut, seL4_PageBits);
@@ -198,7 +227,8 @@ void frame_free(int frame)
     frame_table.free = frame;
     frame_table.num_frees++;
     FRAME_SET_BIT(frame, PIN);
-    if (frame_table.num_frees > MOST_FREE) {
+    // if (frame_table.num_frees >= MOST_FREE) {
+        // printf("try to real free\n");
         free_to_untype(frame);
-    }
+    // }
 }

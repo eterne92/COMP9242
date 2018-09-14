@@ -39,6 +39,7 @@ typedef struct proc proc;
 
 
 void run_coroutine(void *arg);
+void syscall_loop(seL4_CPtr ep);
 void handle_syscall(seL4_Word badge, int num_args);
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);
@@ -69,3 +70,5 @@ void _sys_brk(proc *cur_proc);
 void _sys_mmap(proc *cur_proc);
 
 void _sys_munmap(proc *cur_proc);
+
+void *_sys_handle_page_fault(proc *cur_proc);

@@ -72,6 +72,7 @@ void update_level_4_page_table_entry(page_table_t *table,
 /* some help functions to get slot / frame from vaddr */
 seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr);
 seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
+seL4_Word _get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr);
 
 /*
  * convert a user-level virtual address to SOS's virtual address
@@ -93,4 +94,7 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
 seL4_Error load_page(seL4_Word offset, seL4_Word vaddr);
 
 void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
-                        seL4_Word file_offset)
+                        seL4_Word file_offset);
+
+void initialize_swapping_file(void);
+seL4_Error try_swap_out(void);

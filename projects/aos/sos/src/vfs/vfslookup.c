@@ -143,6 +143,7 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
         printf("we are nfs yeha!\n");
 		*startvn = bootfs_vnode;
 		*subpath = path;
+        printf("got startvn as %p\n", *startvn);
 		return 0;
 	}
 	else if(result != 0){

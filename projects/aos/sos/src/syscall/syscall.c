@@ -9,6 +9,8 @@
 #include <picoro/picoro.h>
 #include <serial/serial.h>
 #include <stdlib.h>
+#include <clock/clock.h>
+#include "../network.h"
 
 typedef  void *(*coro_t)(void *);
 cspace_t *global_cspace;
@@ -182,6 +184,81 @@ void handle_syscall(seL4_Word badge, int num_args)
         /* don't reply to an unknown syscall */
     }
 }
+
+
+NORETURN void syscall_loop(seL4_CPtr ep)
+{
+
+    while (1) {
+        seL4_Word badge;
+        seL4_Word label;
+
+        /* set proc as badge */
+        proc *cur_proc = get_cur_proc();
+        
+        /* Block on ep, waiting for an IPC sent over ep, or
+         * a notification from our bound notification object */
+        seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
+        run_coroutine(NULL);
+        /* Awake! We got a message - check the label and badge to
+         * see what the message is about */
+        label = seL4_MessageInfo_get_label(message);
+
+        if (badge & IRQ_EP_BADGE) {
+            /* It's a notification from our bound notification
+             * object! */
+            if (badge & IRQ_BADGE_NETWORK_IRQ) {
+                /* It's an interrupt from the ethernet MAC */
+                network_irq();
+            }
+            if (badge & IRQ_BADGE_NETWORK_TICK) {
+                /* It's an interrupt from the watchdog keeping our TCP/IP stack alive */
+                network_tick();
+            }
+            if (badge & IRQ_BADGE_TIMER) {
+                timer_interrupt(F);
+            }
+        } else if (label == seL4_Fault_NullFault) {
+            /* It's not a fault or an interrupt, it must be an IPC
+             * message from tty_test! */
+            handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
+        } else {
+            seL4_CPtr reply = cspace_alloc_slot(global_cspace);
+            seL4_Error err = cspace_save_reply_cap(global_cspace, reply);
+            ZF_LOGF_IFERR(err, "Failed to save reply");
+            cur_proc->reply = reply;
+            /* page fault handler */
+            if (label == seL4_Fault_VMFault) {
+                coro c = coroutine((coro_t)_sys_handle_page_fault);
+                resume(c, cur_proc);
+                create_coroutine(c);
+            } else {
+                /* some kind of fault */
+                debug_print_fault(message, "TTY_NAME");
+                /* dump registers too */
+                debug_dump_registers(cur_proc->tcb);
+
+                ZF_LOGF("The SOS skeleton does not know how to handle faults!");
+            }
+        }
+    }
+}
+
+
+void *_sys_handle_page_fault(proc *cur_proc){
+    seL4_Error err = handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
+    if (err) {
+        /* we will deal with this later */
+        ZF_LOGF_IFERR(err, "Segment fault");
+    }
+    syscall_reply(cur_proc->reply, 0, 0);
+    return NULL;
+}
+
+
+
+
+
 
 void _sys_brk(proc *cur_proc)
 {

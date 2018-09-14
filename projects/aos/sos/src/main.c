@@ -83,72 +83,7 @@ extern struct serial *serial;
 /* the one process we start */
 static proc tty_test_process;
 
-NORETURN void syscall_loop(seL4_CPtr ep)
-{
 
-    while (1) {
-        seL4_Word badge;
-        seL4_Word label;
-        /* Block on ep, waiting for an IPC sent over ep, or
-         * a notification from our bound notification object */
-        seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
-        run_coroutine(NULL);
-        /* Awake! We got a message - check the label and badge to
-         * see what the message is about */
-        label = seL4_MessageInfo_get_label(message);
-
-        if (badge & IRQ_EP_BADGE) {
-            /* It's a notification from our bound notification
-             * object! */
-            if (badge & IRQ_BADGE_NETWORK_IRQ) {
-                /* It's an interrupt from the ethernet MAC */
-                network_irq();
-            }
-            if (badge & IRQ_BADGE_NETWORK_TICK) {
-                /* It's an interrupt from the watchdog keeping our TCP/IP stack alive */
-                network_tick();
-            }
-            if (badge & IRQ_BADGE_TIMER) {
-                timer_interrupt(F);
-            }
-        } else if (label == seL4_Fault_NullFault) {
-            /* It's not a fault or an interrupt, it must be an IPC
-             * message from tty_test! */
-            set_cur_proc(&tty_test_process);
-            handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
-        } else {
-            set_cur_proc(&tty_test_process);
-            seL4_CPtr reply = cspace_alloc_slot(global_cspace);
-            seL4_MessageInfo_t reply_msg;
-            seL4_Error err = cspace_save_reply_cap(global_cspace, reply);
-            ZF_LOGF_IFERR(err, "Failed to save reply");
-            /* page fault handler */
-            if (label == seL4_Fault_VMFault) {
-                err = handle_page_fault(get_cur_proc(), seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
-                if (err) {
-                    /* we will deal with this later */
-                    ZF_LOGF_IFERR(err, "Segment fault");
-                }
-                /* construct a reply message of length 1 */
-                reply_msg = seL4_MessageInfo_new(0, 0, 0, 1);
-                /* Set the first (and only) word in the message to 0 */
-                seL4_SetMR(0, 0);
-                /* Send the reply to the saved reply capability. */
-                seL4_Send(reply, reply_msg);
-                /* Free the slot we allocated for the reply - it is now empty, as the reply
-                * capability was consumed by the send. */
-                cspace_free_slot(global_cspace, reply);
-            } else {
-                /* some kind of fault */
-                debug_print_fault(message, TTY_NAME);
-                /* dump registers too */
-                debug_dump_registers(tty_test_process.tcb);
-
-                ZF_LOGF("The SOS skeleton does not know how to handle faults!");
-            }
-        }
-    }
-}
 
 /* helper to allocate a ut + cslot, and retype the ut into the cslot */
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
@@ -565,7 +500,7 @@ void frametable_test()
         assert(*(int *)vaddr == 0x37);
 
         /* print every 1000 iterations */
-        if (i % 1000 == 0) {
+        if (i % 10000 == 0) {
             printf("Page #%d allocated at %p\n", i, (int *)vaddr);
         }
 
@@ -575,29 +510,30 @@ void frametable_test()
     printf("TEST 2 past\n");
     /* Test that you eventually run out of memory gracefully,
    and doesn't crash */
-    int cnt = 0;
-    while (true) {
-        /* Allocate a page */
-        seL4_Word vaddr;
+    // int cnt = 0;
+    // while (true) {
+    //     /* Allocate a page */
+    //     seL4_Word vaddr;
 
-        frame_alloc(&vaddr);
-        if (!vaddr) {
-            printf("Out of memory!\n");
-            break;
-        }
-        cnt++;
+    //     frame_alloc(&vaddr);
+    //     printf("vaddr is %d\n", vaddr);
+    //     if (!vaddr) {
+    //         printf("Out of memory!\n");
+    //         break;
+    //     }
+    //     cnt++;
 
-        /* Test you can touch the page */
-        *(int *)vaddr = 0x37;
-        assert(*(int *)vaddr == 0x37);
-    }
+    //     /* Test you can touch the page */
+    //     *(int *)vaddr = 0x37;
+    //     assert(*(int *)vaddr == 0x37);
+    // }
 
-    printf("TEST 3 past\n");
-    /* finally clean up all the memory allocated above */
-    /* try to free them all */
-    for (int i = 0; i < cnt; i++) {
-        frame_free(3989 + i);
-    }
+    // printf("TEST 3 past\n");
+    // /* finally clean up all the memory allocated above */
+    // /* try to free them all */
+    // for (int i = 0; i < cnt; i++) {
+    //     frame_free(first_available_frame + i);
+    // }
 }
 
 NORETURN void *main_continued(UNUSED void *arg)
@@ -634,6 +570,14 @@ NORETURN void *main_continued(UNUSED void *arg)
     printf("Start first process\n");
     bool success = start_first_process(TTY_NAME, ipc_ep);
     ZF_LOGF_IF(!success, "Failed to start first process");
+
+    set_cur_proc(&tty_test_process);
+
+    struct as_region *region = tty_test_process.as->regions;
+    while(region != NULL){
+        printf("region start %p, size %ld\n", region->vaddr, region->size);
+        region = region->next;
+    }
 
     printf("\nSOS entering syscall loop\n");
     syscall_loop(ipc_ep);

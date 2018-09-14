@@ -84,10 +84,11 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
     seL4_Error err = seL4_NoError;
     while (pos < segment_size) {
         uintptr_t loadee_vaddr = (ROUND_DOWN(dst, PAGE_SIZE_4K));
-        uintptr_t loader_vaddr = ROUND_DOWN(SOS_ELF_VMEM + dst, PAGE_SIZE_4K);
+        // uintptr_t loader_vaddr = ROUND_DOWN(SOS_ELF_VMEM + dst, PAGE_SIZE_4K);
 
         /* allocate the untyped for the loadees address space */
         int frame = frame_alloc(NULL);
+        uintptr_t loader_vaddr = FRAME_BASE + frame * PAGE_SIZE_4K;
         if (frame == -1) {
             ZF_LOGE("fail to alloc frame in elf load");
         }
@@ -104,39 +105,40 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
          *
          * Note that while the standard permits segments to overlap, this should not occur if the segments
          * have different permissions - you should check this and return an error if this case is detected. */
-        bool already_mapped = (err == seL4_DeleteFirst);
+        // bool already_mapped = (err == seL4_DeleteFirst);
+        // seL4_CPtr loader_frame;
 
-        if (already_mapped) {
-            cspace_delete(cspace, loadee_frame);
-            cspace_free_slot(cspace, loadee_frame);
-            ut_free(ut, seL4_PageBits);
-        } else if (err != seL4_NoError) {
-            ZF_LOGE("Failed to map into loadee at %p, error %u", (void *)loadee_vaddr, err);
-            return -1;
-        } else {
+        // if (already_mapped) {
+        //     cspace_delete(cspace, loadee_frame);
+        //     cspace_free_slot(cspace, loadee_frame);
+        //     ut_free(ut, seL4_PageBits);
+        // } else if (err != seL4_NoError) {
+        //     ZF_LOGE("Failed to map into loadee at %p, error %u", (void *)loadee_vaddr, err);
+        //     return -1;
+        // } else {
 
-            /* allocate a slot to map the frame into the loader address space */
-            seL4_CPtr loader_frame = cspace_alloc_slot(cspace);
-            if (loader_frame == seL4_CapNull) {
-                ZF_LOGD("Failed to alloc slot");
-                return -1;
-            }
+        //     /* allocate a slot to map the frame into the loader address space */
+        //     loader_frame = cspace_alloc_slot(cspace);
+        //     if (loader_frame == seL4_CapNull) {
+        //         ZF_LOGD("Failed to alloc slot");
+        //         return -1;
+        //     }
 
-            /* copy the frame cap into the loader slot */
-            err = cspace_copy(cspace, loader_frame, cspace, loadee_frame, seL4_AllRights);
-            if (err != seL4_NoError) {
-                ZF_LOGD("Failed to copy frame cap, cptr %lx", loader_frame);
-                return -1;
-            }
+        //     /* copy the frame cap into the loader slot */
+        //     err = cspace_copy(cspace, loader_frame, cspace, loadee_frame, seL4_AllRights);
+        //     if (err != seL4_NoError) {
+        //         ZF_LOGD("Failed to copy frame cap, cptr %lx", loader_frame);
+        //         return -1;
+        //     }
 
-            /* map the frame into the loader address space */
-            err = map_frame(cspace, loader_frame, loader, loader_vaddr, seL4_AllRights,
-                seL4_ARM_Default_VMAttributes);
-            if (err) {
-                ZF_LOGD("Failed to map into loader at %p", (void *)loader_vaddr);
-                return -1;
-            }
-        }
+        //     /* map the frame into the loader address space */
+        //     err = map_frame(cspace, loader_frame, loader, loader_vaddr, seL4_AllRights,
+        //         seL4_ARM_Default_VMAttributes);
+        //     if (err) {
+        //         ZF_LOGD("Failed to map into loader at %p", (void *)loader_vaddr);
+        //         return -1;
+        //     }
+        // }
 
         /* finally copy the data */
         size_t nbytes = PAGE_SIZE_4K - (dst % PAGE_SIZE_4K);
@@ -149,6 +151,11 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader, proc *cu
         /* Flush the caches */
         seL4_ARM_PageGlobalDirectory_Unify_Instruction(loader, loader_vaddr, loader_vaddr + PAGE_SIZE_4K);
         seL4_ARM_PageGlobalDirectory_Unify_Instruction(cur_proc->vspace, loadee_vaddr, loadee_vaddr + PAGE_SIZE_4K);
+
+        // seL4_ARM_Page_Unmap(loader_frame);
+        // cspace_delete(cspace, loader_frame);
+        // cspace_free_slot(cspace, loader_frame);
+
 
         pos += nbytes;
         dst += nbytes;

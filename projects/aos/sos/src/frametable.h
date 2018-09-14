@@ -30,6 +30,7 @@ typedef struct frame_table {
     int num_frees;
     frame_table_obj *frames;
     int length;
+    int max;
 } frame_table_t;
 
 // declaration of frame table

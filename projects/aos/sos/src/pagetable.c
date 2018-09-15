@@ -157,7 +157,7 @@ void update_level_4_page_table_entry(page_table_t *table,
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = entry->frame | PRESENT;
     pt_cap->cap[offset] = entry->slot;
-    if(vaddr != USERIPCBUFFER){
+    if (vaddr != USERIPCBUFFER) {
         FRAME_CLEAR_BIT(entry->frame, PIN);
     }
     FRAME_SET_BIT(entry->frame, CLOCK);
@@ -183,7 +183,11 @@ seL4_CPtr get_cap_from_vaddr(page_table_t *table, seL4_Word vaddr)
     return slot;
 }
 
-seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr){
+/*
+* This function will return the 32bit frame table index
+*/
+seL4_Word get_frame_from_vaddr(page_table_t *table, seL4_Word vaddr)
+{
     return (_get_frame_from_vaddr(table, vaddr) & (~PRESENT));
 }
 
@@ -218,7 +222,7 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
                        4);
     assert(pt);
     int offset = get_offset(vaddr, 4);
-    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset & 
+    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
     seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     printf("cap %d\n", cap);

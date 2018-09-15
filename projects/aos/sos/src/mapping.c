@@ -104,9 +104,8 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
             // return -1;
             assert(ut);
             printf("get ut\n");
-            printf("failed is %d\n",failed);
+            printf("failed is %d\n", failed);
         }
-        
 
         /* figure out which cptr to use to retype into*/
         seL4_CPtr slot;
@@ -184,7 +183,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
         ZF_LOGE("FAILE TO COPY CAP, SOMETHING WRONG!");
     }
     err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
-    if(frame == 77){
+    if (frame == 77) {
         printf("frame_cap is %d at mapping for 77\n", frame_cap);
         printf("origin_cap is %d at mapping for 77\n", origin_cap);
     }

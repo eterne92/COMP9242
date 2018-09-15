@@ -58,7 +58,7 @@ seL4_Error try_swap_out(void)
     unsigned size = frame_table.max;
     // go through the frame table to find the victim
     for (unsigned j = first_available_frame; j < size * 2; ++j) {
-        if(clock_hand == (unsigned)frame_table.max - 1u){
+        if (clock_hand == frame_table.max - 1u) {
             clock_hand = first_available_frame;
         }
         pin_bit = FRAME_GET_BIT(clock_hand, PIN);
@@ -75,19 +75,18 @@ seL4_Error try_swap_out(void)
                 printf("victim found\n");
                 printf("vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
                 file_offset = header * PAGE_SIZE_4K;
-                if(swap_file == NULL){
+                if (swap_file == NULL) {
                     seL4_Word tmp = 1;
                     vfs_open("swapping", O_RDWR | O_CREAT, 0666, &swap_file);
-                    
+
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), 0, UIO_WRITE);
                     VOP_WRITE(swap_file, &k_uio);
                 }
 
-                if(header == tail){
+                if (header == tail) {
                     tail++;
                     header++;
-                }
-                else{
+                } else {
                     // read the free list header from the swapping file
                     printf("try read\n");
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), file_offset, UIO_READ);
@@ -101,12 +100,13 @@ seL4_Error try_swap_out(void)
                                    file_offset);
                 printf("update done\n");
                 // write out the page into disk
-                uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K, file_offset, UIO_WRITE);
+                uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
+                          file_offset, UIO_WRITE);
                 VOP_WRITE(swap_file, &k_uio);
                 printf("write done\n");
 
                 // free the frame
-                
+
                 frame_free(clock_hand);
                 err = seL4_NoError;
                 clock_hand++;

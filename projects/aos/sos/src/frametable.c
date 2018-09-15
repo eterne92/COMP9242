@@ -98,7 +98,8 @@ void initialize_frame_table(cspace_t *cspace)
         frame_table.frames[i].flag = UNTYPE_MEMEORY;
         FRAME_SET_BIT(i, PIN);
     }
-    frame_table.frames[n_frames - 1].next = -1;
+    // the final frame will link back to itself
+    frame_table.frames[n_frames - 1].next = n_frames - 1;
     /* we are using water mark, so there is no free frame at first */
     frame_table.free = -1;
     frame_table.max = n_frames - n_pages + 1;
@@ -135,8 +136,7 @@ int frame_alloc(seL4_Word *vaddr)
     ut_t *ut = alloc_retype(&frame_cap, seL4_ARM_SmallPageObject);
     if (ut == NULL) {
         // out of memory
-        /* TODO: try pageout */
-        if(vaddr != NULL){
+        if (vaddr != NULL) {
             *vaddr = _vaddr;
         }
         return -1;
@@ -153,16 +153,15 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.frames[page].flag = USED_MEMORY;
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.untyped = frame_table.frames[page].next;
+    frame_table.frames[page].next = -1;
     printf("FRAME CAP IS %ld\n", frame_table.frames[page].frame_cap);
     printf("PAGE IS %d\n", page);
-
     memset((void *)_vaddr, 0, PAGE_SIZE_4K);
-    frame_table.frames[page].next = -1;
     if (vaddr) {
         *vaddr = _vaddr;
     }
     FRAME_SET_BIT(page, PIN);
-    if(page > frame_table.max){
+    if (page > frame_table.max) {
         frame_table.max = page;
     }
     return page;
@@ -228,7 +227,7 @@ void frame_free(int frame)
     frame_table.num_frees++;
     FRAME_SET_BIT(frame, PIN);
     // if (frame_table.num_frees >= MOST_FREE) {
-        // printf("try to real free\n");
-        free_to_untype(frame);
+    // printf("try to real free\n");
+    free_to_untype(frame);
     // }
 }

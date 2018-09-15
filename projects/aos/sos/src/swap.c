@@ -26,11 +26,13 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
     struct uio k_uio;
     struct proc *cur_proc = get_cur_proc();
     unsigned tmp = 0;
-    printf("load page start\n");
-    printf("%d, vaddr %p\n", offset, vaddr);
+    // printf("load page start\n");
+    // printf("%d, vaddr %p\n", offset, vaddr);
+    offset = offset - 1;
     uio_uinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ, cur_proc);
     result = VOP_READ(swap_file, &u_uio);
-    printf("read finish\n");
+    assert(result == 0);
+    // printf("read finish\n");
     if (!result) {
         // update free list
         tmp = header;
@@ -43,7 +45,6 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
 
 seL4_Error try_swap_out(void)
 {
-    printf("we are in swap out\n");
     int clock_bit, pin_bit;
     seL4_Error err = seL4_NotEnoughMemory;
     struct proc *process;
@@ -68,42 +69,48 @@ seL4_Error try_swap_out(void)
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
-                seL4_ARM_Page_Unmap(get_cap_from_vaddr(process->pt,
-                                                       frame_table.frames[clock_hand].vaddr));
+                seL4_CPtr cap = get_cap_from_vaddr(process->pt,
+                                                       frame_table.frames[clock_hand].vaddr);
+                seL4_ARM_Page_Unmap(cap);
+                
+                cspace_delete(global_cspace, cap);
+                cspace_free_slot(global_cspace, cap);
             } else {
                 // victim found
-                printf("victim found\n");
-                printf("vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
+                // printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
+                // printf("victim's cap is %d\n", frame_table.frames[clock_hand].ut->cap);
                 file_offset = header * PAGE_SIZE_4K;
                 if (swap_file == NULL) {
-                    seL4_Word tmp = 1;
+                    seL4_Word tmp = 'c';
                     vfs_open("swapping", O_RDWR | O_CREAT, 0666, &swap_file);
 
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), 0, UIO_WRITE);
                     VOP_WRITE(swap_file, &k_uio);
                 }
 
+
                 if (header == tail) {
                     tail++;
                     header++;
                 } else {
                     // read the free list header from the swapping file
-                    printf("try read\n");
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), file_offset, UIO_READ);
                     int ret = VOP_READ(swap_file, &k_uio);
                     header = tmp;
                 }
 
                 // update the present bit & offset
-                printf("try update\n");
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
-                                   file_offset);
-                printf("update done\n");
+                                   file_offset + 1);
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
                           file_offset, UIO_WRITE);
+                // printf("uio: %p, sos_vaddr %p,offset %ld, swap_file %p\n", 
+                //             k_uio, k_uio.vaddr, k_uio.uio_offset, swap_file);
                 VOP_WRITE(swap_file, &k_uio);
-                printf("write done\n");
+                // printf("WRITE DONE\n");
+
+
 
                 // free the frame
 

@@ -70,7 +70,7 @@ static void prstat(const char *name)
 static int fuck(int argc, char **argv){
     (void) argc;
     (void) argv;
-    const int bfsize = 10000;
+    const int bfsize = 8000;
     char *bufs[bfsize];
     for(int i = 0;i < bfsize;i++){
         if(i % 1000 == 0){
@@ -79,10 +79,15 @@ static int fuck(int argc, char **argv){
         bufs[i] = malloc(4096);
         bufs[i][0] = i % 26;
     }
+    printf("all allocated\n");
     for(int i =0 ;i < bfsize;i++){
+        if(i % 1000 == 0){
+            printf("fuck checked %d\n", i);
+        }
         assert(bufs[i][0] == i % 26);
     }
     printf("pass test\n");
+    return 0;
 }
 
 static int cat(int argc, char **argv)
@@ -353,6 +358,7 @@ int main(void)
 
     printf("\n[SOS Starting]\n");
 
+    // fuck(0, NULL);
 
     while (!done) {
         if (new) {

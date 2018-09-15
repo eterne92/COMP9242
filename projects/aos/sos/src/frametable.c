@@ -87,6 +87,7 @@ void initialize_frame_table(cspace_t *cspace)
         frame_table.frames[i].next = -1;
         frame_table.frames[i].flag = USED_MEMORY;
         frame_table.frames[i].frame_cap = frame_cap;
+        FRAME_SET_BIT(i, PIN);
         vaddr += PAGE_SIZE_4K;
     }
     printf("initial frametable done part I\n");
@@ -100,8 +101,9 @@ void initialize_frame_table(cspace_t *cspace)
     }
     // the final frame will link back to itself
     frame_table.frames[n_frames - 1].next = n_frames - 1;
+    printf("%d's next is %d\n", n_frames - 1, frame_table.frames[n_frames - 1].next);
     /* we are using water mark, so there is no free frame at first */
-    frame_table.free = -1;
+    // frame_table.free = -1;
     frame_table.max = n_frames - n_pages + 1;
     printf("initial frametable done part II\n");
     return;
@@ -129,7 +131,6 @@ int frame_alloc(seL4_Word *vaddr)
     //     return page;
     // }
     /* otherwise we need to get one from untyped mem */
-    page = frame_table.untyped;
     seL4_CPtr frame_cap;
     _vaddr = 0;
     /* always try to get mem from ut_table */
@@ -141,6 +142,8 @@ int frame_alloc(seL4_Word *vaddr)
         }
         return -1;
     }
+    page = frame_table.untyped;
+    assert(page != -1);
     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
     map_frame(root_cspace, frame_cap, seL4_CapInitThreadVSpace,
               _vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
@@ -150,12 +153,12 @@ int frame_alloc(seL4_Word *vaddr)
     }
     */
     frame_table.frames[page].ut = ut;
-    frame_table.frames[page].flag = USED_MEMORY;
+    frame_table.frames[page].flag |= USED_MEMORY;
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.untyped = frame_table.frames[page].next;
+
+    
     frame_table.frames[page].next = -1;
-    printf("FRAME CAP IS %ld\n", frame_table.frames[page].frame_cap);
-    printf("PAGE IS %d\n", page);
     memset((void *)_vaddr, 0, PAGE_SIZE_4K);
     if (vaddr) {
         *vaddr = _vaddr;
@@ -210,9 +213,11 @@ static void free_to_untype(int frame)
     ut_free(frame_table.frames[frame].ut, seL4_PageBits);
     frame_table.frames[frame].ut = NULL;
     frame_table.frames[frame].frame_cap = 0;
-    frame_table.frames[frame].flag = UNTYPE_MEMEORY;
+    frame_table.frames[frame].flag |= UNTYPE_MEMEORY;
+    frame_table.frames[frame].vaddr = 0;
     /* set this frame to untyped list */
     frame_table.frames[frame].next = frame_table.untyped;
+    assert(frame_table.untyped != -1);
     frame_table.untyped = frame;
     frame_table.num_frees--;
 }
@@ -220,11 +225,11 @@ static void free_to_untype(int frame)
 void frame_free(int frame)
 {
     if (frame < 0 || frame >= frame_table.length)
-        return;
-    frame_table.frames[frame].next = frame_table.free;
-    frame_table.frames[frame].flag = FREE_MEMORY;
-    frame_table.free = frame;
-    frame_table.num_frees++;
+        assert(false);
+    // frame_table.frames[frame].next = frame_table.free;
+    // frame_table.frames[frame].flag = FREE_MEMORY;
+    // frame_table.free = frame;
+    // frame_table.num_frees++;
     FRAME_SET_BIT(frame, PIN);
     // if (frame_table.num_frees >= MOST_FREE) {
     // printf("try to real free\n");

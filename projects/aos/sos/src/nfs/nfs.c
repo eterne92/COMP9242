@@ -219,12 +219,13 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
                 handle_page_fault(uio->proc, user_vaddr, 0);
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             }
+            count = n;
         } else {
             sos_vaddr = uio->vaddr;
+            count = uio->length;
         }
 
         // read n bytes
-        count = n;
         cb.status = 0;
         cb.handle = nv->handle;
         cb.data = (void *)sos_vaddr;
@@ -349,12 +350,13 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
                 handle_page_fault(uio->proc, user_vaddr, 0);
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             }
+            count = n;
         } else {
             sos_vaddr = uio->vaddr;
+            count = uio->length;
         }
 
         // read n bytes
-        count = n;
         cb.status = 0;
         cb.handle = nv->handle;
         cb.data = nv->handle;
@@ -362,7 +364,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         result = nfs_pwrite_async(nf->context, nv->handle, uio->uio_offset,
                                   count, (void *)sos_vaddr, nfs_write_cb, &cb);
         if (result) {
-    printf("lock release\n");
+    // printf("lock release\n");
             nv->lock = 0;
             return result;
         }
@@ -372,7 +374,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* callback got sth wrong */
         if (cb.status < 0) {
-    printf("lock release\n");
+    // printf("lock release\n");
             nv->lock = 0;
             return cb.status;
         }
@@ -384,12 +386,12 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
         if (nbytes < count) {
             /* it's over */
-    printf("lock release\n");
+    // printf("lock release\n");
             nv->lock = 0;
             return 0;
         }
     }
-    printf("lock release\n");
+    // printf("lock release\n");
     nv->lock = 0;
     return 0;
 }

@@ -101,6 +101,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
     seL4_Error err;
 
     region = cur_proc->as->regions;
+    // printf("handle page fault for vaddr %p\n", vaddr);
     while (region) {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
             execute = region->flags & RG_X;
@@ -123,7 +124,6 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
 
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
-                printf("frame is %ld, with vaddr as %p\n", frame, vaddr);
                 seL4_Word offset = frame & OFFSET;
                 frame = frame_alloc(NULL);
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
@@ -136,7 +136,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 /* it's a vm fault with permmision */
                 /* for now it's segment fault */
                 /* later it will be copy on write */
-                return -1;
+                return seL4_RangeError;
             }
 
             return err;
@@ -144,7 +144,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
         region = region->next;
     }
     /* failed */
-    return -1;
+    return seL4_RangeError;
 }
 
 void update_level_4_page_table_entry(page_table_t *table,
@@ -225,9 +225,9 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
     pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
     seL4_Word cap = get_cap_from_vaddr(table, vaddr);
-    printf("cap %d\n", cap);
-    seL4_Error err = seL4_ARM_Page_Unmap(cap);
-    assert(err == 0);
-    cspace_delete(global_cspace, cap);
-    cspace_free_slot(global_cspace, cap);
+    // printf("cap %d\n", cap);
+    // seL4_Error err = seL4_ARM_Page_Unmap(cap);
+    // assert(err == 0);
+    // cspace_delete(global_cspace, cap);
+    // cspace_free_slot(global_cspace, cap);
 }

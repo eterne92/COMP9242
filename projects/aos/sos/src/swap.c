@@ -70,9 +70,9 @@ seL4_Error try_swap_out(void)
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
                 seL4_CPtr cap = get_cap_from_vaddr(process->pt,
-                                                       frame_table.frames[clock_hand].vaddr);
+                                                   frame_table.frames[clock_hand].vaddr);
                 seL4_ARM_Page_Unmap(cap);
-                
+
                 cspace_delete(global_cspace, cap);
                 cspace_free_slot(global_cspace, cap);
             } else {
@@ -105,7 +105,7 @@ seL4_Error try_swap_out(void)
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
                           file_offset, UIO_WRITE);
-                // printf("uio: %p, sos_vaddr %p,offset %ld, swap_file %p\n", 
+                // printf("uio: %p, sos_vaddr %p,offset %ld, swap_file %p\n",
                 //             k_uio, k_uio.vaddr, k_uio.uio_offset, swap_file);
                 VOP_WRITE(swap_file, &k_uio);
                 // printf("WRITE DONE\n");

@@ -364,7 +364,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         result = nfs_pwrite_async(nf->context, nv->handle, uio->uio_offset,
                                   count, (void *)sos_vaddr, nfs_write_cb, &cb);
         if (result) {
-    // printf("lock release\n");
+            // printf("lock release\n");
             nv->lock = 0;
             return result;
         }
@@ -374,7 +374,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* callback got sth wrong */
         if (cb.status < 0) {
-    // printf("lock release\n");
+            // printf("lock release\n");
             nv->lock = 0;
             return cb.status;
         }
@@ -386,7 +386,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         n = uio->uio_resid > PAGE_SIZE_4K ? PAGE_SIZE_4K : uio->uio_resid;
         if (nbytes < count) {
             /* it's over */
-    // printf("lock release\n");
+            // printf("lock release\n");
             nv->lock = 0;
             return 0;
         }
@@ -988,7 +988,7 @@ void nfs_mount_cb(int status, struct nfs_context *nfs, void *data,
     struct vnode *vn;
     vn = nfs_bootstrap(nfs);
     change_bootfs(vn);
-    
+
     initialize_swapping_file();
 
 }

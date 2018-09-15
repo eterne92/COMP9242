@@ -101,7 +101,8 @@ void initialize_frame_table(cspace_t *cspace)
     }
     // the final frame will link back to itself
     frame_table.frames[n_frames - 1].next = n_frames - 1;
-    printf("%d's next is %d\n", n_frames - 1, frame_table.frames[n_frames - 1].next);
+    printf("%d's next is %d\n", n_frames - 1,
+           frame_table.frames[n_frames - 1].next);
     /* we are using water mark, so there is no free frame at first */
     // frame_table.free = -1;
     frame_table.max = n_frames - n_pages + 1;
@@ -157,7 +158,7 @@ int frame_alloc(seL4_Word *vaddr)
     frame_table.frames[page].frame_cap = frame_cap;
     frame_table.untyped = frame_table.frames[page].next;
 
-    
+
     frame_table.frames[page].next = -1;
     memset((void *)_vaddr, 0, PAGE_SIZE_4K);
     if (vaddr) {

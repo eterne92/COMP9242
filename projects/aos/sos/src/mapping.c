@@ -182,7 +182,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
         ZF_LOGE("FAILE TO COPY CAP, SOMETHING WRONG!");
     }
     err = seL4_ARM_Page_Map(frame_cap, vspace, vaddr, rights, attr);
- 
+
 
     page_table_entry entry;
     ut_t *ut_array[MAPPING_SLOTS] = { 0, 0, 0 };

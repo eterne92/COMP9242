@@ -29,9 +29,12 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
     if (ut == NULL) {
         /* try page */
         seL4_Error err = try_swap_out();
-        assert(err == seL4_NoError);
-        ut = ut_alloc_4k_untyped(NULL);
-        assert(ut != NULL);
+        if (err == seL4_NoError) {
+            ut = ut_alloc_4k_untyped(NULL);
+        } else {
+            // not enough memory
+            return NULL;
+        }
     }
     // else{
 

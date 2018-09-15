@@ -196,7 +196,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
-
+    seL4_Error err;
     assert(uio->uio_rw == UIO_READ);
 
     while (nv->lock == 1) {
@@ -216,7 +216,10 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         if (uio->uio_segflg == UIO_USERSPACE) {
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             if (sos_vaddr == 0) {
-                handle_page_fault(uio->proc, user_vaddr, 0);
+                err = handle_page_fault(uio->proc, user_vaddr, 0);
+                if (err) {
+                    return err;
+                }
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             }
             count = n;
@@ -325,7 +328,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
-
+    seL4_Word err;
     assert(uio->uio_rw == UIO_WRITE);
 
     while (nv->lock == 1) {
@@ -347,7 +350,10 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
             sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
 
             if (sos_vaddr == 0) {
-                handle_page_fault(uio->proc, user_vaddr, 0);
+                err = handle_page_fault(uio->proc, user_vaddr, 0);
+                if (err) {
+                    return err;
+                }
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
             }
             count = n;

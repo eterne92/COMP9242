@@ -92,11 +92,16 @@ static void putchar_to_user(void)
     int idx = uio->length - uio->uio_resid;
     char c;
     seL4_Word sos_vaddr = 0;
+    seL4_Error err;
     while (the_console->n > 0) {
         if (uio->uio_segflg == UIO_USERSPACE) {
             sos_vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
             if (sos_vaddr == 0) {
-                handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
+                err = handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
+                if (err) {
+                    // not enough memory
+                    return;
+                }
                 sos_vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
             }
         } else {
@@ -137,12 +142,14 @@ static void read_handler(struct serial *serial, char c)
 static int con_io(struct device *dev, struct uio *uio)
 {
     int nbytes = 0, count;
+    
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
     if (uio->uio_resid < n) {
         n = uio->uio_resid;
     }
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     (void)dev; // unused
+    seL4_Error err;
     if (uio->uio_rw == UIO_READ) {
         // the_console->proc = uio->proc;
         // the_console->vaddr = uio->vaddr;
@@ -157,7 +164,10 @@ static int con_io(struct device *dev, struct uio *uio)
             if (uio->uio_segflg == UIO_USERSPACE) {
                 sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
                 if (sos_vaddr == 0) {
-                    handle_page_fault(uio->proc, user_vaddr, 0);
+                    err = handle_page_fault(uio->proc, user_vaddr, 0);
+                    if (err) {
+                        return err;
+                    }
                     sos_vaddr = get_sos_virtual_address(uio->proc->pt, user_vaddr);
                 }
             } else {

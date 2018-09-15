@@ -167,6 +167,9 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
                          seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
                          seL4_ARM_VMAttributes attr)
 {
+
+    if (frame < 0) return seL4_NotEnoughMemory;
+
     /* allign vaddr */
     vaddr = vaddr & PAGE_FRAME;
 

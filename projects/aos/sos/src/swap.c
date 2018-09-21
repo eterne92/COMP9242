@@ -82,7 +82,7 @@ seL4_Error try_swap_out(void)
                 file_offset = header * PAGE_SIZE_4K;
                 if (swap_file == NULL) {
                     seL4_Word tmp = 'c';
-                    vfs_open("swapping", O_RDWR | O_CREAT, 0666, &swap_file);
+                    vfs_open("swapping", O_RDWR, 0666, &swap_file);
 
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), 0, UIO_WRITE);
                     VOP_WRITE(swap_file, &k_uio);

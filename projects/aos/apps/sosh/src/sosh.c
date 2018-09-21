@@ -67,14 +67,14 @@ static void prstat(const char *name)
            sbuf.st_fmode & FM_EXEC ? 'x' : '-', sbuf.st_size, sbuf.st_ctime,
            sbuf.st_atime, name);
 }
-static int fuck(int argc, char **argv){
+static int thrash(int argc, char **argv){
     (void) argc;
     (void) argv;
     const int bfsize = 8000;
     char *bufs[bfsize];
     for(int i = 0;i < bfsize;i++){
         if(i % 1000 == 0){
-            printf("start fuck %d\n", i);
+            printf("start thrash %d\n", i);
         }
         bufs[i] = malloc(4096);
         bufs[i][0] = i % 26;
@@ -82,7 +82,7 @@ static int fuck(int argc, char **argv){
     printf("all allocated\n");
     for(int i =0 ;i < bfsize;i++){
         if(i % 1000 == 0){
-            printf("fuck checked %d\n", i);
+            printf("thrash checked %d\n", i);
         }
         assert(bufs[i][0] == i % 26);
     }
@@ -335,7 +335,7 @@ struct command commands[] = { { "dir", dir }, { "ls", dir }, { "cat", cat }, {
         "cp", cp
     }, { "ps", ps }, { "exec", exec }, {"sleep", second_sleep}, {"msleep", milli_sleep},
     {"time", second_time}, {"mtime", micro_time}, {"kill", kill},
-    {"benchmark", benchmark}, {"fuck", fuck}
+    {"benchmark", benchmark}, {"thrash", thrash}
 };
 
 int main(void)

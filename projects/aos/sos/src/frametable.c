@@ -36,13 +36,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
             return NULL;
         }
     }
-    // else{
 
-    //     ut = ut_alloc_4k_untyped(NULL);
-    //     if(ut == NULL){
-    //         return NULL;
-    //     }
-    // }
 
     /* allocate a slot to retype the memory for object into */
     *cptr = cspace_alloc_slot(root_cspace);
@@ -50,8 +44,6 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
         ut_free(ut, seL4_PageBits);
         return NULL;
     }
-    // if(flag == 1)
-    // printf("root_cspace %p, ut->cap %d, cptr %p\n", root_cspace, ut->cap, *cptr);
     /* now do the retype */
     seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type,
                                            seL4_PageBits);
@@ -104,8 +96,6 @@ void initialize_frame_table(cspace_t *cspace)
     }
     // the final frame will link back to itself
     frame_table.frames[n_frames - 1].next = n_frames - 1;
-    printf("%d's next is %d\n", n_frames - 1,
-           frame_table.frames[n_frames - 1].next);
     /* we are using water mark, so there is no free frame at first */
     // frame_table.free = -1;
     frame_table.max = n_frames - n_pages + 1;

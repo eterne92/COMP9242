@@ -100,3 +100,5 @@ void initialize_swapping_file(void);
 seL4_Error try_swap_out(void);
 
 void page_table_destroy(page_table_t *table);
+
+void clean_up_swapping(unsigned offset)

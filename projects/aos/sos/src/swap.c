@@ -75,7 +75,8 @@ seL4_Error try_swap_out(void)
         pin_bit = FRAME_GET_BIT(clock_hand, PIN);
         if (!pin_bit) {
             clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
-            process = get_process(GET_PID(frame_table.frames[clock_hand].flag));
+            // process = get_process(GET_PID(frame_table.frames[clock_hand].flag));
+            process = get_cur_proc();
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
@@ -140,6 +141,7 @@ seL4_Error try_swap_out(void)
         }
         clock_hand++;
     }
+    swap_lock = 0;
     return err;
 }
 

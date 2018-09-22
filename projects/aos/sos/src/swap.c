@@ -143,3 +143,13 @@ seL4_Error try_swap_out(void)
     }
     return err;
 }
+
+void clean_up_swapping(unsigned offset)
+{
+    struct uio k_uio;
+    int result;
+    uio_kinit(&k_uio, (seL4_Word)&header, sizeof(unsigned), offset, UIO_WRITE);
+    result = VOP_WRITE(swap_file, &k_uio);
+    header = offset / PAGE_SIZE_4K;
+    assert(result == 0);
+}

@@ -30,7 +30,7 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr, proc *cur_proc)
     offset = offset - 1;
     uio_kinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
     result = VOP_READ(swap_file, &u_uio);
-    if(result){
+    if (result) {
         return result;
     }
     // printf("read finish\n");
@@ -60,7 +60,7 @@ seL4_Error try_swap_out(void)
     // no need to go all the way down to the length since many of them
     // have already been retyped into page table object or thread control block
     unsigned size = frame_table.max;
-    while(swap_lock == 1) {
+    while (swap_lock == 1) {
         aborted = yield(NULL);
     }
     if (aborted) {
@@ -129,9 +129,9 @@ seL4_Error try_swap_out(void)
 
                 result = VOP_WRITE(swap_file, &k_uio);
                 if (result) {
-                        swap_lock = 0;
-                        return seL4_IllegalOperation;
-                    }
+                    swap_lock = 0;
+                    return seL4_IllegalOperation;
+                }
                 // free the frame
                 frame_free(clock_hand);
                 err = seL4_NoError;

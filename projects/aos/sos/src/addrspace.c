@@ -21,8 +21,8 @@ addrspace *addrspace_init(void)
 }
 
 static int create_region(as_region *region,
-    seL4_Word vaddr, size_t memsize,
-    unsigned char flag)
+                         seL4_Word vaddr, size_t memsize,
+                         unsigned char flag)
 {
     size_t npages;
 
@@ -83,10 +83,9 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
     for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
         seL4_Word frame = _get_frame_from_vaddr(cur_proc->pt, i);
         seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
-        if(frame & PRESENT){
+        if (frame & PRESENT) {
             clean_up_swapping(frame & OFFSET);
-        }
-        else if (frame != 0 && slot != 0) {
+        } else if (frame != 0 && slot != 0) {
             seL4_ARM_Page_Unmap(slot);
             frame_free(frame);
         }
@@ -140,10 +139,9 @@ static int insert_region(addrspace *as, as_region *region)
                 }
                 region->next = tmp;
 
-                if(prev == NULL){
+                if (prev == NULL) {
                     as->regions = region;
-                }
-                else{
+                } else {
                     prev->next = region;
                 }
                 break;
@@ -151,7 +149,7 @@ static int insert_region(addrspace *as, as_region *region)
             prev = tmp;
             tmp = tmp->next;
         }
-        if(tmp == NULL){
+        if (tmp == NULL) {
             prev->next = region;
         }
     }
@@ -160,7 +158,7 @@ static int insert_region(addrspace *as, as_region *region)
 }
 
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
-    unsigned char flag)
+                            unsigned char flag)
 {
     int result;
     as_region *region;
@@ -186,9 +184,9 @@ int as_define_stack(addrspace *as)
     as_region *region;
     int stacksize = USERSTACKSIZE; // 16M stack
     region = as_define_region(as,
-        USERSTACKTOP - stacksize,
-        stacksize,
-        RG_R | RG_W);
+                              USERSTACKTOP - stacksize,
+                              stacksize,
+                              RG_R | RG_W);
     if (region == NULL) {
         return -1;
     }
@@ -203,9 +201,9 @@ int as_define_ipcbuffer(addrspace *as)
     /* Initial user-level ipcbuffer pointer */
     as_region *region;
     region = as_define_region(as,
-        USERIPCBUFFER,
-        PAGE_SIZE_4K,
-        RG_R | RG_W);
+                              USERIPCBUFFER,
+                              PAGE_SIZE_4K,
+                              RG_R | RG_W);
     if (region == NULL) {
         return -1;
     }
@@ -220,9 +218,9 @@ int as_define_heap(addrspace *as)
     /* Initial user-level stack pointer */
     as_region *region;
     region = as_define_region(as,
-        USERHEAPBASE,
-        0,
-        RG_R | RG_W);
+                              USERHEAPBASE,
+                              0,
+                              RG_R | RG_W);
     if (region == NULL) {
         return -1;
     }
@@ -232,7 +230,8 @@ int as_define_heap(addrspace *as)
     return 0;
 }
 
-bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum OPERATION operation)
+bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size,
+                              enum OPERATION operation)
 {
     as_region *region = as->regions;
     while (region) {
@@ -250,10 +249,11 @@ bool validate_virtual_address(addrspace *as, seL4_Word vaddr, size_t size, enum 
 }
 
 
-as_region *vaddr_get_region(addrspace *as, seL4_Word vaddr){
+as_region *vaddr_get_region(addrspace *as, seL4_Word vaddr)
+{
     as_region *region = as->regions;
     while (region) {
-        if(vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
+        if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
             return region;
         }
         region = region->next;

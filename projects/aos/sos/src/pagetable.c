@@ -231,3 +231,62 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
     // cspace_delete(global_cspace, cap);
     // cspace_free_slot(global_cspace, cap);
 }
+
+void page_table_destroy(page_table_t *table){
+
+    page_table_cap *caps_1 = get_page_table_cap(table);
+    page_table_ut *uts_1 = get_page_table_ut(table);
+    for(int i = 0;i < PAGE_TABLE_SIZE;i++){
+        if(table->page_obj_addr[i] == 0) continue;
+
+        page_table_t *table_2 = (page_table_t *) table->page_obj_addr[i];
+        page_table_cap *caps_2 = get_page_table_cap(table_2);
+        page_table_ut *uts_2 = get_page_table_ut(table_2);
+        for(int j = 0;j < PAGE_TABLE_SIZE;j++){
+            if(table_2->page_obj_addr[j] == 0) continue;
+
+            page_table_t *table_3 = (page_table_t *) table_2->page_obj_addr[j];
+            page_table_cap *caps_3 = get_page_table_cap(table_3);
+            page_table_ut *uts_3 = get_page_table_ut(table_3);
+            for(int k = 0;k < PAGE_TABLE_SIZE;k++){
+                if(table_3->page_obj_addr[k] == 0) continue;
+                seL4_Word vaddr = table_3->page_obj_addr[k];
+
+                frame_n_free((vaddr - FRAME_BASE) / PAGE_SIZE_4K);
+
+                seL4_CPtr cp = caps_3->cap[k];
+                cspace_delete(global_cspace, cp);
+                cspace_free_slot(global_cspace, cp);
+
+                ut_t *u = uts_3->ut[k];
+                ut_free(u, seL4_PageBits);
+            }
+
+            seL4_Word vaddr = table_2->page_obj_addr[j];
+
+            frame_n_free((vaddr - FRAME_BASE) / PAGE_SIZE_4K);
+
+            seL4_CPtr cp = caps_2->cap[j];
+            cspace_delete(global_cspace, cp);
+            cspace_free_slot(global_cspace, cp);
+
+            ut_t *u = uts_2->ut[j];
+            ut_free(u, seL4_PageBits);
+        }
+
+        seL4_Word vaddr = table->page_obj_addr[i];
+
+        frame_n_free((vaddr - FRAME_BASE) / PAGE_SIZE_4K);
+
+        seL4_CPtr cp = caps_1->cap[i];
+        cspace_delete(global_cspace, cp);
+        cspace_free_slot(global_cspace, cp);
+
+        ut_t *u = uts_1->ut[i];
+        ut_free(u, seL4_PageBits);
+    }
+
+    seL4_Word vaddr = table;
+
+    frame_n_free((vaddr - FRAME_BASE) / PAGE_SIZE_4K);
+}

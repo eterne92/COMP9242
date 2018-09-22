@@ -98,3 +98,5 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
 
 void initialize_swapping_file(void);
 seL4_Error try_swap_out(void);
+
+void page_table_destroy(page_table_t *table);

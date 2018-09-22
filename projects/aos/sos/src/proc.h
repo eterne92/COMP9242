@@ -42,6 +42,10 @@ extern cspace_t *global_cspace;
 
 extern proc *cur_proc;
 
+/* The linker will link this symbol to the start address  *
+ * of an archive of attached applications.                */
+extern char _cpio_archive[];
+
 extern proc process_array[];
 
 void set_cur_proc(proc *p);

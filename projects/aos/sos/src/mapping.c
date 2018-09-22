@@ -99,7 +99,7 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
         ut_t *ut = ut_alloc_4k_untyped(NULL);
         if (ut == NULL) {
             err = try_swap_out();
-            if(err){
+            if (err) {
                 return err;
             }
             // printf("map_frame_impl\n");
@@ -206,7 +206,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
             // err = -1;
             // goto cleanup;
             seL4_Error err = try_swap_out();
-            if(err){
+            if (err) {
                 goto cleanup;
             }
             // printf("sos map\n");

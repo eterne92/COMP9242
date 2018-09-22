@@ -113,7 +113,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 /* it's a vm fault without page */
                 // allocate a frame
                 frame = frame_alloc(NULL);
-                if(frame <= 0){
+                if (frame <= 0) {
                     return -1;
                 }
                 // map it
@@ -131,11 +131,11 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 // page is in swapping file
                 seL4_Word offset = frame & OFFSET;
                 frame = frame_alloc(NULL);
-                if(frame <= 0){
+                if (frame <= 0) {
                     return -1;
                 }
                 err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE, cur_proc);
-                if(err){
+                if (err) {
                     frame_free(frame);
                     return err;
                 }
@@ -241,24 +241,25 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
     // cspace_free_slot(global_cspace, cap);
 }
 
-void page_table_destroy(page_table_t *table){
+void page_table_destroy(page_table_t *table)
+{
 
     page_table_cap *caps_1 = get_page_table_cap(table);
     page_table_ut *uts_1 = get_page_table_ut(table);
-    for(int i = 0;i < PAGE_TABLE_SIZE;i++){
-        if(table->page_obj_addr[i] == 0) continue;
+    for (int i = 0; i < PAGE_TABLE_SIZE; i++) {
+        if (table->page_obj_addr[i] == 0) continue;
 
         page_table_t *table_2 = (page_table_t *) table->page_obj_addr[i];
         page_table_cap *caps_2 = get_page_table_cap(table_2);
         page_table_ut *uts_2 = get_page_table_ut(table_2);
-        for(int j = 0;j < PAGE_TABLE_SIZE;j++){
-            if(table_2->page_obj_addr[j] == 0) continue;
+        for (int j = 0; j < PAGE_TABLE_SIZE; j++) {
+            if (table_2->page_obj_addr[j] == 0) continue;
 
             page_table_t *table_3 = (page_table_t *) table_2->page_obj_addr[j];
             page_table_cap *caps_3 = get_page_table_cap(table_3);
             page_table_ut *uts_3 = get_page_table_ut(table_3);
-            for(int k = 0;k < PAGE_TABLE_SIZE;k++){
-                if(table_3->page_obj_addr[k] == 0) continue;
+            for (int k = 0; k < PAGE_TABLE_SIZE; k++) {
+                if (table_3->page_obj_addr[k] == 0) continue;
                 seL4_Word vaddr = table_3->page_obj_addr[k];
 
                 frame_n_free((vaddr - FRAME_BASE) / PAGE_SIZE_4K);

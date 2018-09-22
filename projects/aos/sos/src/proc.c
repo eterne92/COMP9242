@@ -1,12 +1,36 @@
 #include "proc.h"
+#include "addrspace.h"
+#include "frametable.h"
+#include "syscall/syscall.h"
+#include <cpio/cpio.h>
+#include <cspace/cspace.h>
+#include <elf/elf.h>
+#include <stdbool.h>
 
 #define SIZE 32
 
-#define GET_BIT(X,N) ( ( (X) >> (N) ) & 1 )
-#define SET_BIT(X,N) ( (X) |  (1 << (N) ) )
-#define RST_BIT(X,N) ( (X) & ~(1 << (N) ) )
+#define DEFAULT_PRIORITY (0)
+
+#define GET_BIT(X, N) (((X) >> (N)) & 1)
+#define SET_BIT(X, N) ((X) | (1 << (N)))
+#define RST_BIT(X, N) ((X) & ~(1 << (N)))
 
 proc process_array[SIZE];
+
+static int available_pid = 0;
+
+static int get_next_available_pid(void)
+{
+    int pid = -1;
+    for (int i = 0; i < SIZE; ++i) {
+        pid = (i + available_pid) % SIZE;
+        if (process_array[pid].state == DEAD) {
+            available_pid = pid + 1;
+            break;
+        }
+    }
+    return pid;
+}
 
 void set_cur_proc(proc *p)
 {
@@ -23,4 +47,235 @@ proc *get_process(unsigned pid)
     if (pid < 0 || pid > 32)
         return NULL;
     return &process_array[pid - 1];
+}
+
+static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
+{
+    mapped_stack[index] = val;
+    return index - 1;
+}
+
+/* set up System V ABI compliant stack, so that the process can
+ * start up and initialise the C library */
+static uintptr_t init_process_stack(int pid, cspace_t *cspace,
+                                    seL4_CPtr local_vspace, char *elf_file)
+{
+    /* Create a stack frame */
+    seL4_Error err;
+    proc *process = &process_array[pid];
+    int frame = frame_alloc(NULL);
+    err = sos_map_frame(cspace, frame, (seL4_Word)process->pt, process->vspace,
+                        USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
+                        seL4_ARM_Default_VMAttributes);
+
+    if (err != seL4_NoError) {
+        ZF_LOGE("Failed to allocate stack");
+        return 0;
+    }
+
+    /* virtual addresses in the target process' address space */
+    uintptr_t stack_top = USERSTACKTOP;
+    uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
+    /* virtual addresses in the SOS's address space */
+    uintptr_t local_stack_bottom = (uintptr_t)(get_frame_from_vaddr(process->pt,
+                                   stack_bottom)
+                                   * PAGE_SIZE_4K
+                                   + FRAME_BASE);
+    void *local_stack_top = (void *)(local_stack_bottom + PAGE_SIZE_4K);
+
+    /* find the vsyscall table */
+    uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall",
+                          NULL));
+    if (sysinfo == 0) {
+        ZF_LOGE("could not find syscall table for c library");
+        return 0;
+    }
+
+    int index = -2;
+
+    /* null terminate the aux vectors */
+    index = stack_write(local_stack_top, index, 0);
+    index = stack_write(local_stack_top, index, 0);
+
+    /* write the aux vectors */
+    index = stack_write(local_stack_top, index, PAGE_SIZE_4K);
+    index = stack_write(local_stack_top, index, AT_PAGESZ);
+
+    index = stack_write(local_stack_top, index, sysinfo);
+    index = stack_write(local_stack_top, index, AT_SYSINFO);
+
+    /* null terminate the environment pointers */
+    index = stack_write(local_stack_top, index, 0);
+
+    /* we don't have any env pointers - skip */
+
+    /* null terminate the argument pointers */
+    index = stack_write(local_stack_top, index, 0);
+
+    /* no argpointers - skip */
+
+    /* set argc to 0 */
+    stack_write(local_stack_top, index, 0);
+
+    /* adjust the initial stack top */
+    stack_top += (index * sizeof(seL4_Word));
+
+    /* the stack *must* remain aligned to a double word boundary,
+     * as GCC assumes this, and horrible bugs occur if this is wrong */
+    assert(index % 2 == 0);
+    assert(stack_top % (sizeof(seL4_Word) * 2) == 0);
+
+    return stack_top;
+}
+
+/* Start the first process, and return true if successful
+ *
+ * This function will leak memory if the process does not start successfully.
+ * TODO: avoid leaking memory once you implement real processes, otherwise a user
+ *       can force your OS to run out of memory by creating lots of failed processes.
+ */
+bool start_process(char *app_name, seL4_CPtr ep)
+{
+    int frame;
+    int pid = get_next_available_pid();
+    if (pid == -1)
+        return false;
+    proc *process = &process_array[pid];
+    /* Create a VSpace */
+    process->vspace_ut = alloc_retype(&(process->vspace),
+                                      seL4_ARM_PageGlobalDirectoryObject, seL4_PGDBits);
+    if (process->vspace_ut == NULL) {
+        return false;
+    }
+
+    /* assign the vspace to an asid pool */
+    seL4_Word err = seL4_ARM_ASIDPool_Assign(seL4_CapInitThreadASIDPool,
+                    process->vspace);
+    if (err != seL4_NoError) {
+        ZF_LOGE("Failed to assign asid pool");
+        return false;
+    }
+
+    /* create addrspace of ttytest */
+    process->as = addrspace_init();
+    if (!process->as) {
+        ZF_LOGE("Failed to create address space");
+        return false;
+    }
+    /* initialize level 1 shadow page table */
+    process->pt = initialize_page_table();
+    if (!process->pt) {
+        ZF_LOGE("Failed to create shadow global page directory");
+        return false;
+    }
+    /* Create a simple 1 level CSpace */
+
+    err = cspace_create_one_level(global_cspace, &process->cspace);
+    if (err != CSPACE_NOERROR) {
+        ZF_LOGE("Failed to create cspace");
+        return false;
+    }
+
+    /* Create open file table */
+    process->openfile_table = filetable_create();
+
+    /* Create an IPC buffer */
+
+    as_define_ipcbuffer(process->as);
+    frame = frame_alloc(NULL);
+    err = sos_map_frame(global_cspace, frame, (seL4_Word)process->pt,
+                        process->vspace, USERIPCBUFFER, seL4_ReadWrite,
+                        seL4_ARM_Default_VMAttributes);
+
+    if (err != seL4_NoError) {
+        ZF_LOGE("Failed to alloc ipc buffer ut");
+        return false;
+    }
+
+    /* allocate a new slot in the target cspace which we will mint a badged endpoint cap into --
+     * the badge is used to identify the process, which will come in handy when you have multiple
+     * processes. */
+    seL4_CPtr user_ep = cspace_alloc_slot(&(process->cspace));
+    if (user_ep == seL4_CapNull) {
+        ZF_LOGE("Failed to alloc user ep slot");
+        return false;
+    }
+
+    /* now mutate the cap, thereby setting the badge */
+    /* badge is process id */
+    err = cspace_mint(&(process->cspace), user_ep, global_cspace, ep,
+                      seL4_AllRights, pid);
+    if (err) {
+        ZF_LOGE("Failed to mint user ep");
+        return false;
+    }
+
+    /* Create a new TCB object */
+    process->tcb_ut = alloc_retype(&(process->tcb), seL4_TCBObject, seL4_TCBBits);
+    if (process->tcb_ut == NULL) {
+        ZF_LOGE("Failed to alloc tcb ut");
+        return false;
+    }
+
+    /* Configure the TCB */
+    err = seL4_TCB_Configure(process->tcb, user_ep,
+                             process->cspace.root_cnode, seL4_NilData,
+                             process->vspace, seL4_NilData, USERIPCBUFFER,
+                             get_cap_from_vaddr(process->pt, USERIPCBUFFER));
+
+    if (err != seL4_NoError) {
+        ZF_LOGE("Unable to configure new TCB");
+        return false;
+    }
+
+    /* Set the priority */
+    err = seL4_TCB_SetPriority(process->tcb, seL4_CapInitThreadTCB,
+                               DEFAULT_PRIORITY);
+    if (err != seL4_NoError) {
+        ZF_LOGE("Unable to set priority of new TCB");
+        return false;
+    }
+
+    /* Provide a name for the thread -- Helpful for debugging */
+    NAME_THREAD(process->tcb, app_name);
+
+    /* parse the cpio image */
+    ZF_LOGI("\nStarting \"%s\"...\n", app_name);
+    unsigned long elf_size;
+    char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
+    if (elf_base == NULL) {
+        ZF_LOGE("Unable to locate cpio header for %s", app_name);
+        return false;
+    }
+
+    /* set up the stack */
+    as_define_stack(process->as);
+    seL4_Word sp = init_process_stack(global_cspace, seL4_CapInitThreadVSpace,
+                                      elf_base);
+
+    /* load the elf image from the cpio file */
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base);
+    if (err) {
+        ZF_LOGE("Failed to load elf image");
+        return false;
+    }
+
+    if (err != 0) {
+        ZF_LOGE("Unable to map IPC buffer for user app");
+        return false;
+    }
+
+    /* Start the new process */
+    seL4_UserContext context = {
+        .pc = elf_getEntryPoint(elf_base),
+        .sp = sp,
+    };
+
+    err = seL4_TCB_WriteRegisters(process->tcb, 1, 0, 2, &context);
+    ZF_LOGE_IF(err, "Failed to write registers");
+    /* open stdin, stdout, stderr */
+    _sys_do_open(process, "console", 1);
+    _sys_do_open(process, "console", 1);
+    _sys_do_open(process, "console", 1);
+    return err == seL4_NoError;
 }

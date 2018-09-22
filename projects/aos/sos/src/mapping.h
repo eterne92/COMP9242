@@ -42,7 +42,8 @@
  *                        e.g if slot 0 is used, BIT(0) in used will be set.
  * @return 0 on success
  */
-seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr,
+seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap,
+                            seL4_CPtr vspace, seL4_Word vaddr,
                             seL4_CapRights_t rights, seL4_ARM_VMAttributes attr,
                             seL4_CPtr free_slots[MAPPING_SLOTS], seL4_Word *used);
 
@@ -66,7 +67,8 @@ seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vsp
  *
  * @return 0 on success
  */
-seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
+seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace,
+                     seL4_Word vaddr, seL4_CapRights_t rights,
                      seL4_ARM_VMAttributes attr);
 
 /* Maps a page, allocating intermediate structures and cslots with the cspace provided.
@@ -83,8 +85,9 @@ seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace, se
  *
  * @return 0 on success
  */
-seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table, seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
-                     seL4_ARM_VMAttributes attr);
+seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
+                         seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
+                         seL4_ARM_VMAttributes attr);
 
 /*
  * Map a device and return the virtual address it is mapped to.

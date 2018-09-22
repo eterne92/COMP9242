@@ -86,8 +86,6 @@ void run_coroutine(void *arg)
     }
 }
 
-
-
 void handle_syscall(seL4_Word badge, int num_args)
 {
     (void)badge;
@@ -256,11 +254,6 @@ void *_sys_handle_page_fault(proc *cur_proc)
     syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
 }
-
-
-
-
-
 
 void _sys_brk(proc *cur_proc)
 {

@@ -51,7 +51,7 @@ addrspace *addrspace_init(void);
 void addrspace_destroy(addrspace *as);
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                      unsigned char flag);
-void as_destroy_region(addrspace *as, as_region *region);
+void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc);
 int as_define_stack(addrspace *as);
 int as_define_heap(addrspace *as);
 int as_define_ipcbuffer(addrspace *as);

@@ -4,6 +4,10 @@
 #include "pagetable.h"
 #include "proc.h"
 
+#define PRESENT (1lu << 50)
+#define PAGE_RW (1lu << 51)
+#define OFFSET 0xffffffffffff
+
 proc *cur_proc;
 addrspace *addrspace_init(void)
 {
@@ -52,11 +56,10 @@ static int create_region(as_region *region,
  * need to be careful since one frame may contain more than one
  * region.
  */
-void as_destroy_region(addrspace *as, as_region *region)
+void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
 {
     seL4_Word first_vaddr = region->vaddr & PAGE_FRAME;
     seL4_Word last_vaddr = (region->vaddr + region->size) & PAGE_FRAME;
-    cur_proc = get_cur_proc();
 
     /* check first frame */
     as_region *tmp = as->regions;
@@ -78,9 +81,12 @@ void as_destroy_region(addrspace *as, as_region *region)
         last_vaddr -= PAGE_SIZE_4K;
     }
     for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
-        seL4_Word frame = get_frame_from_vaddr(cur_proc->pt, i);
+        seL4_Word frame = _get_frame_from_vaddr(cur_proc->pt, i);
         seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
-        if (frame != 0 && slot != 0) {
+        if(frame & PRESENT){
+            clean_up_swapping(frame & OFFSET);
+        }
+        else if (frame != 0 && slot != 0) {
             seL4_ARM_Page_Unmap(slot);
             frame_free(frame);
         }

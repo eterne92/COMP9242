@@ -4,8 +4,13 @@
 #include "syscall/syscall.h"
 #include <cpio/cpio.h>
 #include <cspace/cspace.h>
+#include <aos/sel4_zf_logif.h>
+#include <aos/debug.h>
 #include <elf/elf.h>
 #include <stdbool.h>
+#include "mapping.h"
+#include "pagetable.h"
+#include "syscall/filetable.h"
 
 #define SIZE 32
 
@@ -42,11 +47,41 @@ proc *get_cur_proc(void)
     return cur_proc;
 }
 
-proc *get_process(unsigned pid)
+proc *get_process(int pid)
 {
     if (pid < 0 || pid > 32)
         return NULL;
     return &process_array[pid - 1];
+}
+
+/* helper to allocate a ut + cslot, and retype the ut into the cslot */
+static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
+{
+    /* Allocate the object */
+    ut_t *ut = ut_alloc(size_bits, global_cspace);
+    if (ut == NULL) {
+        ZF_LOGE("No memory for object of size %zu", size_bits);
+        return NULL;
+    }
+
+    /* allocate a slot to retype the memory for object into */
+    *cptr = cspace_alloc_slot(global_cspace);
+    if (*cptr == seL4_CapNull) {
+        ut_free(ut, size_bits);
+        ZF_LOGE("Failed to allocate slot");
+        return NULL;
+    }
+
+    /* now do the retype */
+    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type, size_bits);
+    ZF_LOGE_IFERR(err, "Failed retype untyped");
+    if (err != seL4_NoError) {
+        ut_free(ut, size_bits);
+        cspace_free_slot(global_cspace, *cptr);
+        return NULL;
+    }
+
+    return ut;
 }
 
 static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
@@ -248,7 +283,7 @@ bool start_process(char *app_name, seL4_CPtr ep)
 
     /* set up the stack */
     as_define_stack(process->as);
-    seL4_Word sp = init_process_stack(global_cspace, seL4_CapInitThreadVSpace,
+    seL4_Word sp = init_process_stack(pid,global_cspace, seL4_CapInitThreadVSpace,
                                       elf_base);
 
     /* load the elf image from the cpio file */

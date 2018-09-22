@@ -79,14 +79,17 @@ static int thrash(int argc, char **argv){
         bufs[i] = malloc(4096);
         bufs[i][0] = i % 26;
     }
-    printf("all allocated\n");
-    for(int i =0 ;i < bfsize;i++){
-        if(i % 1000 == 0){
-            printf("thrash checked %d\n", i);
-        }
-        assert(bufs[i][0] == i % 26);
-    }
+    // printf("all allocated\n");
+    // for(int i =0 ;i < bfsize;i++){
+    //     if(i % 1000 == 0){
+    //         printf("thrash checked %d\n", i);
+    //     }
+    //     assert(bufs[i][0] == i % 26);
+    // }
     printf("pass test\n");
+    // for(int i = 0;i < bfsize;i++){
+    //     free(bufs[i]);
+    // }
     return 0;
 }
 

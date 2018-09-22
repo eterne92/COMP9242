@@ -139,6 +139,7 @@ static int run_benchmark(char *name, benchmark_fn_t fn, uint32_t overhead,
     READ_PMCR(pmcr);
 
     /* open the file */
+    printf("open bench file\n");
     int fd = open_helper(BENCHMARK_FILE, O_RDWR);
     if (fd == -1) {
         return -1;

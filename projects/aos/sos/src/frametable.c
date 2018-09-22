@@ -139,13 +139,16 @@ int frame_alloc(seL4_Word *vaddr)
     page = frame_table.untyped;
     assert(page != -1);
     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
-    map_frame(root_cspace, frame_cap, seL4_CapInitThreadVSpace,
+    seL4_Error err = map_frame(root_cspace, frame_cap, seL4_CapInitThreadVSpace,
               _vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
-    /*
+
     if(err != seL4_NoError) {
-        return -1;
+        cspace_delete(global_cspace, frame_cap);
+        cspace_free(global_cspace, frame_cap);
+        ut_free(ut, seL4_PageBits);
+        return 0;
     }
-    */
+
     frame_table.frames[page].ut = ut;
     frame_table.frames[page].flag |= USED_MEMORY;
     frame_table.frames[page].frame_cap = frame_cap;
@@ -168,12 +171,12 @@ int frame_n_alloc(seL4_Word *vaddr, int nframes)
 {
     int base_frame = frame_alloc(vaddr);
     int frame = 0, tmp = 0;
-    if (base_frame == -1)
+    if (base_frame == -1 || base_frame == 0)
         return -1;
     frame = base_frame;
     for (int i = 1; i < nframes; ++i) {
         frame_table.frames[frame].next = frame_alloc(NULL);
-        if (frame_table.frames[frame].next == -1) {
+        if (frame_table.frames[frame].next == -1 || frame_table.frames[frame].next == 0) {
             // out of memory need clean up all pre-allocated frames
             tmp = base_frame;
             while (tmp != -1) {

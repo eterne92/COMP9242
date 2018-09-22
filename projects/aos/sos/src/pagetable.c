@@ -113,6 +113,9 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 /* it's a vm fault without page */
                 // allocate a frame
                 frame = frame_alloc(NULL);
+                if(frame <= 0){
+                    return -1;
+                }
                 // map it
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
@@ -126,12 +129,16 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 // page is in swapping file
                 seL4_Word offset = frame & OFFSET;
                 frame = frame_alloc(NULL);
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
-                                    vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-                if (err) {
+                if(frame <= 0){
+                    return -1;
+                }
+                err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE);
+                if(err){
+                    frame_free(frame);
                     return err;
                 }
-                err = load_page(offset, vaddr & PAGE_FRAME);
+                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                                    vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
             } else {
                 /* it's a vm fault with permmision */
                 /* for now it's segment fault */

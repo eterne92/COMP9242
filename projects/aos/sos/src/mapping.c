@@ -98,7 +98,10 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
         /* Assume the error was because we are missing a paging structure */
         ut_t *ut = ut_alloc_4k_untyped(NULL);
         if (ut == NULL) {
-            try_swap_out();
+            err = try_swap_out();
+            if(err){
+                return err;
+            }
             // printf("map_frame_impl\n");
             ut = ut_alloc_4k_untyped(NULL);
             // ZF_LOGE("Out of 4k untyped");
@@ -203,8 +206,10 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
             // err = -1;
             // goto cleanup;
             seL4_Error err = try_swap_out();
+            if(err){
+                goto cleanup;
+            }
             // printf("sos map\n");
-            assert(err == seL4_NoError);
             ut = ut_alloc_4k_untyped(NULL);
             assert(ut != NULL);
         }

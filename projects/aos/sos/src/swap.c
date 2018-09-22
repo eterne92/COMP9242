@@ -29,16 +29,18 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
     // printf("load page start\n");
     // printf("%d, vaddr %p\n", offset, vaddr);
     offset = offset - 1;
-    uio_uinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ, cur_proc);
+    uio_kinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
     result = VOP_READ(swap_file, &u_uio);
-    assert(result == 0);
+    if(result){
+        return result;
+    }
     // printf("read finish\n");
     if (!result) {
         // update free list
         tmp = header;
         header = offset / PAGE_SIZE_4K;
         uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), offset, UIO_WRITE);
-        VOP_WRITE(swap_file, &k_uio);
+        result = VOP_WRITE(swap_file, &k_uio);
     }
     return result;
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -119,38 +119,36 @@ void vfs_clearbootfs(void)
  * path and choose the vnode to begin the name lookup relative to.
  */
 
-static int
-getdevice(char *path, char **subpath, struct vnode **startvn)
+static int getdevice(char *path, char **subpath, struct vnode **startvn)
 {
     struct vnode *vn;
     int result;
     int length;
 
     /*
-	 * Entirely empty filenames aren't legal.
-	 */
+     * Entirely empty filenames aren't legal.
+     */
     if (path[0] == 0) {
         return EINVAL;
     }
 
     length = strlen(path);
-	result = vfs_getroot(path, &vn);
-	if (result == ENODEV) {
-		/* it's our nfs fs system */
-        while(bootfs_vnode == NULL){
+    result = vfs_getroot(path, &vn);
+    if (result == ENODEV) {
+        /* it's our nfs fs system */
+        while (bootfs_vnode == NULL) {
             yield(NULL);
         }
         printf("we are nfs yeha!\n");
-		*startvn = bootfs_vnode;
-		*subpath = path;
+        *startvn = bootfs_vnode;
+        *subpath = path;
         printf("got startvn as %p\n", *startvn);
-		return 0;
-	}
-	else if(result != 0){
-		return result;
-	}
+        return 0;
+    } else if (result != 0) {
+        return result;
+    }
     *startvn = vn;
-	*subpath = &path[length];
+    *subpath = &path[length];
     return 0;
 }
 
@@ -160,7 +158,7 @@ getdevice(char *path, char **subpath, struct vnode **startvn)
  */
 
 int vfs_lookparent(char *path, struct vnode **retval,
-    char *buf, size_t buflen)
+                   char *buf, size_t buflen)
 {
     (void) buf;
     (void) buflen;

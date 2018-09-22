@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,218 +46,198 @@
 ////////////////////////////////////////////////////////////
 // uio ops (read, readlink, getdirentry, write, namefile)
 
-int
-vopfail_uio_notdir(struct vnode *vn, struct uio *uio)
+int vopfail_uio_notdir(struct vnode *vn, struct uio *uio)
 {
-	(void)vn;
-	(void)uio;
-	return ENOTDIR;
+    (void)vn;
+    (void)uio;
+    return ENOTDIR;
 }
 
-int
-vopfail_uio_isdir(struct vnode *vn, struct uio *uio)
+int vopfail_uio_isdir(struct vnode *vn, struct uio *uio)
 {
-	(void)vn;
-	(void)uio;
-	return EISDIR;
+    (void)vn;
+    (void)uio;
+    return EISDIR;
 }
 
-int
-vopfail_uio_inval(struct vnode *vn, struct uio *uio)
+int vopfail_uio_inval(struct vnode *vn, struct uio *uio)
 {
-	(void)vn;
-	(void)uio;
-	return EINVAL;
+    (void)vn;
+    (void)uio;
+    return EINVAL;
 }
 
-int
-vopfail_uio_nosys(struct vnode *vn, struct uio *uio)
+int vopfail_uio_nosys(struct vnode *vn, struct uio *uio)
 {
-	(void)vn;
-	(void)uio;
-	return ENOSYS;
+    (void)vn;
+    (void)uio;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // mmap
 
-int
-vopfail_mmap_isdir(struct vnode *vn /*add stuff */)
+int vopfail_mmap_isdir(struct vnode *vn /*add stuff */)
 {
-	(void)vn;
-	return EISDIR;
+    (void)vn;
+    return EISDIR;
 }
 
-int
-vopfail_mmap_perm(struct vnode *vn /*add stuff */)
+int vopfail_mmap_perm(struct vnode *vn /*add stuff */)
 {
-	(void)vn;
-	return EPERM;
+    (void)vn;
+    return EPERM;
 }
 
-int
-vopfail_mmap_nosys(struct vnode *vn /*add stuff */)
+int vopfail_mmap_nosys(struct vnode *vn /*add stuff */)
 {
-	(void)vn;
-	return ENOSYS;
+    (void)vn;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // truncate
 
-int
-vopfail_truncate_isdir(struct vnode *vn, off_t pos)
+int vopfail_truncate_isdir(struct vnode *vn, off_t pos)
 {
-	(void)vn;
-	(void)pos;
-	return EISDIR;
+    (void)vn;
+    (void)pos;
+    return EISDIR;
 }
 
 ////////////////////////////////////////////////////////////
 // creat
 
-int
-vopfail_creat_notdir(struct vnode *vn, const char *name, bool excl,
-		     mode_t mode, struct vnode **result)
+int vopfail_creat_notdir(struct vnode *vn, const char *name, bool excl,
+                         mode_t mode, struct vnode **result)
 {
-	(void)vn;
-	(void)name;
-	(void)excl;
-	(void)mode;
-	(void)result;
-	return ENOTDIR;
+    (void)vn;
+    (void)name;
+    (void)excl;
+    (void)mode;
+    (void)result;
+    return ENOTDIR;
 }
 
 ////////////////////////////////////////////////////////////
 // symlink
 
-int
-vopfail_symlink_notdir(struct vnode *vn, const char *contents,
-		       const char *name)
+int vopfail_symlink_notdir(struct vnode *vn, const char *contents,
+                           const char *name)
 {
-	(void)vn;
-	(void)contents;
-	(void)name;
-	return ENOTDIR;
+    (void)vn;
+    (void)contents;
+    (void)name;
+    return ENOTDIR;
 }
 
-int
-vopfail_symlink_nosys(struct vnode *vn, const char *contents,
-		      const char *name)
+int vopfail_symlink_nosys(struct vnode *vn, const char *contents,
+                          const char *name)
 {
-	(void)vn;
-	(void)contents;
-	(void)name;
-	return ENOSYS;
+    (void)vn;
+    (void)contents;
+    (void)name;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // mkdir
 
-int
-vopfail_mkdir_notdir(struct vnode *vn, const char *name, mode_t mode)
+int vopfail_mkdir_notdir(struct vnode *vn, const char *name, mode_t mode)
 {
-	(void)vn;
-	(void)name;
-	(void)mode;
-	return ENOTDIR;
+    (void)vn;
+    (void)name;
+    (void)mode;
+    return ENOTDIR;
 }
 
-int
-vopfail_mkdir_nosys(struct vnode *vn, const char *name, mode_t mode)
+int vopfail_mkdir_nosys(struct vnode *vn, const char *name, mode_t mode)
 {
-	(void)vn;
-	(void)name;
-	(void)mode;
-	return ENOSYS;
+    (void)vn;
+    (void)name;
+    (void)mode;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // link
 
-int
-vopfail_link_notdir(struct vnode *dir, const char *name, struct vnode *file)
+int vopfail_link_notdir(struct vnode *dir, const char *name, struct vnode *file)
 {
-	(void)dir;
-	(void)name;
-	(void)file;
-	return ENOTDIR;
+    (void)dir;
+    (void)name;
+    (void)file;
+    return ENOTDIR;
 }
 
-int
-vopfail_link_nosys(struct vnode *dir, const char *name, struct vnode *file)
+int vopfail_link_nosys(struct vnode *dir, const char *name, struct vnode *file)
 {
-	(void)dir;
-	(void)name;
-	(void)file;
-	return ENOSYS;
+    (void)dir;
+    (void)name;
+    (void)file;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // string ops (remove and rmdir)
 
-int
-vopfail_string_notdir(struct vnode *vn, const char *name)
+int vopfail_string_notdir(struct vnode *vn, const char *name)
 {
-	(void)vn;
-	(void)name;
-	return ENOTDIR;
+    (void)vn;
+    (void)name;
+    return ENOTDIR;
 }
 
-int
-vopfail_string_nosys(struct vnode *vn, const char *name)
+int vopfail_string_nosys(struct vnode *vn, const char *name)
 {
-	(void)vn;
-	(void)name;
-	return ENOSYS;
+    (void)vn;
+    (void)name;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // rename
 
-int
-vopfail_rename_notdir(struct vnode *fromdir, const char *fromname,
-		      struct vnode *todir, const char *toname)
+int vopfail_rename_notdir(struct vnode *fromdir, const char *fromname,
+                          struct vnode *todir, const char *toname)
 {
-	(void)fromdir;
-	(void)fromname;
-	(void)todir;
-	(void)toname;
-	return ENOTDIR;
+    (void)fromdir;
+    (void)fromname;
+    (void)todir;
+    (void)toname;
+    return ENOTDIR;
 }
 
-int
-vopfail_rename_nosys(struct vnode *fromdir, const char *fromname,
-		     struct vnode *todir, const char *toname)
+int vopfail_rename_nosys(struct vnode *fromdir, const char *fromname,
+                         struct vnode *todir, const char *toname)
 {
-	(void)fromdir;
-	(void)fromname;
-	(void)todir;
-	(void)toname;
-	return ENOSYS;
+    (void)fromdir;
+    (void)fromname;
+    (void)todir;
+    (void)toname;
+    return ENOSYS;
 }
 
 ////////////////////////////////////////////////////////////
 // lookup
 
-int
-vopfail_lookup_notdir(struct vnode *vn, char *path, struct vnode **result)
+int vopfail_lookup_notdir(struct vnode *vn, char *path, struct vnode **result)
 {
-	(void)vn;
-	(void)path;
-	(void)result;
-	return ENOTDIR;
+    (void)vn;
+    (void)path;
+    (void)result;
+    return ENOTDIR;
 }
 
-int
-vopfail_lookparent_notdir(struct vnode *vn, char *path, struct vnode **result,
-			  char *buf, size_t len)
+int vopfail_lookparent_notdir(struct vnode *vn, char *path,
+                              struct vnode **result,
+                              char *buf, size_t len)
 {
-	(void)vn;
-	(void)path;
-	(void)result;
-	(void)buf;
-	(void)len;
-	return ENOTDIR;
+    (void)vn;
+    (void)path;
+    (void)result;
+    (void)buf;
+    (void)len;
+    return ENOTDIR;
 }
 

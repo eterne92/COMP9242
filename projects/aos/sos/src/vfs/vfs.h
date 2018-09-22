@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,7 +80,7 @@ const char *vfs_getdevname(struct fs *fs);
 
 int vfs_lookup(char *path, struct vnode **result);
 int vfs_lookparent(char *path, struct vnode **result,
-		   char *buf, size_t buflen);
+                   char *buf, size_t buflen);
 
 /*
  * VFS layer high-level operations on pathnames
@@ -176,9 +176,9 @@ int vfs_adddev(const char *devname, struct device *dev, int mountable);
 int vfs_addfs(const char *devname, struct fs *fs);
 
 int vfs_mount(const char *devname, void *data,
-	      int (*mountfunc)(void *data,
-			       struct device *dev,
-			       struct fs **result));
+              int (*mountfunc)(void *data,
+                               struct device *dev,
+                               struct fs **result));
 int vfs_unmount(const char *devname);
 int vfs_swapon(const char *devname, struct vnode **result);
 int vfs_swapoff(const char *devname);

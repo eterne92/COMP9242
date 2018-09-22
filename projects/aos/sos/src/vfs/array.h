@@ -69,8 +69,8 @@
  */
 
 struct array {
-	void **v;
-	unsigned num, max;
+    void **v;
+    unsigned num, max;
 };
 
 struct array *array_create(void);
@@ -89,42 +89,38 @@ void array_remove(struct array *, unsigned index);
  * Inlining for base operations
  */
 
-ARRAYINLINE unsigned
-array_num(const struct array *a)
+ARRAYINLINE unsigned array_num(const struct array *a)
 {
-	return a->num;
+    return a->num;
 }
 
-ARRAYINLINE void *
-array_get(const struct array *a, unsigned index)
+ARRAYINLINE void *array_get(const struct array *a, unsigned index)
 {
-	ARRAYASSERT(index < a->num);
-	return a->v[index];
+    ARRAYASSERT(index < a->num);
+    return a->v[index];
 }
 
-ARRAYINLINE void
-array_set(const struct array *a, unsigned index, void *val)
+ARRAYINLINE void array_set(const struct array *a, unsigned index, void *val)
 {
-	ARRAYASSERT(index < a->num);
-	a->v[index] = val;
+    ARRAYASSERT(index < a->num);
+    a->v[index] = val;
 }
 
-ARRAYINLINE int
-array_add(struct array *a, void *val, unsigned *index_ret)
+ARRAYINLINE int array_add(struct array *a, void *val, unsigned *index_ret)
 {
-	unsigned index;
-	int ret;
+    unsigned index;
+    int ret;
 
-	index = a->num;
-	ret = array_setsize(a, index+1);
-	if (ret) {
-		return ret;
-	}
-	a->v[index] = val;
-	if (index_ret != NULL) {
-		*index_ret = index;
-	}
-	return 0;
+    index = a->num;
+    ret = array_setsize(a, index + 1);
+    if (ret) {
+        return ret;
+    }
+    a->v[index] = val;
+    if (index_ret != NULL) {
+        *index_ret = index;
+    }
+    return 0;
 }
 
 /*
@@ -167,94 +163,94 @@ array_add(struct array *a, void *val, unsigned *index_ret)
  */
 
 #define DECLARRAY_BYTYPE(ARRAY, T, INLINE) \
-	struct ARRAY {						\
-		struct array arr;				\
-	};							\
-								\
-	INLINE struct ARRAY *ARRAY##_create(void);		\
-	INLINE void ARRAY##_destroy(struct ARRAY *a);		\
-	INLINE void ARRAY##_init(struct ARRAY *a);		\
-	INLINE void ARRAY##_cleanup(struct ARRAY *a);		\
-	INLINE unsigned ARRAY##_num(const struct ARRAY *a);	\
-	INLINE T *ARRAY##_get(const struct ARRAY *a, unsigned index); \
-	INLINE void ARRAY##_set(struct ARRAY *a, unsigned index, T *val); \
-	INLINE int ARRAY##_preallocate(struct ARRAY *a, unsigned num);	\
-	INLINE int ARRAY##_setsize(struct ARRAY *a, unsigned num);	\
-	INLINE int ARRAY##_add(struct ARRAY *a, T *val, unsigned *index_ret); \
-	INLINE void ARRAY##_remove(struct ARRAY *a, unsigned index)
+    struct ARRAY {                      \
+        struct array arr;               \
+    };                          \
+                                \
+    INLINE struct ARRAY *ARRAY##_create(void);      \
+    INLINE void ARRAY##_destroy(struct ARRAY *a);       \
+    INLINE void ARRAY##_init(struct ARRAY *a);      \
+    INLINE void ARRAY##_cleanup(struct ARRAY *a);       \
+    INLINE unsigned ARRAY##_num(const struct ARRAY *a); \
+    INLINE T *ARRAY##_get(const struct ARRAY *a, unsigned index); \
+    INLINE void ARRAY##_set(struct ARRAY *a, unsigned index, T *val); \
+    INLINE int ARRAY##_preallocate(struct ARRAY *a, unsigned num);  \
+    INLINE int ARRAY##_setsize(struct ARRAY *a, unsigned num);  \
+    INLINE int ARRAY##_add(struct ARRAY *a, T *val, unsigned *index_ret); \
+    INLINE void ARRAY##_remove(struct ARRAY *a, unsigned index)
 
 #define DEFARRAY_BYTYPE(ARRAY, T, INLINE) \
-	INLINE struct ARRAY *					\
-	ARRAY##_create(void)					\
-	{							\
-		struct ARRAY *a = malloc(sizeof(*a));		\
-		if (a == NULL) {				\
-			return NULL;				\
-		}						\
-		array_init(&a->arr);				\
-		return a;					\
-	}							\
-								\
-	INLINE void						\
-	ARRAY##_destroy(struct ARRAY *a)			\
-	{							\
-		array_cleanup(&a->arr);				\
-		free(a);					\
-	}							\
-								\
-	INLINE void						\
-	ARRAY##_init(struct ARRAY *a)				\
-	{							\
-		array_init(&a->arr);				\
-	}							\
-								\
-	INLINE void						\
-	ARRAY##_cleanup(struct ARRAY *a)			\
-	{							\
-		array_cleanup(&a->arr);				\
-	}							\
-								\
-	INLINE unsigned						\
-	ARRAY##_num(const struct ARRAY *a)			\
-	{							\
-		return array_num(&a->arr);			\
-	}							\
-								\
-	INLINE T *						\
-	ARRAY##_get(const struct ARRAY *a, unsigned index)	\
-	{							\
-		return (T *)array_get(&a->arr, index);		\
-	}							\
-								\
-	INLINE void						\
-	ARRAY##_set(struct ARRAY *a, unsigned index, T *val)	\
-	{							\
-		array_set(&a->arr, index, (void *)val);		\
-	}							\
-								\
-	INLINE int						\
-	ARRAY##_preallocate(struct ARRAY *a, unsigned num)	\
-	{							\
-		return array_preallocate(&a->arr, num);		\
-	}							\
-								\
-	INLINE int						\
-	ARRAY##_setsize(struct ARRAY *a, unsigned num)		\
-	{							\
-		return array_setsize(&a->arr, num);		\
-	}							\
-								\
-	INLINE int						\
-	ARRAY##_add(struct ARRAY *a, T *val, unsigned *index_ret) \
-	{							\
-		return array_add(&a->arr, (void *)val, index_ret); \
-	}							\
-								\
-	INLINE void						\
-	ARRAY##_remove(struct ARRAY *a, unsigned index)		\
-	{							\
-		array_remove(&a->arr, index);			\
-	}
+    INLINE struct ARRAY *                   \
+    ARRAY##_create(void)                    \
+    {                           \
+        struct ARRAY *a = malloc(sizeof(*a));       \
+        if (a == NULL) {                \
+            return NULL;                \
+        }                       \
+        array_init(&a->arr);                \
+        return a;                   \
+    }                           \
+                                \
+    INLINE void                     \
+    ARRAY##_destroy(struct ARRAY *a)            \
+    {                           \
+        array_cleanup(&a->arr);             \
+        free(a);                    \
+    }                           \
+                                \
+    INLINE void                     \
+    ARRAY##_init(struct ARRAY *a)               \
+    {                           \
+        array_init(&a->arr);                \
+    }                           \
+                                \
+    INLINE void                     \
+    ARRAY##_cleanup(struct ARRAY *a)            \
+    {                           \
+        array_cleanup(&a->arr);             \
+    }                           \
+                                \
+    INLINE unsigned                     \
+    ARRAY##_num(const struct ARRAY *a)          \
+    {                           \
+        return array_num(&a->arr);          \
+    }                           \
+                                \
+    INLINE T *                      \
+    ARRAY##_get(const struct ARRAY *a, unsigned index)  \
+    {                           \
+        return (T *)array_get(&a->arr, index);      \
+    }                           \
+                                \
+    INLINE void                     \
+    ARRAY##_set(struct ARRAY *a, unsigned index, T *val)    \
+    {                           \
+        array_set(&a->arr, index, (void *)val);     \
+    }                           \
+                                \
+    INLINE int                      \
+    ARRAY##_preallocate(struct ARRAY *a, unsigned num)  \
+    {                           \
+        return array_preallocate(&a->arr, num);     \
+    }                           \
+                                \
+    INLINE int                      \
+    ARRAY##_setsize(struct ARRAY *a, unsigned num)      \
+    {                           \
+        return array_setsize(&a->arr, num);     \
+    }                           \
+                                \
+    INLINE int                      \
+    ARRAY##_add(struct ARRAY *a, T *val, unsigned *index_ret) \
+    {                           \
+        return array_add(&a->arr, (void *)val, index_ret); \
+    }                           \
+                                \
+    INLINE void                     \
+    ARRAY##_remove(struct ARRAY *a, unsigned index)     \
+    {                           \
+        array_remove(&a->arr, index);           \
+    }
 
 #define DECLARRAY(T, INLINE) DECLARRAY_BYTYPE(T##array, struct T, INLINE)
 #define DEFARRAY(T, INLINE) DEFARRAY_BYTYPE(T##array, struct T, INLINE)

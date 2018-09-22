@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,46 +43,42 @@
 /*
  * Get current directory as a vnode.
  */
-int
-vfs_getcurdir(struct vnode **ret)
+int vfs_getcurdir(struct vnode **ret)
 {
-	(void) ret;
-	assert(-1);
-	return -1;
+    (void) ret;
+    assert(-1);
+    return -1;
 }
 
 /*
  * Set current directory as a vnode.
  * The passed vnode must in fact be a directory.
  */
-int
-vfs_setcurdir(struct vnode *dir)
+int vfs_setcurdir(struct vnode *dir)
 {
-	(void) dir;
-	assert(-1);
-	return -1;
+    (void) dir;
+    assert(-1);
+    return -1;
 }
 
 /*
  * Set current directory to "none".
  */
-int
-vfs_clearcurdir(void)
+int vfs_clearcurdir(void)
 {
-	assert(-1);
-	return -1;
+    assert(-1);
+    return -1;
 }
 
 /*
  * Set current directory, as a pathname. Use vfs_lookup to translate
  * it to a vnode.
  */
-int
-vfs_chdir(char *path)
+int vfs_chdir(char *path)
 {
-	(void) path;
-	assert(-1);
-	return -1;
+    (void) path;
+    assert(-1);
+    return -1;
 }
 
 /*
@@ -90,10 +86,9 @@ vfs_chdir(char *path)
  * Use VOP_NAMEFILE to get the pathname and FSOP_GETVOLNAME to get the
  * volume name.
  */
-int
-vfs_getcwd(struct uio *uio)
+int vfs_getcwd(struct uio *uio)
 {
-	(void) uio;
-	assert(-1);
-	return -1;
+    (void) uio;
+    assert(-1);
+    return -1;
 }

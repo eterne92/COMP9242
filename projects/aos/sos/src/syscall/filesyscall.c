@@ -188,7 +188,7 @@ void *_sys_stat(proc *cur_proc)
     }
     struct vnode *vn;
     printf("got str is %s\n", str);
-    if(strcmp("..", str) == 0){
+    if (strcmp("..", str) == 0) {
         str[1] = 0;
     }
     result = vfs_lookup(str, &vn);

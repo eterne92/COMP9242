@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,12 +47,12 @@ struct device {
     blkcnt_t d_blocks;
     blksize_t d_blocksize;
     dev_t d_devnumber;    /* serial number for this device */
-    void *d_data; 		  /* device-specific data */
+    void *d_data;         /* device-specific data */
 };
 
 /*
  * Device operations.
- * 
+ *
  * devop_eachopen - called on each open call to allow denying the open
  * devop_io - for both reads and writes (the uio indicates the direction)
  * devop_ioctl - miscellaneous control operations

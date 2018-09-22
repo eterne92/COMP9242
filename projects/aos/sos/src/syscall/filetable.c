@@ -220,7 +220,7 @@ int filetable_place(struct filetable *ft, struct openfile *file, int *fd_ret)
  * potentially handy.
  */
 void filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
-    struct openfile **oldfile_ret)
+                       struct openfile **oldfile_ret)
 {
     assert(filetable_okfd(ft, fd));
 

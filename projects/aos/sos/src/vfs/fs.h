@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,8 +40,8 @@ struct vnode; /* in vnode.h */
  */
 
 struct fs {
-	void *fs_data;
-	const struct fs_ops *fs_ops;
+    void *fs_data;
+    const struct fs_ops *fs_ops;
 };
 
 /*
@@ -70,10 +70,10 @@ struct fs {
  * filesystem should have been discarded/released.
  */
 struct fs_ops {
-	int           (*fsop_sync)(struct fs *);
-	const char   *(*fsop_getvolname)(struct fs *);
-	int           (*fsop_getroot)(struct fs *, struct vnode **);
-	int           (*fsop_unmount)(struct fs *);
+    int (*fsop_sync)(struct fs *);
+    const char   *(*fsop_getvolname)(struct fs *);
+    int (*fsop_getroot)(struct fs *, struct vnode **);
+    int (*fsop_unmount)(struct fs *);
 };
 
 /*

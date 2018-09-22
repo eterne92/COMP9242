@@ -59,7 +59,8 @@ struct openfile {
 };
 
 /* open a file (args must be kernel pointers; destroys filename) */
-int openfile_open(char *filename, int openflags, mode_t mode, struct openfile **ret);
+int openfile_open(char *filename, int openflags, mode_t mode,
+                  struct openfile **ret);
 
 /* adjust the refcount on an openfile */
 void openfile_incref(struct openfile *);

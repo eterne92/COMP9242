@@ -75,7 +75,7 @@ static void openfile_destroy(struct openfile *file)
  * Open a file (with vfs_open) and wrap it in an openfile object.
  */
 int openfile_open(char *filename, int openflags, mode_t mode,
-    struct openfile **ret)
+                  struct openfile **ret)
 {
     struct vnode *vn;
     struct openfile *file;

@@ -86,6 +86,6 @@ void filetable_put(struct filetable *ft, int fd, struct openfile *file);
 
 int filetable_place(struct filetable *ft, struct openfile *file, int *fd);
 void filetable_placeat(struct filetable *ft, struct openfile *newfile, int fd,
-    struct openfile **oldfile_ret);
+                       struct openfile **oldfile_ret);
 
 #endif /* _FILETABLE_H_ */

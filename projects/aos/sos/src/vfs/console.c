@@ -107,8 +107,10 @@ static void putchar_to_user(void)
         } else {
             sos_vaddr = uio->vaddr;
         }
-        *(char *)sos_vaddr = c = the_console->console_buffer[the_console->cs_gotchars_head];
-        the_console->cs_gotchars_head = (the_console->cs_gotchars_head + 1) % BUFFER_SIZE;
+        *(char *)sos_vaddr = c =
+                                 the_console->console_buffer[the_console->cs_gotchars_head];
+        the_console->cs_gotchars_head = (the_console->cs_gotchars_head + 1) %
+                                        BUFFER_SIZE;
         --the_console->n;
         --uio->uio_resid;
         if (uio->uio_resid == 0) {
@@ -142,7 +144,7 @@ static void read_handler(struct serial *serial, char c)
 static int con_io(struct device *dev, struct uio *uio)
 {
     int nbytes = 0, count;
-    
+
     size_t n = PAGE_SIZE_4K - (uio->vaddr & PAGE_MASK_4K);
     if (uio->uio_resid < n) {
         n = uio->uio_resid;

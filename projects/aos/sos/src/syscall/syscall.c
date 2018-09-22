@@ -195,7 +195,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
 
         /* set proc as badge */
         proc *cur_proc = get_cur_proc();
-        
+
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
         seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
@@ -245,8 +245,10 @@ NORETURN void syscall_loop(seL4_CPtr ep)
 }
 
 
-void *_sys_handle_page_fault(proc *cur_proc){
-    seL4_Error err = handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr), seL4_GetMR(seL4_VMFault_FSR));
+void *_sys_handle_page_fault(proc *cur_proc)
+{
+    seL4_Error err = handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr),
+                                       seL4_GetMR(seL4_VMFault_FSR));
     if (err) {
         /* we will deal with this later */
         ZF_LOGF_IFERR(err, "Segment fault");

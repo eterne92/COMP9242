@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,22 +44,22 @@ struct nfs_context;
  */
 
 struct nfs_vnode {
-	struct vnode nv_v;		/* abstract vnode structure */
-	struct nfsfh *handle;		/* file handle */
-	char filename[NAME_MAX + 1];
-	int lock;
+    struct vnode nv_v;      /* abstract vnode structure */
+    struct nfsfh *handle;       /* file handle */
+    char filename[NAME_MAX + 1];
+    int lock;
 };
 
 struct nfs_fs {
-	struct fs nfs_fsdata;		/* abstract filesystem structure */
-	struct nfs_context *context;
-	struct vnodearray *nfs_vnodes;	/* table of loaded vnodes */
+    struct fs nfs_fsdata;       /* abstract filesystem structure */
+    struct nfs_context *context;
+    struct vnodearray *nfs_vnodes;  /* table of loaded vnodes */
 };
 
 struct nfs_cb {
-	struct nfsfh *handle;
-	void *data;
-	int status;
+    struct nfsfh *handle;
+    void *data;
+    int status;
 };
 
 

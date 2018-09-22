@@ -131,7 +131,6 @@ static int _nfs_reclaim(struct vnode *v)
     struct nfs_cb cb;
     unsigned ix, i, num;
     int result;
-
     cb.status = 0;
     cb.handle = nv->handle;
 
@@ -166,7 +165,6 @@ static int _nfs_reclaim(struct vnode *v)
     while (cb.handle != NULL) {
         yield(NULL);
     }
-
     if (cb.status != 0) {
         return cb.status;
     }
@@ -196,12 +194,14 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
+    int aborted = 0;
     seL4_Error err;
     assert(uio->uio_rw == UIO_READ);
 
     while (nv->lock == 1) {
-        yield(NULL);
+        aborted = yield(NULL);
     }
+    if (aborted) return -1;
     nv->lock = 1;
 
     /* read frame by frame */
@@ -241,10 +241,10 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data) {
-            yield(NULL);
+            aborted += (int)yield(NULL);
         }
         /* callback got sth wrong */
-        if (cb.status < 0) {
+        if (aborted || cb.status < 0) {
             nv->lock = 0;
             return cb.status;
         }
@@ -328,12 +328,14 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
+    int aborted = 0;
     seL4_Word err;
     assert(uio->uio_rw == UIO_WRITE);
 
     while (nv->lock == 1) {
-        yield(NULL);
+        aborted = yield(NULL);
     }
+    if (aborted) return -1;
     nv->lock = 1;
 
     /* read frame by frame */
@@ -376,10 +378,10 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data != NULL) {
-            yield(NULL);
+            aborted += (int)yield(NULL);
         }
         /* callback got sth wrong */
-        if (cb.status < 0) {
+        if (aborted || cb.status < 0) {
             // printf("lock release\n");
             nv->lock = 0;
             return cb.status;
@@ -452,7 +454,6 @@ static int _nfs_stat(struct vnode *v, struct stat *statbuf)
     while (cb.status > 0) {
         yield(NULL);
     }
-
     if (cb.status != 0) {
         return cb.status;
     }
@@ -847,7 +848,6 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     struct nfs_vnode *nv;
     unsigned i, num;
     int result;
-
     struct nfs_fs *nf = root->vn_fs->fs_data;
 
     num = vnodearray_num(nf->nfs_vnodes);
@@ -889,6 +889,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     while (cb.handle == NULL && cb.status == 0) {
         yield(NULL);
     }
+
     printf("nfs open done\n");
 
     /* something wrong with open callback */

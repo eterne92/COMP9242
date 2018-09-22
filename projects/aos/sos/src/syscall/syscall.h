@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sel4/sel4.h>
-/* 
+/*
  * our new syscall
  */
 
@@ -26,7 +26,7 @@ typedef struct proc proc;
 #define SOS_SYS_STAT                4
 #define SOS_SYS_GET_DIRDENTS        5
 #define SOS_SYS_MY_ID               6
-#define SOS_SYS_PROCESS_CREATE      7   
+#define SOS_SYS_PROCESS_CREATE      7
 #define SOS_SYS_PROCESS_DELETE      8
 #define SOS_SYS_PROCESS_STATUS      9
 #define SOS_SYS_PROCESS_WAIT        10

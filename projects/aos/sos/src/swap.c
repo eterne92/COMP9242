@@ -6,13 +6,13 @@
 #include "vfs/uio.h"
 #include <fcntl.h>
 #include <sel4/sel4.h>
-
+#include <picoro/picoro.h>
 
 static struct vnode *swap_file = NULL;
 static unsigned header = 0;
 static unsigned tail = 0;
 static unsigned clock_hand;
-
+static int swap_lock = 0;
 
 void initialize_swapping_file(void)
 {
@@ -55,10 +55,19 @@ seL4_Error try_swap_out(void)
     struct uio u_uio;
     struct uio k_uio;
     unsigned tmp = 0;
+    int aborted = 0;
+    int result = 0;
     // still need to figure out the actual size of all the frames
     // no need to go all the way down to the length since many of them
     // have already been retyped into page table object or thread control block
     unsigned size = frame_table.max;
+    while(swap_lock == 1) {
+        aborted = yield(NULL);
+    }
+    if (aborted) {
+        swap_lock = 0;
+        return seL4_IllegalOperation;
+    }
     // go through the frame table to find the victim
     for (unsigned j = first_available_frame; j < size * 2; ++j) {
         if (clock_hand == frame_table.max - 1u) {
@@ -83,13 +92,19 @@ seL4_Error try_swap_out(void)
                 // printf("victim's cap is %d\n", frame_table.frames[clock_hand].ut->cap);
                 file_offset = header * PAGE_SIZE_4K;
                 if (swap_file == NULL) {
-                    seL4_Word tmp = 'c';
-                    vfs_open("swapping", O_RDWR, 0666, &swap_file);
-
+                    seL4_Word tmp = 1;
+                    result = vfs_open("swapping", O_RDWR, 0666, &swap_file);
+                    if (result) {
+                        swap_lock = 0;
+                        return seL4_IllegalOperation;
+                    }
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), 0, UIO_WRITE);
-                    VOP_WRITE(swap_file, &k_uio);
+                    result = VOP_WRITE(swap_file, &k_uio);
+                    if (result) {
+                        swap_lock = 0;
+                        return seL4_IllegalOperation;
+                    }
                 }
-
 
                 if (header == tail) {
                     tail++;
@@ -97,7 +112,11 @@ seL4_Error try_swap_out(void)
                 } else {
                     // read the free list header from the swapping file
                     uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), file_offset, UIO_READ);
-                    int ret = VOP_READ(swap_file, &k_uio);
+                    result = VOP_READ(swap_file, &k_uio);
+                    if (result) {
+                        swap_lock = 0;
+                        return seL4_IllegalOperation;
+                    }
                     header = tmp;
                 }
 
@@ -107,15 +126,13 @@ seL4_Error try_swap_out(void)
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
                           file_offset, UIO_WRITE);
-                // printf("uio: %p, sos_vaddr %p,offset %ld, swap_file %p\n",
-                //             k_uio, k_uio.vaddr, k_uio.uio_offset, swap_file);
-                VOP_WRITE(swap_file, &k_uio);
-                // printf("WRITE DONE\n");
 
-
-
+                result = VOP_WRITE(swap_file, &k_uio);
+                if (result) {
+                        swap_lock = 0;
+                        return seL4_IllegalOperation;
+                    }
                 // free the frame
-
                 frame_free(clock_hand);
                 err = seL4_NoError;
                 clock_hand++;

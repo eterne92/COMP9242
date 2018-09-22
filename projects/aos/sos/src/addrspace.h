@@ -23,6 +23,8 @@ enum OPERATION {
 #define RG_X (1 << 0)
 #define RG_OLD (1 << 4)
 
+typedef struct proc proc;
+
 typedef struct as_region
 {
     struct as_region *next;

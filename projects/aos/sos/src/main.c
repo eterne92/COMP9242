@@ -141,46 +141,14 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     uintptr_t stack_top = USERSTACKTOP;
     uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
     /* virtual addresses in the SOS's address space */
-    void *local_stack_top = (seL4_Word *)SOS_SCRATCH;
-    uintptr_t local_stack_bottom = SOS_SCRATCH - PAGE_SIZE_4K;
+    uintptr_t local_stack_bottom = (uintptr_t)(get_frame_from_vaddr(tty_test_process.pt, stack_bottom) * PAGE_SIZE_4K + FRAME_BASE);
+    void *local_stack_top =   (void *) (local_stack_bottom + PAGE_SIZE_4K);
+
 
     /* find the vsyscall table */
     uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall", NULL));
     if (sysinfo == 0) {
         ZF_LOGE("could not find syscall table for c library");
-        return 0;
-    }
-
-    /* Map in the stack frame for the user app */
-    // err = map_frame(cspace, tty_test_process.stack, tty_test_process.vspace, stack_bottom,
-    //                            seL4_AllRights, seL4_ARM_Default_VMAttributes);
-    // if (err != 0) {
-    //     ZF_LOGE("Unable to map stack for user app");
-    //     return 0;
-    // }
-
-    /* allocate a slot to duplicate the stack frame cap so we can map it into our address space */
-    seL4_CPtr local_stack_cptr = cspace_alloc_slot(cspace);
-    if (local_stack_cptr == seL4_CapNull) {
-        ZF_LOGE("Failed to alloc slot for stack");
-        return 0;
-    }
-
-    /* copy the stack frame cap into the slot */
-    err = cspace_copy(cspace, local_stack_cptr, cspace,
-        get_cap_from_vaddr(tty_test_process.pt, stack_bottom), seL4_AllRights);
-    if (err != seL4_NoError) {
-        cspace_free_slot(cspace, local_stack_cptr);
-        ZF_LOGE("Failed to copy cap");
-        return 0;
-    }
-
-    /* map it into the sos address space */
-    err = map_frame(cspace, local_stack_cptr, local_vspace, local_stack_bottom, seL4_AllRights,
-        seL4_ARM_Default_VMAttributes);
-    if (err != seL4_NoError) {
-        cspace_delete(cspace, local_stack_cptr);
-        cspace_free_slot(cspace, local_stack_cptr);
         return 0;
     }
 
@@ -218,16 +186,6 @@ static uintptr_t init_process_stack(cspace_t *cspace, seL4_CPtr local_vspace, ch
     assert(index % 2 == 0);
     assert(stack_top % (sizeof(seL4_Word) * 2) == 0);
 
-    /* unmap our copy of the stack */
-    err = seL4_ARM_Page_Unmap(local_stack_cptr);
-    assert(err == seL4_NoError);
-
-    /* delete the copy of the stack frame cap */
-    err = cspace_delete(cspace, local_stack_cptr);
-    assert(err == seL4_NoError);
-
-    /* mark the slot as free */
-    cspace_free_slot(cspace, local_stack_cptr);
 
     return stack_top;
 }
@@ -470,71 +428,7 @@ void dummycallback(uint64_t id, void *data)
     register_timer(1000000, &anotherdummycallback, NULL, F, ONE_SHOT);
 }
 
-void frametable_test()
-{
-    /* Allocate 10 pages and make sure you can touch them all */
-    for (int i = 0; i < 10; i++) {
-        /* Allocate a page */
-        seL4_Word vaddr;
-        frame_alloc(&vaddr);
-        assert(vaddr);
 
-        /* Test you can touch the page */
-        *(int *)vaddr = 0x37;
-        assert(*(int *)vaddr == 0x37);
-
-        printf("Page #%d allocated at %p\n", i, (void *)vaddr);
-    }
-
-    printf("TEST 1 past\n");
-
-    /* Test that you never run out of memory if you always free frames. */
-    for (int i = 0; i < 1000000; i++) {
-        /* Allocate a page */
-        seL4_Word vaddr;
-        int page = frame_alloc(&vaddr);
-        assert(vaddr != 0);
-
-        /* Test you can touch the page */
-        *(int *)vaddr = 0x37;
-        assert(*(int *)vaddr == 0x37);
-
-        /* print every 1000 iterations */
-        if (i % 10000 == 0) {
-            printf("Page #%d allocated at %p\n", i, (int *)vaddr);
-        }
-
-        frame_free(page);
-    }
-
-    printf("TEST 2 past\n");
-    /* Test that you eventually run out of memory gracefully,
-   and doesn't crash */
-    // int cnt = 0;
-    // while (true) {
-    //     /* Allocate a page */
-    //     seL4_Word vaddr;
-
-    //     frame_alloc(&vaddr);
-    //     printf("vaddr is %d\n", vaddr);
-    //     if (!vaddr) {
-    //         printf("Out of memory!\n");
-    //         break;
-    //     }
-    //     cnt++;
-
-    //     /* Test you can touch the page */
-    //     *(int *)vaddr = 0x37;
-    //     assert(*(int *)vaddr == 0x37);
-    // }
-
-    // printf("TEST 3 past\n");
-    // /* finally clean up all the memory allocated above */
-    // /* try to free them all */
-    // for (int i = 0; i < cnt; i++) {
-    //     frame_free(first_available_frame + i);
-    // }
-}
 
 NORETURN void *main_continued(UNUSED void *arg)
 {

@@ -123,6 +123,7 @@ static int insert_region(addrspace *as, as_region *region)
         as->regions = region;
     } else {
         as_region *tmp = as->regions;
+        as_region *prev = NULL;
         // check overlap
         while (tmp) {
             // overlap
@@ -130,35 +131,28 @@ static int insert_region(addrspace *as, as_region *region)
                 free(region);
                 return -1;
             }
-            // last region
-            if (tmp->next == NULL) {
-                tmp->next = region;
-                break;
-            }
             // first region
-            else if (vaddr < tmp->vaddr) {
+            if (vaddr < tmp->vaddr) {
                 // check overlap
                 if (vaddr + region->size > tmp->vaddr) {
                     free(region);
                     return -1;
                 }
                 region->next = tmp;
-                as->regions = region;
-                break;
-            }
-            // in the middle
-            // and we are in the right position
-            else if (vaddr < tmp->next->vaddr) {
-                // check overlap
-                if (vaddr + region->size > tmp->next->vaddr) {
-                    free(region);
-                    return -1;
+
+                if(prev == NULL){
+                    as->regions = region;
                 }
-                region->next = tmp->next;
-                tmp->next = region;
+                else{
+                    prev->next = region;
+                }
                 break;
             }
+            prev = tmp;
             tmp = tmp->next;
+        }
+        if(tmp == NULL){
+            prev->next = region;
         }
     }
 

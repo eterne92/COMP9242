@@ -318,7 +318,7 @@ void _sys_munmap(proc *cur_proc)
     while (region) {
         if (region->vaddr == base) {
             cur_proc->as->used_top = region->vaddr + region->size;
-            as_destroy_region(cur_proc->as, region);
+            as_destroy_region(cur_proc->as, region, cur_proc);
             break;
         }
         region = region->next;

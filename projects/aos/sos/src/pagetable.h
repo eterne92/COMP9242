@@ -91,7 +91,7 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
  *
  * return 0 on success
  */
-seL4_Error load_page(seL4_Word offset, seL4_Word vaddr);
+seL4_Error load_page(seL4_Word offset, seL4_Word vaddr, proc *cur_proc);
 
 void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
                         seL4_Word file_offset);
@@ -101,4 +101,4 @@ seL4_Error try_swap_out(void);
 
 void page_table_destroy(page_table_t *table);
 
-void clean_up_swapping(unsigned offset)
+void clean_up_swapping(unsigned offset);

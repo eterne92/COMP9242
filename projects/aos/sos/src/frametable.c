@@ -144,7 +144,7 @@ int frame_alloc(seL4_Word *vaddr)
 
     if(err != seL4_NoError) {
         cspace_delete(global_cspace, frame_cap);
-        cspace_free(global_cspace, frame_cap);
+        cspace_free_slot(global_cspace, frame_cap);
         ut_free(ut, seL4_PageBits);
         return 0;
     }

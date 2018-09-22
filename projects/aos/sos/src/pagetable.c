@@ -132,7 +132,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 if(frame <= 0){
                     return -1;
                 }
-                err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE);
+                err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE, cur_proc);
                 if(err){
                     frame_free(frame);
                     return err;
@@ -231,7 +231,7 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
     int offset = get_offset(vaddr, 4);
     pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
-    seL4_Word cap = get_cap_from_vaddr(table, vaddr);
+    // seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     // printf("cap %d\n", cap);
     // seL4_Error err = seL4_ARM_Page_Unmap(cap);
     // assert(err == 0);

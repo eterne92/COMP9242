@@ -19,12 +19,11 @@ void initialize_swapping_file(void)
     clock_hand = first_available_frame;
 }
 
-seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
+seL4_Error load_page(seL4_Word offset, seL4_Word vaddr, proc *cur_proc)
 {
     int result = 0;
     struct uio u_uio;
     struct uio k_uio;
-    struct proc *cur_proc = get_cur_proc();
     unsigned tmp = 0;
     // printf("load page start\n");
     // printf("%d, vaddr %p\n", offset, vaddr);

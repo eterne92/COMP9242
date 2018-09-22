@@ -94,8 +94,6 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
         if (frame == -1) {
             ZF_LOGE("fail to alloc frame in elf load");
         }
-        seL4_CPtr loadee_frame = frame_table.frames[frame].frame_cap;
-        ut_t *ut = frame_table.frames[frame].ut;
 
         err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace,
                             loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
@@ -118,7 +116,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
         dst += nbytes;
         src += nbytes;
     }
-    return 0;
+    return err;
 }
 
 int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,

@@ -92,8 +92,7 @@ static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
 
 /* set up System V ABI compliant stack, so that the process can
  * start up and initialise the C library */
-static uintptr_t init_process_stack(int pid, cspace_t *cspace,
-                                    seL4_CPtr local_vspace, char *elf_file)
+static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file)
 {
     /* Create a stack frame */
     seL4_Error err;
@@ -283,8 +282,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     /* set up the stack */
     as_define_stack(process->as);
-    seL4_Word sp = init_process_stack(pid,global_cspace, seL4_CapInitThreadVSpace,
-                                      elf_base);
+    seL4_Word sp = init_process_stack(pid, global_cspace, elf_base);
 
     /* load the elf image from the cpio file */
     err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base);

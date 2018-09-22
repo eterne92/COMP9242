@@ -19,17 +19,16 @@ void initialize_swapping_file(void)
     clock_hand = first_available_frame;
 }
 
-seL4_Error load_page(seL4_Word offset, seL4_Word vaddr, proc *cur_proc)
+seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
 {
     int result = 0;
-    struct uio u_uio;
     struct uio k_uio;
     unsigned tmp = 0;
     // printf("load page start\n");
     // printf("%d, vaddr %p\n", offset, vaddr);
     offset = offset - 1;
-    uio_kinit(&u_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
-    result = VOP_READ(swap_file, &u_uio);
+    uio_kinit(&k_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
+    result = VOP_READ(swap_file, &k_uio);
     if (result) {
         return result;
     }
@@ -50,8 +49,6 @@ seL4_Error try_swap_out(void)
     seL4_Error err = seL4_NotEnoughMemory;
     struct proc *process;
     seL4_Word file_offset = 0;
-    page_table_entry entry;
-    struct uio u_uio;
     struct uio k_uio;
     unsigned tmp = 0;
     int aborted = 0;

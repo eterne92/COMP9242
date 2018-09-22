@@ -199,7 +199,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     assert(uio->uio_rw == UIO_READ);
 
     while (nv->lock == 1) {
-        aborted = yield(NULL);
+        aborted = (int *)yield(NULL);
     }
     if (aborted) return -1;
     nv->lock = 1;
@@ -241,7 +241,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data) {
-            aborted += (int)yield(NULL);
+            aborted += (int *)yield(NULL);
         }
         /* callback got sth wrong */
         if (aborted || cb.status < 0) {
@@ -333,7 +333,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
     assert(uio->uio_rw == UIO_WRITE);
 
     while (nv->lock == 1) {
-        aborted = yield(NULL);
+        aborted = (int *)yield(NULL);
     }
     if (aborted) return -1;
     nv->lock = 1;
@@ -378,7 +378,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data != NULL) {
-            aborted += (int)yield(NULL);
+            aborted += (int *)yield(NULL);
         }
         /* callback got sth wrong */
         if (aborted || cb.status < 0) {

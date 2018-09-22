@@ -91,7 +91,7 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
  *
  * return 0 on success
  */
-seL4_Error load_page(seL4_Word offset, seL4_Word vaddr, proc *cur_proc);
+seL4_Error load_page(seL4_Word offset, seL4_Word vaddr);
 
 void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
                         seL4_Word file_offset);

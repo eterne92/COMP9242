@@ -51,7 +51,7 @@ seL4_Error try_swap_out(void)
     seL4_Word file_offset = 0;
     struct uio k_uio;
     unsigned tmp = 0;
-    int aborted = 0;
+    void *aborted = 0;
     int result = 0;
     // still need to figure out the actual size of all the frames
     // no need to go all the way down to the length since many of them

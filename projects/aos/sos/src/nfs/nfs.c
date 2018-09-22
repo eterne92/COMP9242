@@ -194,12 +194,12 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
-    int aborted = 0;
+    void *aborted = 0;
     seL4_Error err;
     assert(uio->uio_rw == UIO_READ);
 
     while (nv->lock == 1) {
-        aborted = (int *)yield(NULL);
+        aborted = yield(NULL);
     }
     if (aborted) return -1;
     nv->lock = 1;
@@ -241,7 +241,7 @@ static int _nfs_read(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data) {
-            aborted += (int *)yield(NULL);
+            aborted += (seL4_Word)yield(NULL);
         }
         /* callback got sth wrong */
         if (aborted || cb.status < 0) {
@@ -328,12 +328,12 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
     struct nfs_fs *nf = v->vn_fs->fs_data;
     struct nfs_cb cb;
     int result;
-    int aborted = 0;
+    void *aborted = 0;
     seL4_Word err;
     assert(uio->uio_rw == UIO_WRITE);
 
     while (nv->lock == 1) {
-        aborted = (int *)yield(NULL);
+        aborted = yield(NULL);
     }
     if (aborted) return -1;
     nv->lock = 1;
@@ -378,7 +378,7 @@ static int _nfs_write(struct vnode *v, struct uio *uio)
         }
         /* wait until callback done */
         while (cb.data != NULL) {
-            aborted += (int *)yield(NULL);
+            aborted += (seL4_Word)yield(NULL);
         }
         /* callback got sth wrong */
         if (aborted || cb.status < 0) {

@@ -81,7 +81,6 @@ cspace_t *global_cspace = &cspace;
 extern struct serial *serial;
 
 /* the one process we start */
-static proc tty_test_process;
 
 
 
@@ -472,7 +471,7 @@ NORETURN void *main_continued(UNUSED void *arg)
 
     struct as_region *region = cur_proc->as->regions;
     while(region != NULL){
-        printf("region start %p, size %ld\n", region->vaddr, region->size);
+        printf("region start %p, size %ld\n", (void *)region->vaddr, region->size);
         region = region->next;
     }
 

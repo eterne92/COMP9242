@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sel4/sel4.h>
+#include <utils/util.h>
 /*
  * our new syscall
  */
@@ -39,7 +40,7 @@ typedef struct proc proc;
 
 
 void run_coroutine(void *arg);
-void syscall_loop(seL4_CPtr ep);
+NORETURN void syscall_loop(seL4_CPtr ep);
 void handle_syscall(seL4_Word badge, int num_args);
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);

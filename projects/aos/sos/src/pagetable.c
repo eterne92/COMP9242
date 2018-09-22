@@ -221,7 +221,7 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr)
     if (frame & PRESENT) {
         frame = (int) frame;
         return (FRAME_BASE + frame * PAGE_SIZE_4K) + (vaddr & PAGE_MASK_4K);
-    } 
+    }
     return 0;
 }
 

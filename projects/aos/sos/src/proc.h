@@ -54,4 +54,4 @@ proc *get_cur_proc(void);
 
 proc *get_process(int pid);
 
-bool start_process(char *app_name, seL4_CPtr ep);
+bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid);

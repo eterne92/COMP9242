@@ -196,7 +196,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
  * TODO: avoid leaking memory once you implement real processes, otherwise a user
  *       can force your OS to run out of memory by creating lots of failed processes.
  */
-bool start_first_process(char *app_name, seL4_CPtr ep)
+bool start_first_process(char *app_name, seL4_CPtr ep, pid_t *pid)
 {
     // int frame;
     // /* Create a VSpace */
@@ -333,7 +333,7 @@ bool start_first_process(char *app_name, seL4_CPtr ep)
     // _sys_do_open(&tty_test_process, "console", 1);
     // _sys_do_open(&tty_test_process, "console", 1);
     // return err == seL4_NoError;
-    return start_process(app_name, ep);
+    return start_process(app_name, ep, pid);
 }
 
 /* Allocate an endpoint and a notification object for sos.
@@ -463,12 +463,14 @@ NORETURN void *main_continued(UNUSED void *arg)
     // frametable_test();
     /* Start the user application */
     printf("Start first process\n");
-    bool success = start_first_process(TTY_NAME, ipc_ep);
+    pid_t pid;
+    bool success = start_first_process(TTY_NAME, ipc_ep, &pid);
     ZF_LOGF_IF(!success, "Failed to start first process");
 
-    set_cur_proc(&tty_test_process);
+    proc *cur_proc = get_process(pid);
+    set_cur_proc(cur_proc);
 
-    struct as_region *region = tty_test_process.as->regions;
+    struct as_region *region = cur_proc->as->regions;
     while(region != NULL){
         printf("region start %p, size %ld\n", region->vaddr, region->size);
         region = region->next;

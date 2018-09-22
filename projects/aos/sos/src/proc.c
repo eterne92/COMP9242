@@ -6,8 +6,8 @@
 #include <cspace/cspace.h>
 #include <aos/sel4_zf_logif.h>
 #include <aos/debug.h>
-#include <elf/elf.h>
 #include <stdbool.h>
+#include "elfload.h"
 #include "mapping.h"
 #include "pagetable.h"
 #include "syscall/filetable.h"
@@ -51,7 +51,7 @@ proc *get_process(int pid)
 {
     if (pid < 0 || pid > 32)
         return NULL;
-    return &process_array[pid - 1];
+    return &process_array[pid];
 }
 
 /* helper to allocate a ut + cslot, and retype the ut into the cslot */
@@ -167,7 +167,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace,
  * TODO: avoid leaking memory once you implement real processes, otherwise a user
  *       can force your OS to run out of memory by creating lots of failed processes.
  */
-bool start_process(char *app_name, seL4_CPtr ep)
+bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 {
     int frame;
     int pid = get_next_available_pid();
@@ -310,5 +310,6 @@ bool start_process(char *app_name, seL4_CPtr ep)
     _sys_do_open(process, "console", 1);
     _sys_do_open(process, "console", 1);
     _sys_do_open(process, "console", 1);
+    *ret_pid = pid;
     return err == seL4_NoError;
 }

@@ -119,6 +119,8 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 // map it
                 err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+                // update process_status->size
+                ++cur_proc->size;
             } else if (frame & PRESENT) {
                 /* the page is still there */
                 frame = frame & OFFSET;

@@ -53,3 +53,5 @@ void set_cur_proc(proc *p);
 proc *get_cur_proc(void);
 
 proc *get_process(unsigned pid);
+
+bool start_process(char *app_name, seL4_CPtr ep);

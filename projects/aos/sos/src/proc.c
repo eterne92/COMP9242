@@ -77,10 +77,8 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace,
     uintptr_t stack_top = USERSTACKTOP;
     uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
     /* virtual addresses in the SOS's address space */
-    uintptr_t local_stack_bottom = (uintptr_t)(get_frame_from_vaddr(process->pt,
-                                   stack_bottom)
-                                   * PAGE_SIZE_4K
-                                   + FRAME_BASE);
+    int offset = get_frame_from_vaddr(process->pt, stack_bottom) * PAGE_SIZE_4K;
+    uintptr_t local_stack_bottom = (uintptr_t)(offset + FRAME_BASE);
     void *local_stack_top = (void *)(local_stack_bottom + PAGE_SIZE_4K);
 
     /* find the vsyscall table */

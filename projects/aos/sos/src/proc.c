@@ -11,6 +11,7 @@
 #include "mapping.h"
 #include "pagetable.h"
 #include "syscall/filetable.h"
+#include <picoro/picoro.h>
 
 #define SIZE 32
 
@@ -23,6 +24,7 @@
 proc process_array[SIZE];
 
 static int available_pid = 0;
+static int kill_lock = 0;
 
 static int get_next_available_pid(void)
 {
@@ -315,6 +317,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
 void kill_process(int pid)
 {
+    while (kill_lock) yield(NULL);
     proc *process = get_process(pid);
     if (!process) return;
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
@@ -337,4 +340,5 @@ void kill_process(int pid)
         }
     }
     process->state = DEAD;
+    kill_lock = 0;
 }

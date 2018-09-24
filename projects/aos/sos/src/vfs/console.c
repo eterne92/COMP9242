@@ -70,6 +70,7 @@ static int con_eachopen(struct device *dev, int openflags)
     (void)dev;
     int how = openflags & O_ACCMODE;
     printf("how : %d\n", how);
+    printf("proc is %p\n", console.proc);
     // only one process could open console in read mode
     if (how == O_RDONLY || how == O_RDWR) {
         if (console.proc == NULL) {
@@ -216,12 +217,12 @@ static int con_ioctl(struct device *dev, int op, const void *data)
 static int con_reclaim(struct device *dev)
 {
     struct con_softc *cs = (struct con_softc *)dev->d_data;
-    proc *proc = get_cur_proc();
-    if (proc == cs->proc) {
-        cs->vaddr = cs->n = cs->cs_gotchars_head = cs->cs_gotchars_tail = 0;
-        cs->uio = NULL;
-        cs->proc = NULL;
-    }
+    // proc *proc = get_cur_proc();
+    // if (proc == cs->proc) {
+    cs->vaddr = cs->n = cs->cs_gotchars_head = cs->cs_gotchars_tail = 0;
+    cs->uio = NULL;
+    cs->proc = NULL;
+    // }
     return 0;
 }
 

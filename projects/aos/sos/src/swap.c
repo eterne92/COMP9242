@@ -85,7 +85,6 @@ seL4_Error try_swap_out(void)
                 cspace_delete(global_cspace, cap);
                 cspace_free_slot(global_cspace, cap);
             } else {
-                printf("pid is %d\n", pid);
                 // victim found
                 // printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
                 // printf("victim's cap is %d\n", frame_table.frames[clock_hand].ut->cap);

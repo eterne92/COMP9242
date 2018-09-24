@@ -92,10 +92,14 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         }
         else if (!(frame & PRESENT)) {
             clean_up_swapping(frame & OFFSET);
-        } else if (frame != 0) {
-            seL4_ARM_Page_Unmap(slot);
-            cspace_delete(global_cspace, slot);
-            cspace_free_slot(global_cspace, slot);
+        } else if (frame != 0 && slot != 0) {
+            frame = (int) frame;
+            int clock_bit = FRAME_GET_BIT(frame, CLOCK);
+            if(clock_bit){
+                seL4_ARM_Page_Unmap(slot);
+                cspace_delete(global_cspace, slot);
+                cspace_free_slot(global_cspace, slot);
+            }
             frame_free(frame);
         }
     }

@@ -173,6 +173,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     if (pid == -1)
         return false;
     proc *process = &process_array[pid];
+    process->pid = pid;
     /* Create a VSpace */
     process->vspace_ut = alloc_retype(&(process->vspace),
                                       seL4_ARM_PageGlobalDirectoryObject, seL4_PGDBits);
@@ -308,7 +309,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
     process->size = 0;
-    process->pid = pid;
     process->waiting_list = 0;
     process->stime = (unsigned)timestamp_us(timestamp_get_freq());
     strcpy(process->command, app_name);
@@ -323,7 +323,7 @@ void kill_process(int pid)
     if (!process) return;
 
     printf("try suspend\n");
-    // if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
+    if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
     process->state = INACTIVE;
 
     printf("try destroy regions\n");

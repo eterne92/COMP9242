@@ -116,7 +116,6 @@ void *_sys_open(proc *cur_proc)
         return NULL;
     }
     char str[NAME_MAX + 1];
-    printf("try copy in\n");
     int path_length = copystr(cur_proc, (char *)path, str, NAME_MAX + 1, COPYIN);
     if (path_length == -1) {
         syscall_reply(cur_proc->reply, ret, -1);

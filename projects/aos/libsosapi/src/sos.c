@@ -106,7 +106,6 @@ int sos_stat(const char *path, sos_stat_t *buf)
 
 pid_t sos_process_create(const char *path)
 {
-    assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 2);

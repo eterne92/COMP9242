@@ -171,6 +171,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 {
     int frame;
     int pid = get_next_available_pid();
+    *ret_pid = pid;
     if (pid == -1)
         return false;
     proc *process = &process_array[pid];
@@ -308,15 +309,14 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* open stdin, stdout, stderr */
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
-    *ret_pid = pid;
     return err == seL4_NoError;
 }
 
 void kill_process(int pid)
 {
     proc *process = get_process(pid);
-    if (!prcess) return;
-    destroy_regions(process->as);
+    if (!process) return;
+    destroy_regions(process->as, process);
     destroy_page_table(process->pt);
     filetable_destroy(process->openfile_table);
     cspace_destroy(&process->cspace);

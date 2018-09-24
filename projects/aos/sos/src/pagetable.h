@@ -1,6 +1,5 @@
 #pragma once
 
-#include "proc.h"
 #include "ut.h"
 #include <sel4/sel4.h>
 #include <stdbool.h>
@@ -16,6 +15,8 @@
 #define PAGE_FRAME 0xfffffffffffff000
 
 typedef struct page_table page_table_t;
+typedef struct proc proc;
+
 
 typedef struct page_table_entry {
     seL4_CPtr slot;

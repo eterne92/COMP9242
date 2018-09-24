@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <clock/clock.h>
 #include "../network.h"
+#include "../vfs/uio.h"
 
 typedef  void *(*coro_t)(void *);
 cspace_t *global_cspace;
@@ -177,6 +178,13 @@ void handle_syscall(seL4_Word badge, int num_args)
         _sys_munmap(cur_proc);
         break;
 
+    case SOS_SYS_PROCESS_CREATE:{
+        coro c = coroutine((coro_t)_sys_create_process);
+        resume(c, cur_proc);
+        create_coroutine(c);
+        break;
+    }
+
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
@@ -322,4 +330,28 @@ void _sys_munmap(proc *cur_proc)
         ret = 0;
     }
     syscall_reply(cur_proc->reply, ret, 0);
+}
+
+void *_sys_create_process(proc *cur_proc){
+    seL4_Word path = seL4_GetMR(1);
+    char app_name[N_NAME];
+    int ret_pid;
+
+    int path_length = copystr(cur_proc, (char *)path, app_name, N_NAME, COPYIN);
+    if (path_length == -1) {
+        syscall_reply(cur_proc->reply, -1, -1);
+        return NULL;
+    }
+
+    bool success = start_process(app_name, ipc_ep, &ret_pid);
+    if(!success){
+        if(ret_pid == -1){
+            syscall_reply(cur_proc->reply, -1, -1);
+            return NULL;           
+        }
+        else{
+            kill_process(ret_pid);
+        }
+    }
+    return NULL;
 }

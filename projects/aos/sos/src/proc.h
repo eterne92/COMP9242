@@ -24,7 +24,7 @@ typedef struct proc {
     cspace_t cspace;
     page_table_t *pt;
     addrspace *as;
-    seL4_CPtr reply;
+   seL4_CPtr reply;
     filetable *openfile_table;
     int     pid;
     unsigned  size;            /* in pages */
@@ -37,6 +37,8 @@ typedef struct proc {
 extern cspace_t *global_cspace;
 
 extern proc *cur_proc;
+
+extern seL4_CPtr ipc_ep;
 
 /* The linker will link this symbol to the start address  *
  * of an archive of attached applications.                */
@@ -51,3 +53,4 @@ proc *get_cur_proc(void);
 proc *get_process(int pid);
 
 bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid);
+void kill_process(int pid);

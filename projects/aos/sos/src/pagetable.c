@@ -2,6 +2,7 @@
 #include "addrspace.h"
 #include "frametable.h"
 #include "mapping.h"
+#include "proc.h"
 
 
 #define PRESENT (1lu << 50)
@@ -242,7 +243,7 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
     // cspace_free_slot(global_cspace, cap);
 }
 
-void page_table_destroy(page_table_t *table)
+void destroy_page_table(page_table_t *table)
 {
 
     page_table_cap *caps_1 = get_page_table_cap((seL4_Word)table);

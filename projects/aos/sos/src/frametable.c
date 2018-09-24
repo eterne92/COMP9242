@@ -1,6 +1,7 @@
 #include "frametable.h"
 #include "mapping.h"
 #include "pagetable.h"
+#include "proc.h"
 #include <stdlib.h>
 
 #define UNTYPE_MEMEORY 0x1

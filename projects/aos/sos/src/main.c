@@ -80,6 +80,8 @@ cspace_t *global_cspace = &cspace;
 /* serial */
 extern struct serial *serial;
 
+seL4_CPtr ipc_ep;
+
 /* the one process we start */
 
 
@@ -197,141 +199,6 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
  */
 bool start_first_process(char *app_name, seL4_CPtr ep, pid_t *pid)
 {
-    // int frame;
-    // /* Create a VSpace */
-    // tty_test_process.vspace_ut = alloc_retype(&tty_test_process.vspace, seL4_ARM_PageGlobalDirectoryObject,
-    //     seL4_PGDBits);
-    // if (tty_test_process.vspace_ut == NULL) {
-    //     return false;
-    // }
-
-    // /* assign the vspace to an asid pool */
-    // seL4_Word err = seL4_ARM_ASIDPool_Assign(seL4_CapInitThreadASIDPool, tty_test_process.vspace);
-    // if (err != seL4_NoError) {
-    //     ZF_LOGE("Failed to assign asid pool");
-    //     return false;
-    // }
-
-    // /* create addrspace of ttytest */
-    // tty_test_process.as = addrspace_init();
-    // if (!tty_test_process.as) {
-    //     ZF_LOGE("Failed to create address space");
-    //     return false;
-    // }
-    // /* initialize level 1 shadow page table */
-    // printf("pt\n");
-    // tty_test_process.pt = initialize_page_table();
-    // if (!tty_test_process.pt) {
-    //     ZF_LOGE("Failed to create shadow global page directory");
-    //     return false;
-    // }
-    // /* Create a simple 1 level CSpace */
-    // printf("cspace\n");
-    // err = cspace_create_one_level(global_cspace, &tty_test_process.cspace);
-    // if (err != CSPACE_NOERROR) {
-    //     ZF_LOGE("Failed to create cspace");
-    //     return false;
-    // }
-    
-    // /* Create open file table */
-    // tty_test_process.openfile_table = filetable_create();
-
-    // /* Create an IPC buffer */
-    // printf("ipc\n");
-    // as_define_ipcbuffer(tty_test_process.as);
-    // frame = frame_alloc(NULL);
-    // err = sos_map_frame(global_cspace, frame, (seL4_Word)tty_test_process.pt, tty_test_process.vspace,
-    //     USERIPCBUFFER, seL4_ReadWrite, seL4_ARM_Default_VMAttributes);
-    // // tty_test_process.ipc_buffer_ut = alloc_retype(&tty_test_process.ipc_buffer, seL4_ARM_SmallPageObject,
-    // //                                               seL4_PageBits);
-    // if (err != seL4_NoError) {
-    //     ZF_LOGE("Failed to alloc ipc buffer ut");
-    //     return false;
-    // }
-
-    // /* allocate a new slot in the target cspace which we will mint a badged endpoint cap into --
-    //  * the badge is used to identify the process, which will come in handy when you have multiple
-    //  * processes. */
-    // seL4_CPtr user_ep = cspace_alloc_slot(&tty_test_process.cspace);
-    // if (user_ep == seL4_CapNull) {
-    //     ZF_LOGE("Failed to alloc user ep slot");
-    //     return false;
-    // }
-
-    // /* now mutate the cap, thereby setting the badge */
-    // err = cspace_mint(&tty_test_process.cspace, user_ep, global_cspace, ep, seL4_AllRights, TTY_EP_BADGE);
-    // if (err) {
-    //     ZF_LOGE("Failed to mint user ep");
-    //     return false;
-    // }
-
-    // /* Create a new TCB object */
-    // tty_test_process.tcb_ut = alloc_retype(&tty_test_process.tcb, seL4_TCBObject, seL4_TCBBits);
-    // if (tty_test_process.tcb_ut == NULL) {
-    //     ZF_LOGE("Failed to alloc tcb ut");
-    //     return false;
-    // }
-
-    // /* Configure the TCB */
-    // err = seL4_TCB_Configure(tty_test_process.tcb, user_ep,
-    //     tty_test_process.cspace.root_cnode, seL4_NilData,
-    //     tty_test_process.vspace, seL4_NilData, USERIPCBUFFER,
-    //     get_cap_from_vaddr(tty_test_process.pt, USERIPCBUFFER));
-    // if (err != seL4_NoError) {
-    //     ZF_LOGE("Unable to configure new TCB");
-    //     return false;
-    // }
-
-    // /* Set the priority */
-    // err = seL4_TCB_SetPriority(tty_test_process.tcb, seL4_CapInitThreadTCB, TTY_PRIORITY);
-    // if (err != seL4_NoError) {
-    //     ZF_LOGE("Unable to set priority of new TCB");
-    //     return false;
-    // }
-
-    // /* Provide a name for the thread -- Helpful for debugging */
-    // NAME_THREAD(tty_test_process.tcb, app_name);
-
-    // /* parse the cpio image */
-    // ZF_LOGI("\nStarting \"%s\"...\n", app_name);
-    // unsigned long elf_size;
-    // char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
-    // if (elf_base == NULL) {
-    //     ZF_LOGE("Unable to locate cpio header for %s", app_name);
-    //     return false;
-    // }
-
-    // /* set up the stack */
-    // as_define_stack(tty_test_process.as);
-    // seL4_Word sp = init_process_stack(global_cspace, seL4_CapInitThreadVSpace, elf_base);
-
-    // /* load the elf image from the cpio file */
-    // err = elf_load(global_cspace, seL4_CapInitThreadVSpace, &tty_test_process, elf_base);
-    // if (err) {
-    //     ZF_LOGE("Failed to load elf image");
-    //     return false;
-    // }
-
-    // /* Map in the IPC buffer for the thread */
-    // // err = map_frame(&cspace, tty_test_process.ipc_buffer, tty_test_process.vspace, PROCESS_IPC_BUFFER,
-    // //                 seL4_AllRights, seL4_ARM_Default_VMAttributes);
-    // if (err != 0) {
-    //     ZF_LOGE("Unable to map IPC buffer for user app");
-    //     return false;
-    // }
-
-    // /* Start the new process */
-    // seL4_UserContext context = {
-    //     .pc = elf_getEntryPoint(elf_base),
-    //     .sp = sp,
-    // };
-    // printf("Starting ttytest at %p\n", (void *)context.pc);
-    // err = seL4_TCB_WriteRegisters(tty_test_process.tcb, 1, 0, 2, &context);
-    // ZF_LOGE_IF(err, "Failed to write registers");
-    // _sys_do_open(&tty_test_process, "console", 1);
-    // _sys_do_open(&tty_test_process, "console", 1);
-    // _sys_do_open(&tty_test_process, "console", 1);
-    // return err == seL4_NoError;
     return start_process(app_name, ep, pid);
 }
 
@@ -433,7 +300,7 @@ void dummycallback(uint64_t id, void *data)
 NORETURN void *main_continued(UNUSED void *arg)
 {
     /* Initialise other system compenents here */
-    seL4_CPtr ipc_ep, ntfn;
+    seL4_CPtr ntfn;
     sos_ipc_init(&ipc_ep, &ntfn);
 
     /* run sos initialisation tests */
@@ -463,7 +330,7 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Start the user application */
     printf("Start first process\n");
     pid_t pid;
-    bool success = start_first_process(TTY_NAME, ipc_ep, &pid);
+    bool success = start_first_process(TTY_NAME,ipc_ep, &pid);
     ZF_LOGF_IF(!success, "Failed to start first process");
 
     proc *cur_proc = get_process(pid);

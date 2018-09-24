@@ -49,6 +49,7 @@ typedef struct addrspace {
 
 addrspace *addrspace_init(void);
 void addrspace_destroy(addrspace *as);
+void destroy_regions(addrspace *as, proc *cur_proc);
 as_region *as_define_region(addrspace *as, seL4_Word vaddr, size_t memsize,
                             unsigned char flag);
 void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc);

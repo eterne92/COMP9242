@@ -319,13 +319,27 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 void kill_process(int pid)
 {
     while (kill_lock) yield(NULL);
+    kill_lock = 1;
     proc *process = get_process(pid);
     if (!process) return;
+
+    printf("try suspend\n");
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
+    process->state = INACTIVE;
+
+    printf("try destroy regions\n");
     if (process->as) destroy_regions(process->as, process);
+
+    printf("try destroy pt\n");
     if (process->pt) destroy_page_table(process->pt);
+
+    printf("try destroy ft\n");
     if (process->openfile_table) filetable_destroy(process->openfile_table);
+
+    printf("try destroy cspace\n");
     cspace_destroy(&process->cspace);
+
+    printf("try destroy vspace\n");
     if (process->vspace_ut) {
         ut_free(process->vspace_ut, seL4_PGDBits);
         if (process->vspace != seL4_CapNull) {
@@ -333,6 +347,8 @@ void kill_process(int pid)
             cspace_free_slot(global_cspace, process->vspace);
         }
     }
+
+    printf("try destroy tcb\n");
     if (process->tcb_ut) {
         ut_free(process->tcb_ut, seL4_TCBBits);
         if (process->tcb != seL4_CapNull) {
@@ -340,10 +356,12 @@ void kill_process(int pid)
             cspace_free_slot(global_cspace, process->tcb);
         }
     }
+
     process->state = DEAD;
     process->size = 0;
     process->pid = -1;
     process->waiting_list = 0;
     process->stime = 0;
     kill_lock = 0;
+    printf("all done\n");
 }

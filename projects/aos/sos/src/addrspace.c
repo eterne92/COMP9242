@@ -59,34 +59,43 @@ static int create_region(as_region *region,
 void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
 {
     seL4_Word first_vaddr = region->vaddr & PAGE_FRAME;
-    seL4_Word last_vaddr = (region->vaddr + region->size) & PAGE_FRAME;
+    seL4_Word last_vaddr = (region->vaddr + region->size - 1) & PAGE_FRAME;
 
     /* check first frame */
     as_region *tmp = as->regions;
-    while (tmp) {
-        if (tmp->vaddr + tmp->size > first_vaddr) {
-            if (tmp->vaddr < first_vaddr) {
-                /* region overlapped */
-                /* start from second frame */
-                first_vaddr += PAGE_SIZE_4K;
-            }
-            break;
-        }
-        tmp = tmp->next;
-    }
+    // while (tmp) {
+    //     if (tmp->vaddr + tmp->size > first_vaddr) {
+    //         if (tmp->vaddr < first_vaddr) {
+    //             /* region overlapped */
+    //             /* start from second frame */
+    //             first_vaddr += PAGE_SIZE_4K;
+    //         }
+    //         break;
+    //     }
+    //     tmp = tmp->next;
+    // }
 
     /* check last frame */
-    if ((region->next->vaddr & PAGE_FRAME) == last_vaddr) {
+    if (region->next && (region->next->vaddr & PAGE_FRAME) == last_vaddr) {
         /* last frame overlap */
         last_vaddr -= PAGE_SIZE_4K;
     }
+
+    printf("first %p, last %p\n", first_vaddr, last_vaddr);
+
     for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
+        // printf("destroy %p\n", i);
         seL4_Word frame = _get_frame_from_vaddr(cur_proc->pt, i);
         seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
-        if (frame & PRESENT) {
+        if(frame == 0){
+            continue;
+        }
+        else if (!(frame & PRESENT)) {
             clean_up_swapping(frame & OFFSET);
-        } else if (frame != 0 && slot != 0) {
+        } else if (frame != 0) {
             seL4_ARM_Page_Unmap(slot);
+            cspace_delete(global_cspace, slot);
+            cspace_free_slot(global_cspace, slot);
             frame_free(frame);
         }
     }

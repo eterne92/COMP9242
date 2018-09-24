@@ -37,6 +37,7 @@ void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
     seL4_Send(reply, reply_msg);
     /* Free the slot we allocated for the reply - it is now empty, as the reply
          * capability was consumed by the send. */
+    cspace_delete(global_cspace, reply);
     cspace_free_slot(global_cspace, reply);
 }
 
@@ -377,14 +378,14 @@ void _sys_process_wait(proc *cur_proc)
     if (pid == -1) {
         for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
             if (process_array[pid].state == ACTIVE) {
-                SET_BIT(process_array[pid].waiting_list, pid);
+                SET_BIT(process_array[pid].waiting_list, cur_proc->pid);
             }
         }
     } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
         syscall_reply(cur_proc->reply, 0, 0);
     } else {
         if (process_array[pid].state == ACTIVE) {
-            SET_BIT(process_array[pid].waiting_list, pid);
+            SET_BIT(process_array[pid].waiting_list, cur_proc->pid);
         } else {
             syscall_reply(cur_proc->reply, 0, 0);
         }
@@ -398,18 +399,29 @@ void *_sys_kill_process(proc *cur_proc)
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
+    if(process_array[pid].state == DEAD){
+        syscall_reply(cur_proc->reply, 0, 0);
+        return NULL;
+    }
+
     int waiting_list = get_process(pid)->waiting_list;
+
     kill_process(pid);
+
     proc *p;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         if (GET_BIT(waiting_list, i)) {
+            printf("%d is waiting on %d\n", i, pid);
             p = get_process(i);
             /* clear other processes' waiting list  */
             for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
                 RST_BIT(get_process(j)->waiting_list, i);
             }
-            syscall_reply(p->reply, 0, 0);
+            if(p->state == ACTIVE)
+                syscall_reply(p->reply, 0, 0);
         }
     }
+    if(cur_proc->state == ACTIVE)
+        syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
 }

@@ -216,7 +216,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
 
         /* figure out which cptr to use to retype into*/
         seL4_CPtr slot = cspace_alloc_slot(cspace);
-        ;
+        
         if (slot == seL4_CapNull) {
             ZF_LOGE("No cptr to alloc paging structure");
             err = -1;

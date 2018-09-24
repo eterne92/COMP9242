@@ -70,9 +70,14 @@ int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw)
     if (region == NULL) {
         return -1;
     }
-
+    seL4_Error err;
     seL4_Word left_size = region->vaddr + region->size - (seL4_Word)region->vaddr;
     seL4_Word vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)user);
+    if (!vaddr) {
+        err = handle_page_fault(proc, (seL4_Word)user, 0);
+        if (err != seL4_NoError) return -1;
+        vaddr = get_sos_virtual_address(proc->pt, (seL4_Word)user);
+    }
     seL4_Word top = (vaddr & PAGE_FRAME) + PAGE_SIZE_4K;
     size_t i = 0;
     size_t j = 0;

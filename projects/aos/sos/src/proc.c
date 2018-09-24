@@ -241,7 +241,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         ZF_LOGE("Failed to mint user ep");
         return false;
     }
-
+    process->user_endpoint = user_ep;
     /* Create a new TCB object */
     process->tcb_ut = alloc_retype(&(process->tcb), seL4_TCBObject, seL4_TCBBits);
     if (process->tcb_ut == NULL) {
@@ -335,11 +335,11 @@ void kill_process(int pid)
 
     printf("try destroy ft\n");
     if (process->openfile_table) filetable_destroy(process->openfile_table);
-
-    printf("try destroy cspace\n");
-    cspace_destroy(&process->cspace);
-
-    printf("try destroy vspace\n");
+    if (process->user_endpoint != seL4_CapNull) {
+        cspace_delete(&process->cspace, process->user_endpoint);
+        cspace_free_slot(&process->cspace, process->user_endpoint);
+    }
+    if (process->cspace.bootstrap) cspace_destroy(&process->cspace);
     if (process->vspace_ut) {
         ut_free(process->vspace_ut, seL4_PGDBits);
         if (process->vspace != seL4_CapNull) {

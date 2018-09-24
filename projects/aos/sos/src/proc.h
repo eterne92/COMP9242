@@ -6,6 +6,11 @@
 #include "ut.h"
 
 #define N_NAME 32
+#define PROCESS_ARRAY_SIZE 32
+
+#define GET_BIT(number, bit) (((number) >> (bit)) & 1)
+#define SET_BIT(number, bit) ((number) |= (1 << (bit)))
+#define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
 
 #define GET_BIT(number, bit) (((number) >> (bit)) & 1)
 #define SET_BIT(number, bit) ((number) |= (1 << (bit)))
@@ -27,7 +32,7 @@ typedef struct proc {
     cspace_t cspace;
     page_table_t *pt;
     addrspace *as;
-   seL4_CPtr reply;
+    seL4_CPtr reply;
     filetable *openfile_table;
     int     pid;
     unsigned  size;            /* in pages */

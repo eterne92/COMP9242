@@ -3,6 +3,7 @@
 #include "frametable.h"
 #include "syscall/syscall.h"
 #include <cpio/cpio.h>
+#include <clock/timestamp.h>
 #include <cspace/cspace.h>
 #include <aos/sel4_zf_logif.h>
 #include <aos/debug.h>
@@ -11,21 +12,21 @@
 #include "mapping.h"
 #include "pagetable.h"
 #include "syscall/filetable.h"
-
-#define SIZE 32
+#include <picoro/picoro.h>
+#include <string.h>
 
 #define DEFAULT_PRIORITY (0)
 
-
-proc process_array[SIZE];
+proc process_array[PROCESS_ARRAY_SIZE];
 
 static int available_pid = 0;
+static int kill_lock = 0;
 
 static int get_next_available_pid(void)
 {
     int pid = -1;
-    for (int i = 0; i < SIZE; ++i) {
-        pid = (i + available_pid) % SIZE;
+    for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+        pid = (i + available_pid) % PROCESS_ARRAY_SIZE;
         if (process_array[pid].state == DEAD) {
             available_pid = pid + 1;
             break;
@@ -306,23 +307,37 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* open stdin, stdout, stderr */
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
+    process->state = ACTIVE;
+    process->waiting_list = 0;
+    process->stime = (unsigned)timestamp_us(timestamp_get_freq());
+    strcpy(process->command, app_name);
     return err == seL4_NoError;
 }
 
 void kill_process(int pid)
 {
+    while (kill_lock) yield(NULL);
     proc *process = get_process(pid);
     if (!process) return;
-    destroy_regions(process->as, process);
-    destroy_page_table(process->pt);
-    filetable_destroy(process->openfile_table);
+    if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
+    if (process->as) destroy_regions(process->as, process);
+    if (process->pt) destroy_page_table(process->pt);
+    if (process->openfile_table) filetable_destroy(process->openfile_table);
     cspace_destroy(&process->cspace);
-    cspace_delete(global_cspace, process->tcb);
-    cspace_free_slot(global_cspace, process->tcb);
-    ut_free(process->tcb_ut, seL4_TCBBits);
-    cspace_delete(global_cspace, process->vspace);
-    cspace_free_slot(global_cspace, process->vspace);
-    ut_free(process->vspace_ut, seL4_PGDBits);
+    if (process->vspace_ut) {
+        ut_free(process->vspace_ut, seL4_PGDBits);
+        if (process->vspace != seL4_CapNull) {
+            cspace_delete(global_cspace, process->vspace);
+            cspace_free_slot(global_cspace, process->vspace);
+        }
+    }
+    if (process->tcb_ut) {
+        ut_free(process->tcb_ut, seL4_TCBBits);
+        if (process->tcb != seL4_CapNull) {
+            cspace_delete(global_cspace, process->tcb);
+            cspace_free_slot(global_cspace, process->tcb);
+        }
+    }
     process->state = DEAD;
-    
+    kill_lock = 0;
 }

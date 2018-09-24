@@ -323,7 +323,7 @@ void kill_process(int pid)
     if (!process) return;
 
     printf("try suspend\n");
-    if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
+    // if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
     process->state = INACTIVE;
 
     printf("try destroy regions\n");
@@ -332,14 +332,18 @@ void kill_process(int pid)
     printf("try destroy pt\n");
     if (process->pt) destroy_page_table(process->pt);
 
+
     printf("try destroy ft\n");
     if (process->openfile_table) filetable_destroy(process->openfile_table);
 
     if (process->user_endpoint != seL4_CapNull) {
+        // cspace_revoke(global_cspace, ipc_ep);
         cspace_delete(&process->cspace, process->user_endpoint);
         cspace_free_slot(&process->cspace, process->user_endpoint);
     }
-    if (process->cspace.bootstrap) cspace_destroy(&process->cspace);
+
+    
+
     if (process->vspace_ut) {
         ut_free(process->vspace_ut, seL4_PGDBits);
         if (process->vspace != seL4_CapNull) {
@@ -357,6 +361,8 @@ void kill_process(int pid)
         }
     }
 
+    if (process->cspace.bootstrap) 
+        cspace_destroy(&process->cspace);
     process->state = DEAD;
     process->size = 0;
     process->pid = -1;

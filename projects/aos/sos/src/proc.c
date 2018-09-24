@@ -16,9 +16,9 @@
 
 #define DEFAULT_PRIORITY (0)
 
-#define GET_BIT(X, N) (((X) >> (N)) & 1)
-#define SET_BIT(X, N) ((X) | (1 << (N)))
-#define RST_BIT(X, N) ((X) & ~(1 << (N)))
+#define GET_BIT(number, bit) (((number) >> (bit)) & 1)
+#define SET_BIT(number, bit) ((number) |= (1 << (bit)))
+#define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
 
 proc process_array[SIZE];
 
@@ -73,7 +73,8 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
     }
 
     /* now do the retype */
-    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type, size_bits);
+    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type,
+                                           size_bits);
     ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
         ut_free(ut, size_bits);
@@ -309,4 +310,22 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 2);
     *ret_pid = pid;
     return err == seL4_NoError;
+}
+
+void kill_process(int pid)
+{
+    proc *process = get_process(pid);
+    if (!prcess) return;
+    destroy_regions(process->as);
+    destroy_page_table(process->pt);
+    filetable_destroy(process->openfile_table);
+    cspace_destroy(&process->cspace);
+    cspace_delete(global_cspace, process->tcb);
+    cspace_free_slot(global_cspace, process->tcb);
+    ut_free(process->tcb_ut, seL4_TCBBits);
+    cspace_delete(global_cspace, process->vspace);
+    cspace_free_slot(global_cspace, process->vspace);
+    ut_free(process->vspace_ut, seL4_PGDBits);
+    process->state = DEAD;
+    
 }

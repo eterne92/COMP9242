@@ -24,10 +24,6 @@ typedef struct proc {
     cspace_t cspace;
     page_table_t *pt;
     addrspace *as;
-    ut_t *ipc_buffer_ut;
-    seL4_CPtr ipc_buffer;
-    ut_t *stack_ut;
-    seL4_CPtr stack;
     seL4_CPtr reply;
     filetable *openfile_table;
     int     pid;

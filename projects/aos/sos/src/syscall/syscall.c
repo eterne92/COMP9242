@@ -178,7 +178,7 @@ void handle_syscall(seL4_Word badge, int num_args)
         _sys_munmap(cur_proc);
         break;
 
-    case SOS_SYS_PROCESS_CREATE:{
+    case SOS_SYS_PROCESS_CREATE: {
         coro c = coroutine((coro_t)_sys_create_process);
         resume(c, cur_proc);
         create_coroutine(c);
@@ -332,7 +332,8 @@ void _sys_munmap(proc *cur_proc)
     syscall_reply(cur_proc->reply, ret, 0);
 }
 
-void *_sys_create_process(proc *cur_proc){
+void *_sys_create_process(proc *cur_proc)
+{
     seL4_Word path = seL4_GetMR(1);
     char app_name[N_NAME];
     int ret_pid;
@@ -344,12 +345,11 @@ void *_sys_create_process(proc *cur_proc){
     }
 
     bool success = start_process(app_name, ipc_ep, &ret_pid);
-    if(!success){
-        if(ret_pid == -1){
+    if (!success) {
+        if (ret_pid == -1) {
             syscall_reply(cur_proc->reply, -1, -1);
-            return NULL;           
-        }
-        else{
+            return NULL;
+        } else {
             kill_process(ret_pid);
         }
     }

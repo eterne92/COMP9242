@@ -309,6 +309,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* open stdin, stdout, stderr */
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
+    process->state = ACTIVE;
     return err == seL4_NoError;
 }
 
@@ -316,16 +317,24 @@ void kill_process(int pid)
 {
     proc *process = get_process(pid);
     if (!process) return;
-    destroy_regions(process->as, process);
-    destroy_page_table(process->pt);
-    filetable_destroy(process->openfile_table);
+    if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
+    if (process->as) destroy_regions(process->as, process);
+    if (process->pt) destroy_page_table(process->pt);
+    if (process->openfile_table) filetable_destroy(process->openfile_table);
     cspace_destroy(&process->cspace);
-    cspace_delete(global_cspace, process->tcb);
-    cspace_free_slot(global_cspace, process->tcb);
-    ut_free(process->tcb_ut, seL4_TCBBits);
-    cspace_delete(global_cspace, process->vspace);
-    cspace_free_slot(global_cspace, process->vspace);
-    ut_free(process->vspace_ut, seL4_PGDBits);
+    if (process->vspace_ut) {
+        ut_free(process->vspace_ut, seL4_PGDBits);
+        if (process->vspace != seL4_CapNull) {
+            cspace_delete(global_cspace, process->vspace);
+            cspace_free_slot(global_cspace, process->vspace);
+        }
+    }
+    if (process->tcb_ut) {
+        ut_free(process->tcb_ut, seL4_TCBBits);
+        if (process->tcb != seL4_CapNull) {
+            cspace_delete(global_cspace, process->tcb);
+            cspace_free_slot(global_cspace, process->tcb);
+        }
+    }
     process->state = DEAD;
-    
 }

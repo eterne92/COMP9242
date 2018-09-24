@@ -24,7 +24,7 @@ typedef struct proc {
     cspace_t cspace;
     page_table_t *pt;
     addrspace *as;
-   seL4_CPtr reply;
+    seL4_CPtr reply;
     filetable *openfile_table;
     int     pid;
     unsigned  size;            /* in pages */

@@ -110,9 +110,10 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
     }
 }
 
-void destroy_regions(addrspace *as, proc *cur_proc){
+void destroy_regions(addrspace *as, proc *cur_proc)
+{
     as_region *region = as->regions;
-    while(region){
+    while (region) {
         as_destroy_region(as, region, cur_proc);
         region = as->regions;
     }

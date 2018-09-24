@@ -83,10 +83,9 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
     if (ret) {
         return -1;
     }
-    if(at == -1){
+    if (at == -1) {
         ret = filetable_place(cur_proc->openfile_table, file, &fd);
-    }
-    else{
+    } else {
         struct openfile *tmp;
         filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
     }

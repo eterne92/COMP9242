@@ -109,8 +109,8 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number, 
-     (cur_proc - process_array));
+    printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number,
+           (cur_proc - process_array));
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -185,9 +185,14 @@ void handle_syscall(seL4_Word badge, int num_args)
         create_coroutine(c);
         break;
     }
-
-    case SOS_SYS_PROCESS_WAIT:{
+    case SOS_SYS_PROCESS_WAIT: {
         _sys_process_wait(cur_proc);
+        break;
+    }
+    case SOS_SYS_PROCESS_DELETE: {
+        coro c = coroutine((coro_t)_sys_kill_process);
+        resume(c, cur_proc);
+        create_coroutine(c);
         break;
     }
 
@@ -339,7 +344,8 @@ void _sys_munmap(proc *cur_proc)
     syscall_reply(cur_proc->reply, ret, 0);
 }
 
-void *_sys_create_process(proc *cur_proc){
+void *_sys_create_process(proc *cur_proc)
+{
     printf("in create process\n");
     seL4_Word path = seL4_GetMR(1);
     char app_name[N_NAME];
@@ -365,24 +371,45 @@ void *_sys_create_process(proc *cur_proc){
     return NULL;
 }
 
-void _sys_process_wait(proc *cur_proc){
+void _sys_process_wait(proc *cur_proc)
+{
     int pid = seL4_GetMR(1);
-    if(pid == -1){
-        for(int i = 0;i < 31;i++){
-            if(process_array[pid].state == ACTIVE){
+    if (pid == -1) {
+        for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+            if (process_array[pid].state == ACTIVE) {
                 SET_BIT(process_array[pid].waiting_list, pid);
             }
         }
-    }
-    else if(pid > 31 || pid < 0){
+    } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
         syscall_reply(cur_proc->reply, 0, 0);
-    }
-    else{
-        if(process_array[pid].state == ACTIVE){
+    } else {
+        if (process_array[pid].state == ACTIVE) {
             SET_BIT(process_array[pid].waiting_list, pid);
-        }
-        else{
+        } else {
             syscall_reply(cur_proc->reply, 0, 0);
         }
     }
+}
+
+void *_sys_kill_process(proc *cur_proc)
+{
+    int pid = seL4_GetMR(1);
+    if (pid < 0 || pid > PROCESS_ARRAY_SIZE - 1) {
+        syscall_reply(cur_proc->reply, 0, 0);
+        return NULL;
+    }
+    int waiting_list = get_process(pid)->waiting_list;
+    kill_process(pid);
+    proc *p;
+    for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+        if (GET_BIT(waiting_list, i)) {
+            p = get_process(i);
+            /* clear other processes' waiting list  */
+            for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
+                RST_BIT(get_process(j)->waiting_list, i);
+            }
+            syscall_reply(p->reply, 0, 0);
+        }
+    }
+    return NULL;
 }

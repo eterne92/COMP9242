@@ -75,4 +75,7 @@ void _sys_munmap(proc *cur_proc);
 void *_sys_handle_page_fault(proc *cur_proc);
 
 void *_sys_create_process(proc *cur_proc);
+
 void _sys_process_wait(proc *cur_proc);
+
+void *_sys_kill_process(proc *cur_proc);

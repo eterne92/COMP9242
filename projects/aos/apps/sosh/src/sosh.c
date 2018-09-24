@@ -202,6 +202,7 @@ static int exec(int argc, char **argv)
     }
 
     if (bg == 0) {
+        printf("try close\n");
         r = close(in);
         assert(r == 0);
     }

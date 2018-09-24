@@ -90,11 +90,11 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
         struct openfile *tmp;
         filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
     }
+    printf("got fd is %d\n", fd);
     if (ret) {
         openfile_decref(file);
         return -1;
     }
-    printf("got fd is %d\n", fd);
     return fd;
 }
 

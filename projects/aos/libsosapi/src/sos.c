@@ -111,7 +111,10 @@ pid_t sos_process_create(const char *path)
     tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, SOS_SYS_PROCESS_CREATE);
     seL4_SetMR(1, (seL4_Word)path);
-    return -1;
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+
+    int ret = seL4_GetMR(0);
+    return ret;
 }
 
 int sos_process_delete(pid_t pid)
@@ -150,14 +153,16 @@ int sos_process_status(sos_process_t *processes, unsigned max)
 
 pid_t sos_process_wait(pid_t pid)
 {
-    assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, SOS_SYS_PROCESS_WAIT);
     seL4_SetMR(1, (seL4_Word)pid);
-    return -1;
 
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+
+    int ret = seL4_GetMR(0);
+    return ret;
 }
 
 void sos_sys_usleep(int msec)

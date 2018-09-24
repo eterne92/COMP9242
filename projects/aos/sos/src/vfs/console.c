@@ -73,6 +73,7 @@ static int con_eachopen(struct device *dev, int openflags)
     // only one process could open console in read mode
     if (how == O_RDONLY || how == O_RDWR) {
         if (console.proc == NULL) {
+            printf("real open\n");
             console.proc = get_cur_proc();
             return 0;
         } else {

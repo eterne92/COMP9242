@@ -16,9 +16,6 @@
 
 #define DEFAULT_PRIORITY (0)
 
-#define GET_BIT(number, bit) (((number) >> (bit)) & 1)
-#define SET_BIT(number, bit) ((number) |= (1 << (bit)))
-#define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
 
 proc process_array[SIZE];
 

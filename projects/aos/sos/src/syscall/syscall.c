@@ -109,7 +109,8 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    // printf("SYSCALL NO.%d IS CALLED, cap saved as %ld\n", syscall_number, reply);
+    printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number, 
+     (cur_proc - process_array));
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -185,6 +186,11 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
     }
 
+    case SOS_SYS_PROCESS_WAIT:{
+        _sys_process_wait(cur_proc);
+        break;
+    }
+
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
@@ -200,11 +206,12 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         seL4_Word label;
 
         /* set proc as badge */
-        proc *cur_proc = get_cur_proc();
 
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
         seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
+        proc *cur_proc = get_process(badge);
+        set_cur_proc(cur_proc);
         run_coroutine(NULL);
         /* Awake! We got a message - check the label and badge to
          * see what the message is about */
@@ -333,6 +340,7 @@ void _sys_munmap(proc *cur_proc)
 }
 
 void *_sys_create_process(proc *cur_proc){
+    printf("in create process\n");
     seL4_Word path = seL4_GetMR(1);
     char app_name[N_NAME];
     int ret_pid;
@@ -353,5 +361,29 @@ void *_sys_create_process(proc *cur_proc){
             kill_process(ret_pid);
         }
     }
+    printf("ret_pid is %d\n", ret_pid);
+    syscall_reply(cur_proc->reply, ret_pid, 0);
     return NULL;
+}
+
+void _sys_process_wait(proc *cur_proc){
+    int pid = seL4_GetMR(1);
+    if(pid == -1){
+        for(int i = 0;i < 31;i++){
+            if(process_array[pid].state == ACTIVE){
+                SET_BIT(process_array[pid].waiting_list, pid);
+            }
+        }
+    }
+    else if(pid > 31 || pid < 0){
+        syscall_reply(cur_proc->reply, 0, 0);
+    }
+    else{
+        if(process_array[pid].state == ACTIVE){
+            SET_BIT(process_array[pid].waiting_list, pid);
+        }
+        else{
+            syscall_reply(cur_proc->reply, 0, 0);
+        }
+    }
 }

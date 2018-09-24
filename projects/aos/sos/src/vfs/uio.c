@@ -84,7 +84,6 @@ int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw)
         } else {
             c = sos[i];
             *(char *)(vaddr + j) = c;
-            printf("in copyout str, c is %c\n", c);
         }
         /* copy end */
         if (c == 0) {

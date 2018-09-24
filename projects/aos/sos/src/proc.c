@@ -312,3 +312,21 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     *ret_pid = pid;
     return err == seL4_NoError;
 }
+
+void kill_process(int pid)
+{
+    proc *process = get_process(pid);
+    if (!prcess) return;
+    destroy_regions(process->as);
+    destroy_page_table(process->pt);
+    filetable_destroy(process->openfile_table);
+    cspace_destroy(&process->cspace);
+    cspace_delete(global_cspace, process->tcb);
+    cspace_free_slot(global_cspace, process->tcb);
+    ut_free(process->tcb_ut, seL4_TCBBits);
+    cspace_delete(global_cspace, process->vspace);
+    cspace_free_slot(global_cspace, process->vspace);
+    ut_free(process->vspace_ut, seL4_PGDBits);
+    process->state = DEAD;
+    
+}

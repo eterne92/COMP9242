@@ -73,7 +73,7 @@ fail:
     return result;
 }
 
-int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags)
+int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
 {
     int fd;
     int ret;
@@ -83,7 +83,13 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags)
     if (ret) {
         return -1;
     }
-    ret = filetable_place(cur_proc->openfile_table, file, &fd);
+    if(at == -1){
+        ret = filetable_place(cur_proc->openfile_table, file, &fd);
+    }
+    else{
+        struct openfile *tmp;
+        filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
+    }
     if (ret) {
         openfile_decref(file);
         return -1;
@@ -91,6 +97,7 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags)
     printf("got fd is %d\n", fd);
     return fd;
 }
+
 /*
  * open() - get the path with copyinstr, then use openfile_open and
  * filetable_place to do the real work.
@@ -116,7 +123,7 @@ void *_sys_open(proc *cur_proc)
         return NULL;
     }
 
-    ret = _sys_do_open(cur_proc, str, openflags);
+    ret = _sys_do_open(cur_proc, str, openflags, -1);
 
     if (ret < 0) {
         syscall_reply(cur_proc->reply, ret, -1);

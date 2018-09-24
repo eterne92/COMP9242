@@ -109,6 +109,14 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         tmp = tmp->next;
     }
 }
+
+void destroy_regions(addrspace *as, proc *cur_proc){
+    as_region *region = as->regions;
+    while(region){
+        as_destroy_region(as, region, cur_proc);
+        region = as->regions;
+    }
+}
 /* make region list ordered by check each region
  * this also prevent regions from overlap with each other
  */

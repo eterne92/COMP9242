@@ -305,9 +305,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     err = seL4_TCB_WriteRegisters(process->tcb, 1, 0, 2, &context);
     ZF_LOGE_IF(err, "Failed to write registers");
     /* open stdin, stdout, stderr */
-    _sys_do_open(process, "console", 1);
-    _sys_do_open(process, "console", 1);
-    _sys_do_open(process, "console", 1);
+    _sys_do_open(process, "console", 1, 1);
+    _sys_do_open(process, "console", 1, 2);
     *ret_pid = pid;
     return err == seL4_NoError;
 }

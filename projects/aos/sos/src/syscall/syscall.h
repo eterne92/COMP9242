@@ -52,7 +52,7 @@ void _sos_sys_time_stamp(void);
 void _sos_sys_usleep(void);
 /* file syscalls */
 
-int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags);
+int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at);
 
 void *_sys_open(proc *cur_proc);
 

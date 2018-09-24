@@ -132,13 +132,15 @@ int sos_process_delete(pid_t pid)
 
 pid_t sos_my_id(void)
 {
-    assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     seL4_SetMR(0, SOS_SYS_MY_ID);
     tag = seL4_MessageInfo_new(0, 0, 0, 1);
-    return -1;
 
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+
+    int ret = seL4_GetMR(0);
+    return ret;
 }
 
 int sos_process_status(sos_process_t *processes, unsigned max)

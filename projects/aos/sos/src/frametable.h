@@ -12,15 +12,15 @@
 #define FRAME_SET_BIT(x, bit) (frame_table.frames[x].flag |= (1 << bit))
 #define FRAME_CLEAR_BIT(x, bit) (frame_table.frames[x].flag &= ~(1 << bit))
 #define FRAME_GET_BIT(x, bit) (((frame_table.frames[x].flag >> bit) & 1u) )
-#define PID 0xFF0
-#define GET_PID(flag) ((flag & PID) >> 5)
-#define SET_PID(x, pid) (frame_table.frames[x].flag |= (pid << 5))
+#define SET_PID(x, p) (frame_table.frames[x].pid = p)
+#define GET_PID(x) (frame_table.frames[x].pid)
 
 typedef struct frame_table_obj {
     ut_t *ut;
     int next;
     seL4_CPtr frame_cap;
-    uint16_t flag;
+    uint8_t flag;
+    uint8_t pid;
     seL4_Word vaddr;
 } frame_table_obj;
 

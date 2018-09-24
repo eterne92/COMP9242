@@ -272,6 +272,16 @@ static int second_sleep(int argc, char *argv[])
     return 0;
 }
 
+static int my_id(int argc, char *argv[])
+{
+    if (argc != 1) {
+        return 1;
+    }
+    int id = sos_my_id();
+    printf("MY ID IS %d\n", id);
+    return 0;
+}
+
 static int milli_sleep(int argc, char *argv[])
 {
     struct timespec tv;
@@ -339,7 +349,7 @@ struct command commands[] = { { "dir", dir }, { "ls", dir }, { "cat", cat }, {
         "cp", cp
     }, { "ps", ps }, { "exec", exec }, {"sleep", second_sleep}, {"msleep", milli_sleep},
     {"time", second_time}, {"mtime", micro_time}, {"kill", kill},
-    {"benchmark", benchmark}, {"thrash", thrash}
+    {"benchmark", benchmark}, {"thrash", thrash}, {"id", my_id}
 };
 
 int main(void)

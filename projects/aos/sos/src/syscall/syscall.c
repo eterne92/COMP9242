@@ -90,9 +90,8 @@ void run_coroutine(void *arg)
 
 void handle_syscall(seL4_Word badge, int num_args)
 {
-    (void)badge;
     (void)num_args;
-    proc *cur_proc = get_cur_proc();
+    proc *cur_proc = get_process(badge);
     /* allocate a slot for the reply tty_test_processcap */
     seL4_CPtr reply = cspace_alloc_slot(global_cspace);
     /* get the first word of the message, which in the SOS protocol is the number
@@ -194,6 +193,12 @@ void handle_syscall(seL4_Word badge, int num_args)
         coro c = coroutine((coro_t)_sys_kill_process);
         resume(c, cur_proc);
         create_coroutine(c);
+        break;
+    }
+
+    case SOS_SYS_MY_ID: {
+        printf("id is %d\n", cur_proc->pid);
+        syscall_reply(cur_proc->reply, cur_proc->pid, 0);
         break;
     }
 

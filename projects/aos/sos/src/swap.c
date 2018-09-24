@@ -70,9 +70,10 @@ seL4_Error try_swap_out(void)
             clock_hand = first_available_frame;
         }
         pin_bit = FRAME_GET_BIT(clock_hand, PIN);
+
         if (!pin_bit) {
             clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
-            int pid = GET_PID(frame_table.frames[clock_hand].flag);
+            int pid = GET_PID(clock_hand);
             process = get_process(pid);
             // process = get_cur_proc();
             if (clock_bit) {
@@ -80,6 +81,9 @@ seL4_Error try_swap_out(void)
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
                 seL4_CPtr cap = get_cap_from_vaddr(process->pt,
                                                    frame_table.frames[clock_hand].vaddr);
+                // printf("clock hand %d, cap %d, pid is %d, %p\n", clock_hand, cap, pid,
+                // frame_table.frames[clock_hand].vaddr);
+
                 seL4_ARM_Page_Unmap(cap);
 
                 cspace_delete(global_cspace, cap);

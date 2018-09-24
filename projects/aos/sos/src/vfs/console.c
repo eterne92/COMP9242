@@ -76,6 +76,7 @@ static int con_eachopen(struct device *dev, int openflags)
         if (console.proc == NULL) {
             printf("real open\n");
             console.proc = get_cur_proc();
+            printf("now console proc is %p\n", console.proc);
             return 0;
         } else {
             return -1;
@@ -154,6 +155,8 @@ static int con_io(struct device *dev, struct uio *uio)
     seL4_Word sos_vaddr, user_vaddr = uio->vaddr;
     (void)dev; // unused
     seL4_Error err;
+    printf("console io %d\n", uio->uio_rw);
+    printf("console proc %p, curproc %p\n", console.proc, get_cur_proc());
     if (uio->uio_rw == UIO_READ) {
         // the_console->proc = uio->proc;
         // the_console->vaddr = uio->vaddr;

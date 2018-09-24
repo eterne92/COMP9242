@@ -95,7 +95,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
             ZF_LOGE("fail to alloc frame in elf load");
         }
 
-        err = sos_map_frame(cspace, frame, (seL4_Word)cur_proc->pt, cur_proc->vspace,
+        err = sos_map_frame(cspace, frame, cur_proc, 
                             loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
         /* finally copy the data */

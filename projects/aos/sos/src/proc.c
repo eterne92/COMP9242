@@ -97,7 +97,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file)
     seL4_Error err;
     proc *process = &process_array[pid];
     int frame = frame_alloc(NULL);
-    err = sos_map_frame(cspace, frame, (seL4_Word)process->pt, process->vspace,
+    err = sos_map_frame(cspace, frame, process,
                         USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
                         seL4_ARM_Default_VMAttributes);
 
@@ -215,8 +215,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     as_define_ipcbuffer(process->as);
     frame = frame_alloc(NULL);
-    err = sos_map_frame(global_cspace, frame, (seL4_Word)process->pt,
-                        process->vspace, USERIPCBUFFER, seL4_ReadWrite,
+    err = sos_map_frame(global_cspace, frame, process, USERIPCBUFFER, seL4_ReadWrite,
                         seL4_ARM_Default_VMAttributes);
 
     if (err != seL4_NoError) {
@@ -335,6 +334,7 @@ void kill_process(int pid)
 
     printf("try destroy ft\n");
     if (process->openfile_table) filetable_destroy(process->openfile_table);
+
     if (process->user_endpoint != seL4_CapNull) {
         cspace_delete(&process->cspace, process->user_endpoint);
         cspace_free_slot(&process->cspace, process->user_endpoint);

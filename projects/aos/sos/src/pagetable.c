@@ -96,7 +96,6 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
     // right now, there is only one process (tty_test)
     (void)fault_info;
     seL4_Word frame;
-    seL4_CPtr vspace = cur_proc->vspace;
     as_region *region = cur_proc->as->regions;
     bool execute, read, write;
     seL4_Error err;
@@ -118,14 +117,14 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                     return -1;
                 }
                 // map it
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
                 // update process_status->size
                 ++cur_proc->size;
             } else if (frame & PRESENT) {
                 /* the page is still there */
                 frame = frame & OFFSET;
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
 
             } else if (!(frame & PRESENT)) {
@@ -140,7 +139,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                     frame_free(frame);
                     return err;
                 }
-                err = sos_map_frame(global_cspace, frame, (seL4_Word)cur_proc->pt, vspace,
+                err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
             } else {
                 /* it's a vm fault with permmision */

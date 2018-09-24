@@ -30,6 +30,7 @@ typedef struct proc {
     addrspace *as;
     seL4_CPtr reply;
     filetable *openfile_table;
+    seL4_CPtr user_endpoint;
     int     pid;
     unsigned  size;            /* in pages */
     unsigned  stime;           /* start time in msec since booting */

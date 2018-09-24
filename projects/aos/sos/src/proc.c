@@ -3,6 +3,7 @@
 #include "frametable.h"
 #include "syscall/syscall.h"
 #include <cpio/cpio.h>
+#include <clock/timestamp.h>
 #include <cspace/cspace.h>
 #include <aos/sel4_zf_logif.h>
 #include <aos/debug.h>
@@ -12,16 +13,11 @@
 #include "pagetable.h"
 #include "syscall/filetable.h"
 #include <picoro/picoro.h>
-
-#define SIZE 32
+#include <string.h>
 
 #define DEFAULT_PRIORITY (0)
 
-#define GET_BIT(number, bit) (((number) >> (bit)) & 1)
-#define SET_BIT(number, bit) ((number) |= (1 << (bit)))
-#define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
-
-proc process_array[SIZE];
+proc process_array[PROCESS_ARRAY_SIZE];
 
 static int available_pid = 0;
 static int kill_lock = 0;
@@ -29,8 +25,8 @@ static int kill_lock = 0;
 static int get_next_available_pid(void)
 {
     int pid = -1;
-    for (int i = 0; i < SIZE; ++i) {
-        pid = (i + available_pid) % SIZE;
+    for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+        pid = (i + available_pid) % PROCESS_ARRAY_SIZE;
         if (process_array[pid].state == DEAD) {
             available_pid = pid + 1;
             break;
@@ -312,6 +308,9 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
+    process->waiting_list = 0;
+    process->stime = (unsigned)timestamp_us(timestamp_get_freq());
+    strcpy(process->command, app_name);
     return err == seL4_NoError;
 }
 

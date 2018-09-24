@@ -12,10 +12,6 @@
 #define SET_BIT(number, bit) ((number) |= (1 << (bit)))
 #define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
 
-#define GET_BIT(number, bit) (((number) >> (bit)) & 1)
-#define SET_BIT(number, bit) ((number) |= (1 << (bit)))
-#define RST_BIT(number, bit) ((number) &= ~(1 << (bit)))
-
 typedef struct page_table page_table_t;
 typedef struct addrspace addrspace;
 typedef struct filetable filetable;

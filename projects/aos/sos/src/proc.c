@@ -308,6 +308,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
+    process->size = 0;
+    process->pid = pid;
     process->waiting_list = 0;
     process->stime = (unsigned)timestamp_us(timestamp_get_freq());
     strcpy(process->command, app_name);
@@ -339,5 +341,9 @@ void kill_process(int pid)
         }
     }
     process->state = DEAD;
+    process->size = 0;
+    process->pid = -1;
+    process->waiting_list = 0;
+    process->stime = 0;
     kill_lock = 0;
 }

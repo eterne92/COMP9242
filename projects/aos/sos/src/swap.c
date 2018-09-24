@@ -72,8 +72,8 @@ seL4_Error try_swap_out(void)
         pin_bit = FRAME_GET_BIT(clock_hand, PIN);
         if (!pin_bit) {
             clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
-            // process = get_process(GET_PID(frame_table.frames[clock_hand].flag));
-            process = get_cur_proc();
+            process = get_process(GET_PID(frame_table.frames[clock_hand].flag));
+            // process = get_cur_proc();
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
@@ -85,7 +85,7 @@ seL4_Error try_swap_out(void)
                 cspace_free_slot(global_cspace, cap);
             } else {
                 // victim found
-                // printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
+                printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
                 // printf("victim's cap is %d\n", frame_table.frames[clock_hand].ut->cap);
                 file_offset = header * PAGE_SIZE_4K;
                 if (swap_file == NULL) {
@@ -103,6 +103,7 @@ seL4_Error try_swap_out(void)
                     }
                 }
 
+                printf("try read\n");
                 if (header == tail) {
                     tail++;
                     header++;
@@ -118,11 +119,13 @@ seL4_Error try_swap_out(void)
                 }
 
                 // update the present bit & offset
+                printf("try update\n");
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
                                    file_offset + 1);
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
                           file_offset, UIO_WRITE);
+                printf("try write\n");
 
                 result = VOP_WRITE(swap_file, &k_uio);
                 if (result) {

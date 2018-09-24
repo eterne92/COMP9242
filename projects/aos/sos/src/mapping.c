@@ -17,6 +17,7 @@
 #include "pagetable.h"
 #include "ut.h"
 #include "vmem_layout.h"
+#include "proc.h"
 
 /**
  * Retypes and maps a page table into the root servers page global directory
@@ -166,10 +167,11 @@ seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace,
                           NULL);
 }
 
-seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
-                         seL4_CPtr vspace, seL4_Word vaddr, seL4_CapRights_t rights,
+seL4_Error sos_map_frame(cspace_t *cspace, int frame,proc *cur_proc, seL4_Word vaddr, seL4_CapRights_t rights,
                          seL4_ARM_VMAttributes attr)
 {
+    seL4_Word page_table = (seL4_Word)cur_proc->pt;
+    seL4_CPtr vspace = cur_proc->vspace;
 
     if (frame < 0) return seL4_NotEnoughMemory;
 
@@ -284,6 +286,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, seL4_Word page_table,
         entry.frame = frame;
         entry.slot = frame_cap;
         update_level_4_page_table_entry((page_table_t *)page_table, &entry, vaddr);
+        SET_PID(frame, cur_proc->pid);
         return err;
     }
 cleanup:

@@ -110,8 +110,8 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number,
-           (cur_proc - process_array));
+    // printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number,
+    //        (cur_proc - process_array));
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");

@@ -119,13 +119,15 @@ pid_t sos_process_create(const char *path)
 
 int sos_process_delete(pid_t pid)
 {
-    assert(!"You need to implement this");
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 2);
     seL4_SetMR(0, SOS_SYS_PROCESS_DELETE);
     seL4_SetMR(1, (seL4_Word)pid);
-    return -1;
+    seL4_Call(SOS_IPC_EP_CAP, tag);
+
+    int ret = seL4_GetMR(0);
+    return 0;
 }
 
 pid_t sos_my_id(void)

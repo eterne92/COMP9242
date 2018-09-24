@@ -65,7 +65,7 @@ void uio_kinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
 int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw)
 {
     /* get region */
-    as_region *region = vaddr_get_region(cur_proc->as, (seL4_Word)user);
+    as_region *region = vaddr_get_region(proc->as, (seL4_Word)user);
     /* not valid */
     if (region == NULL) {
         return -1;

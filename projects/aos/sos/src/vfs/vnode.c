@@ -103,8 +103,9 @@ void vnode_decref(struct vnode *vn)
 
     struct vnode *newvn;
     vfs_lookup("console", &newvn);
-    if (vn == newvn) {
+    if (vn == newvn && vn->closing_op == 1) {
         VOP_RECLAIM(vn);
+        return;
     }
 
     printf("try real destroy\n");

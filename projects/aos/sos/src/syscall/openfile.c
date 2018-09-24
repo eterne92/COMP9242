@@ -33,6 +33,7 @@
 
 #include "openfile.h"
 #include "../vfs/vfs.h"
+#include "../vfs/vnode.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -67,6 +68,13 @@ static struct openfile *openfile_create(struct vnode *vn, int accmode)
 static void openfile_destroy(struct openfile *file)
 {
     /* balance vfs_open with vfs_close (not VOP_DECREF) */
+    struct vnode *v = file->of_vnode;
+    if(file->of_accmode == O_RDONLY || file->of_accmode == O_RDWR){
+        v->closing_op = 1;
+    }
+    else{
+        v->closing_op = 0;
+    }
     vfs_close(file->of_vnode);
     free(file);
 }

@@ -66,9 +66,9 @@ int dev_eachopen(struct vnode *v, int flags)
 static
 int dev_reclaim(struct vnode *v)
 {
-    (void)v;
+    struct device *d = v->vn_data;
     /* nothing - device continues to exist even when not in use */
-    return 0;
+    return DEVOP_RECLAIM(d);
 }
 
 /*

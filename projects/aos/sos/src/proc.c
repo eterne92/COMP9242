@@ -216,7 +216,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     as_define_ipcbuffer(process->as);
     frame = frame_alloc(NULL);
-    err = sos_map_frame(global_cspace, frame, process, USERIPCBUFFER, seL4_ReadWrite,
+    err = sos_map_frame(global_cspace, frame, process, USERIPCBUFFER,
+                        seL4_ReadWrite,
                         seL4_ARM_Default_VMAttributes);
 
     if (err != seL4_NoError) {
@@ -342,7 +343,7 @@ void kill_process(int pid)
         cspace_free_slot(&process->cspace, process->user_endpoint);
     }
 
-    
+
 
     if (process->vspace_ut) {
         ut_free(process->vspace_ut, seL4_PGDBits);
@@ -361,7 +362,7 @@ void kill_process(int pid)
         }
     }
 
-    if (process->cspace.bootstrap) 
+    if (process->cspace.bootstrap)
         cspace_destroy(&process->cspace);
     process->state = DEAD;
     process->size = 0;

@@ -69,10 +69,9 @@ static void openfile_destroy(struct openfile *file)
 {
     /* balance vfs_open with vfs_close (not VOP_DECREF) */
     struct vnode *v = file->of_vnode;
-    if(file->of_accmode == O_RDONLY || file->of_accmode == O_RDWR){
+    if (file->of_accmode == O_RDONLY || file->of_accmode == O_RDWR) {
         v->closing_op = 1;
-    }
-    else{
+    } else {
         v->closing_op = 0;
     }
     vfs_close(file->of_vnode);

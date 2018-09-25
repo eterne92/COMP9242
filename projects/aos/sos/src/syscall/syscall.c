@@ -92,6 +92,7 @@ void handle_syscall(seL4_Word badge, int num_args)
 {
     (void)num_args;
     proc *cur_proc = get_process(badge);
+    set_cur_proc(cur_proc);
     /* allocate a slot for the reply tty_test_processcap */
     seL4_CPtr reply = cspace_alloc_slot(global_cspace);
     /* get the first word of the message, which in the SOS protocol is the number

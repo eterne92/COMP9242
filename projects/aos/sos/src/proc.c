@@ -388,6 +388,7 @@ void kill_process(int pid)
     process->state = DEAD;
     process->size = 0;
     process->pid = -1;
+    process->reply = seL4_CapNull;
     process->waiting_list = 0;
     process->stime = 0;
     kill_lock = 0;

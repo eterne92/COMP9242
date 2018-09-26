@@ -47,6 +47,8 @@ void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);
 
 void set_boottime(void);
 
+unsigned get_now_since_boot(void);
+
 void _sos_sys_time_stamp(void);
 
 void _sos_sys_usleep(void);
@@ -79,3 +81,5 @@ void *_sys_create_process(proc *cur_proc);
 void _sys_process_wait(proc *cur_proc);
 
 void *_sys_kill_process(proc *cur_proc);
+
+void *_sys_process_status(proc *cur_proc);

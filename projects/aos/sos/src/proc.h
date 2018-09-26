@@ -45,7 +45,6 @@ typedef struct proc {
 
 extern cspace_t *global_cspace;
 
-extern proc *cur_proc;
 
 extern seL4_CPtr ipc_ep;
 

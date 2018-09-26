@@ -19,6 +19,8 @@
 
 proc process_array[PROCESS_ARRAY_SIZE];
 
+static proc *cur_proc;
+
 static int available_pid = 0;
 static int kill_lock = 0;
 
@@ -332,7 +334,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     process->state = ACTIVE;
     process->status.size = 0;
     process->waiting_list = 0;
-    process->status.stime = (unsigned)timestamp_us(timestamp_get_freq());
+    process->status.stime = get_now_since_boot();
     strcpy(process->status.command, app_name);
     return err == seL4_NoError;
 }

@@ -218,6 +218,14 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
     }
 
+    case SOS_SYS_PROCESS_STATUS:{
+
+        coro c = coroutine((coro_t)_sys_process_status);
+        resume(c, cur_proc);
+        create_coroutine(c);
+        break;
+    }
+
     default:
         ZF_LOGE("Unknown syscall %lu\n", syscall_number);
         /* don't reply to an unknown syscall */
@@ -441,7 +449,7 @@ void *_sys_kill_process(proc *cur_proc)
     return NULL;
 }
 
-void sos_process_status(proc *cur_proc){
+void *_sys_process_status(proc *cur_proc){
     void *u_ptr = seL4_GetMR(1);
     int max = seL4_GetMR(2);
 
@@ -449,6 +457,7 @@ void sos_process_status(proc *cur_proc){
 
     int index = 0;
     for(int i = 0;i < PROCESS_ARRAY_SIZE;i++){
+        printf("%d is %d\n", i , process_array[i].state);
         if(process_array[i].state == ACTIVE){
             k_processes[index] = process_array[i].status;
             index++;
@@ -457,8 +466,13 @@ void sos_process_status(proc *cur_proc){
             }
         }
     }
+    int ret = mem_move(cur_proc, (seL4_Word) u_ptr, (seL4_Word) &k_processes, sizeof(sos_process_t) * index, READ);
+    printf("ret is %d\n", ret);
 
-
-
-
+    if(ret == -1){
+        syscall_reply(cur_proc->reply, 0, -1);
+        return NULL;
+    }
+    syscall_reply(cur_proc->reply, index, 0);
+    return NULL;
 }

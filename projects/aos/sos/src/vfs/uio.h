@@ -91,6 +91,9 @@ void uio_uinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
 void uio_kinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
                enum uio_rw rw);
 
+int mem_move(proc *proc, seL4_Word u_vaddr, seL4_Word k_vaddr, size_t len,
+             enum uio_rw rw);
+
 int copystr(proc *proc, char *user, char *sos, size_t length, enum uio_rw rw);
 
 #endif /* _UIO_H_ */

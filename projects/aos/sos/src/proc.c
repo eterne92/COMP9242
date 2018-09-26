@@ -390,6 +390,7 @@ void kill_process(int pid)
     process->status.pid = -1;
     process->waiting_list = 0;
     process->status.stime = 0;
+    process->reply = seL4_CapNull;
     kill_lock = 0;
     printf("all done\n");
 }

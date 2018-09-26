@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <stdbool.h>
+#include <string.h>
 #include "uio.h"
 #include "../addrspace.h"
 #include "../pagetable.h"
@@ -58,7 +60,39 @@ void uio_kinit(struct uio *u, seL4_Word vaddr, size_t len, size_t pos,
     u->proc = NULL;
 }
 
-
+int mem_move(proc *proc, seL4_Word u_vaddr, seL4_Word k_vaddr, size_t len,
+             enum uio_rw rw)
+{
+    enum OPERATION oper = rw == UIO_READ ? READ : WRITE;
+    seL4_Error err;
+    bool valid = validate_virtual_address(cur_proc->as, u_vaddr, len, oper);
+    /* not valid */
+    if (!valid) {
+        return -1;
+    }
+    size_t n = PAGE_SIZE_4K - (u_vaddr & PAGE_MASK_4K);
+    int nbytes = 0;
+    if (len < n) {
+        n = len;
+    }
+    while (len > 0) {
+        seL4_Word vaddr = get_sos_virtual_address(proc->pt, u_vaddr);
+        if (!vaddr) {
+            err = handle_page_fault(proc, u_vaddr, 0);
+            if (err != seL4_NoError) return -1;
+            vaddr = get_sos_virtual_address(proc->pt, u_vaddr);
+        }
+        if (rw == UIO_READ) {
+            memcpy((void *)vaddr, (void *)k_vaddr, n);
+        } else {
+            memcpy((void *)k_vaddr, (void *)vaddr, n);
+        }
+        len -= n;
+        u_vaddr += n;
+        n = len > PAGE_SIZE_4K ? PAGE_SIZE_4K : len;
+    }
+    return 0;
+}
 
 /* only used to copy string size less then a frame */
 /* so we won't go through too many frame */

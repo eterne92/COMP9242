@@ -289,7 +289,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, proc *cur_proc,
         entry.frame = frame;
         entry.slot = frame_cap;
         update_level_4_page_table_entry((page_table_t *)page_table, &entry, vaddr);
-        SET_PID(frame, cur_proc->pid);
+        SET_PID(frame, cur_proc->status.pid);
         return err;
     }
 cleanup:

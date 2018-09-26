@@ -20,6 +20,13 @@ enum process_state {
     DEAD, ACTIVE, INACTIVE
 };
 
+typedef struct {
+    int     pid;
+    unsigned  size;            /* in pages */
+    unsigned  stime;           /* start time in msec since booting */
+    char      command[N_NAME]; /* Name of exectuable */
+} sos_process_t;
+
 typedef struct proc {
     ut_t *tcb_ut;
     seL4_CPtr tcb;
@@ -31,10 +38,7 @@ typedef struct proc {
     seL4_CPtr reply;
     filetable *openfile_table;
     seL4_CPtr user_endpoint;
-    int     pid;
-    unsigned  size;            /* in pages */
-    unsigned  stime;           /* start time in msec since booting */
-    char      command[N_NAME]; /* Name of exectuable */
+    sos_process_t status;
     unsigned waiting_list;
     enum process_state state;
 } proc;

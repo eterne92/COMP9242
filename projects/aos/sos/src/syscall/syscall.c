@@ -213,8 +213,8 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
 
     case SOS_SYS_MY_ID: {
-        printf("id is %d\n", cur_proc->pid);
-        syscall_reply(cur_proc->reply, cur_proc->pid, 0);
+        printf("id is %d\n", cur_proc->status.pid);
+        syscall_reply(cur_proc->reply, cur_proc->status.pid, 0);
         break;
     }
 
@@ -296,7 +296,7 @@ void *_sys_handle_page_fault(proc *cur_proc)
         printf("vaddr is %p\n", vaddr);
         ZF_LOGE("Segment fault");
         int waiting_list = cur_proc->waiting_list;
-        kill_process(cur_proc->pid);
+        kill_process(cur_proc->status.pid);
         wake_up(waiting_list);
         return NULL;
     }
@@ -406,14 +406,14 @@ void _sys_process_wait(proc *cur_proc)
     if (pid == -1) {
         for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
             if (process_array[pid].state == ACTIVE) {
-                SET_BIT(process_array[pid].waiting_list, cur_proc->pid);
+                SET_BIT(process_array[pid].waiting_list, cur_proc->status.pid);
             }
         }
     } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
         syscall_reply(cur_proc->reply, 0, 0);
     } else {
         if (process_array[pid].state == ACTIVE) {
-            SET_BIT(process_array[pid].waiting_list, cur_proc->pid);
+            SET_BIT(process_array[pid].waiting_list, cur_proc->status.pid);
         } else {
             syscall_reply(cur_proc->reply, 0, 0);
         }
@@ -439,4 +439,26 @@ void *_sys_kill_process(proc *cur_proc)
     if(cur_proc->state == ACTIVE)
         syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
+}
+
+void sos_process_status(proc *cur_proc){
+    void *u_ptr = seL4_GetMR(1);
+    int max = seL4_GetMR(2);
+
+    sos_process_t k_processes[max];
+
+    int index = 0;
+    for(int i = 0;i < PROCESS_ARRAY_SIZE;i++){
+        if(process_array[i].state == ACTIVE){
+            k_processes[index] = process_array[i].status;
+            index++;
+            if(index > max){
+                break;
+            }
+        }
+    }
+
+
+
+
 }

@@ -25,6 +25,7 @@
 #include "ut.h"
 #include "dma.h"
 #include "vmem_layout.h"
+#include "pagetable.h"
 
 /* top level cspace node size, for the root cnode, in bits, where size = 2^bits */
 #define INITIAL_TASK_CNODE_SIZE_BITS 18u
@@ -144,6 +145,16 @@ void *bootstrap_cspace_map_frame(void *cookie, seL4_CPtr cap, seL4_CPtr free_slo
 void *bootstrap_cspace_alloc_4k_ut(UNUSED void *cookie, seL4_CPtr *cap)
 {
     ut_t *untyped = ut_alloc_4k_untyped(NULL);
+    if(untyped == NULL){
+        seL4_Error err = try_swap_out();
+        if(err){
+            return NULL;
+        }
+        untyped = ut_alloc_4k_untyped(NULL);
+        if(untyped == NULL){
+            return NULL;
+        }
+    }
     *cap = untyped->cap;
     return untyped;
 }

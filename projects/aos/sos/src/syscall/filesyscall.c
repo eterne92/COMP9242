@@ -121,6 +121,7 @@ void *_sys_open(proc *cur_proc)
         return NULL;
     }
 
+    set_cur_proc(cur_proc);
     ret = _sys_do_open(cur_proc, str, openflags, -1);
 
     if (ret < 0) {

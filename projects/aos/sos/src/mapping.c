@@ -107,7 +107,7 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
             ut = ut_alloc_4k_untyped(NULL);
             // ZF_LOGE("Out of 4k untyped");
             // return -1;
-            assert(ut);
+            return -1;
         }
 
         /* figure out which cptr to use to retype into*/
@@ -213,7 +213,9 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame,proc *cur_proc, seL4_Word v
             }
             // printf("sos map\n");
             ut = ut_alloc_4k_untyped(NULL);
-            assert(ut != NULL);
+            if(ut == NULL){
+                goto cleanup;
+            }
         }
 
         /* figure out which cptr to use to retype into*/

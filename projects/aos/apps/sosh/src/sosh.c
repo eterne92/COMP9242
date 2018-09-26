@@ -70,7 +70,7 @@ static void prstat(const char *name)
 static int thrash(int argc, char **argv){
     (void) argc;
     (void) argv;
-    const int bfsize = 8000;
+    const int bfsize = 5000;
     char *bufs[bfsize];
     for(int i = 0;i < bfsize;i++){
         if(i % 1000 == 0){
@@ -202,7 +202,6 @@ static int exec(int argc, char **argv)
     }
 
     if (bg == 0) {
-        printf("try close\n");
         r = close(in);
         assert(r == 0);
     }

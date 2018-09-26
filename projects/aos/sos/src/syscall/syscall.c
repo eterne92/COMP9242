@@ -25,6 +25,21 @@ typedef struct coroutines {
 static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
 
+static void wake_up(int waiting_list){
+    proc *p;
+    for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+        if (GET_BIT(waiting_list, i)) {
+            p = get_process(i);
+            /* clear other processes' waiting list  */
+            for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
+                RST_BIT(get_process(j)->waiting_list, i);
+            }
+            if(p->state == ACTIVE)
+                syscall_reply(p->reply, 0, 0);
+        }
+    }
+}
+ 
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
 {
@@ -92,6 +107,7 @@ void handle_syscall(seL4_Word badge, int num_args)
 {
     (void)num_args;
     proc *cur_proc = get_process(badge);
+    // printf("cur_proc is %p, proc is %p\n", cur_proc, process_array);
     /* allocate a slot for the reply tty_test_processcap */
     seL4_CPtr reply = cspace_alloc_slot(global_cspace);
     /* get the first word of the message, which in the SOS protocol is the number
@@ -221,8 +237,6 @@ NORETURN void syscall_loop(seL4_CPtr ep)
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
         seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
-        proc *cur_proc = get_process(badge);
-        set_cur_proc(cur_proc);
         run_coroutine(NULL);
         /* Awake! We got a message - check the label and badge to
          * see what the message is about */
@@ -247,6 +261,9 @@ NORETURN void syscall_loop(seL4_CPtr ep)
              * message from tty_test! */
             handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
         } else {
+            proc *cur_proc = get_process(badge);
+            set_cur_proc(cur_proc);
+
             seL4_CPtr reply = cspace_alloc_slot(global_cspace);
             seL4_Error err = cspace_save_reply_cap(global_cspace, reply);
             ZF_LOGF_IFERR(err, "Failed to save reply");
@@ -271,11 +288,17 @@ NORETURN void syscall_loop(seL4_CPtr ep)
 
 void *_sys_handle_page_fault(proc *cur_proc)
 {
-    seL4_Error err = handle_page_fault(cur_proc, seL4_GetMR(seL4_VMFault_Addr),
+    seL4_Word vaddr = seL4_GetMR(seL4_VMFault_Addr);
+    seL4_Error err = handle_page_fault(cur_proc, vaddr,
                                        seL4_GetMR(seL4_VMFault_FSR));
     if (err) {
         /* we will deal with this later */
-        ZF_LOGF_IFERR(err, "Segment fault");
+        printf("vaddr is %p\n", vaddr);
+        ZF_LOGE("Segment fault");
+        int waiting_list = cur_proc->waiting_list;
+        kill_process(cur_proc->pid);
+        wake_up(waiting_list);
+        return NULL;
     }
     syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
@@ -412,20 +435,7 @@ void *_sys_kill_process(proc *cur_proc)
     int waiting_list = get_process(pid)->waiting_list;
 
     kill_process(pid);
-
-    proc *p;
-    for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-        if (GET_BIT(waiting_list, i)) {
-            printf("%d is waiting on %d\n", i, pid);
-            p = get_process(i);
-            /* clear other processes' waiting list  */
-            for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
-                RST_BIT(get_process(j)->waiting_list, i);
-            }
-            if(p->state == ACTIVE)
-                syscall_reply(p->reply, 0, 0);
-        }
-    }
+    wake_up(waiting_list);
     if(cur_proc->state == ACTIVE)
         syscall_reply(cur_proc->reply, 0, 0);
     return NULL;

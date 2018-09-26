@@ -55,11 +55,20 @@ proc *get_process(int pid)
 /* helper to allocate a ut + cslot, and retype the ut into the cslot */
 static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
 {
+    seL4_Error err;
     /* Allocate the object */
     ut_t *ut = ut_alloc(size_bits, global_cspace);
     if (ut == NULL) {
-        ZF_LOGE("No memory for object of size %zu", size_bits);
-        return NULL;
+        err = try_swap_out();
+        if(err){
+            ZF_LOGE("No memory for object of size %zu", size_bits);
+            return NULL;
+        }
+        ut = ut_alloc(size_bits, global_cspace);
+        if(ut == NULL){
+            ZF_LOGE("No memory for object of size %zu", size_bits);
+            return NULL;
+        }
     }
 
     /* allocate a slot to retype the memory for object into */
@@ -71,7 +80,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
     }
 
     /* now do the retype */
-    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type,
+    err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type,
                                            size_bits);
     ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
@@ -174,6 +183,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     proc *process = &process_array[pid];
     process->pid = pid;
+
+    printf("vspace\n");
     /* Create a VSpace */
     process->vspace_ut = alloc_retype(&(process->vspace),
                                       seL4_ARM_PageGlobalDirectoryObject, seL4_PGDBits);
@@ -189,12 +200,15 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
+    printf("as\n");
     /* create addrspace of ttytest */
     process->as = addrspace_init();
     if (!process->as) {
         ZF_LOGE("Failed to create address space");
         return false;
     }
+
+    printf("pt\n");
     /* initialize level 1 shadow page table */
     process->pt = initialize_page_table();
     if (!process->pt) {
@@ -203,17 +217,20 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     }
     /* Create a simple 1 level CSpace */
 
+    printf("cspace, global_cspace %p\n", &process->cspace);
     err = cspace_create_one_level(global_cspace, &process->cspace);
     if (err != CSPACE_NOERROR) {
         ZF_LOGE("Failed to create cspace");
         return false;
     }
 
+    printf("filetable\n");
     /* Create open file table */
     process->openfile_table = filetable_create();
 
     /* Create an IPC buffer */
 
+    printf("ipc\n");
     as_define_ipcbuffer(process->as);
     frame = frame_alloc(NULL);
     err = sos_map_frame(global_cspace, frame, process, USERIPCBUFFER, seL4_ReadWrite,
@@ -224,6 +241,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
+    printf("endpoint\n");
     /* allocate a new slot in the target cspace which we will mint a badged endpoint cap into --
      * the badge is used to identify the process, which will come in handy when you have multiple
      * processes. */
@@ -242,6 +260,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
     process->user_endpoint = user_ep;
+
+    printf("tcb\n");
     /* Create a new TCB object */
     process->tcb_ut = alloc_retype(&(process->tcb), seL4_TCBObject, seL4_TCBBits);
     if (process->tcb_ut == NULL) {
@@ -280,6 +300,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
+    printf("stack\n");
     /* set up the stack */
     as_define_stack(process->as);
     seL4_Word sp = init_process_stack(pid, global_cspace, elf_base);

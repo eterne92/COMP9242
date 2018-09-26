@@ -87,15 +87,14 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         // printf("destroy %p\n", i);
         seL4_Word frame = _get_frame_from_vaddr(cur_proc->pt, i);
         seL4_Word slot = get_cap_from_vaddr(cur_proc->pt, i);
-        if(frame == 0){
+        if (frame == 0) {
             continue;
-        }
-        else if (!(frame & PRESENT)) {
+        } else if (!(frame & PRESENT)) {
             clean_up_swapping(frame & OFFSET);
         } else if (frame != 0 && slot != 0) {
             frame = (int) frame;
             int clock_bit = FRAME_GET_BIT(frame, CLOCK);
-            if(clock_bit){
+            if (clock_bit) {
                 seL4_ARM_Page_Unmap(slot);
                 cspace_delete(global_cspace, slot);
                 cspace_free_slot(global_cspace, slot);

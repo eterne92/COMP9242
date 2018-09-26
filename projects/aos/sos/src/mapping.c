@@ -160,14 +160,15 @@ seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap,
 }
 
 seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace,
-                     seL4_Word vaddr,
-                     seL4_CapRights_t rights, seL4_ARM_VMAttributes attr)
+                     seL4_Word vaddr, seL4_CapRights_t rights, 
+                     seL4_ARM_VMAttributes attr)
 {
     return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, NULL,
                           NULL);
 }
 
-seL4_Error sos_map_frame(cspace_t *cspace, int frame,proc *cur_proc, seL4_Word vaddr, seL4_CapRights_t rights,
+seL4_Error sos_map_frame(cspace_t *cspace, int frame, proc *cur_proc,
+                         seL4_Word vaddr, seL4_CapRights_t rights,
                          seL4_ARM_VMAttributes attr)
 {
     seL4_Word page_table = (seL4_Word)cur_proc->pt;
@@ -220,7 +221,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame,proc *cur_proc, seL4_Word v
 
         /* figure out which cptr to use to retype into*/
         seL4_CPtr slot = cspace_alloc_slot(cspace);
-        
+
         if (slot == seL4_CapNull) {
             ZF_LOGE("No cptr to alloc paging structure");
             err = -1;

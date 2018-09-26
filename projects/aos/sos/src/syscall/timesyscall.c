@@ -33,7 +33,8 @@ void _sos_sys_usleep(void)
     register_timer(msec, sleep_callback, (void *)reply, F, ONE_SHOT);
 }
 
-unsigned get_now_since_boot(void){
+unsigned get_now_since_boot(void)
+{
     seL4_Word msec = (timestamp_us(timestamp_get_freq()) - boottime) / 1000;
     return msec;
 }

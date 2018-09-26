@@ -25,7 +25,8 @@ typedef struct coroutines {
 static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
 
-static void wake_up(int waiting_list){
+static void wake_up(int waiting_list)
+{
     proc *p;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         if (GET_BIT(waiting_list, i)) {
@@ -34,12 +35,12 @@ static void wake_up(int waiting_list){
             for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
                 RST_BIT(get_process(j)->waiting_list, i);
             }
-            if(p->state == ACTIVE)
+            if (p->state == ACTIVE)
                 syscall_reply(p->reply, 0, 0);
         }
     }
 }
- 
+
 
 void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
 {
@@ -218,7 +219,7 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
     }
 
-    case SOS_SYS_PROCESS_STATUS:{
+    case SOS_SYS_PROCESS_STATUS: {
 
         coro c = coroutine((coro_t)_sys_process_status);
         resume(c, cur_proc);
@@ -435,7 +436,7 @@ void *_sys_kill_process(proc *cur_proc)
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
-    if(process_array[pid].state == DEAD){
+    if (process_array[pid].state == DEAD) {
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
@@ -444,32 +445,34 @@ void *_sys_kill_process(proc *cur_proc)
 
     kill_process(pid);
     wake_up(waiting_list);
-    if(cur_proc->state == ACTIVE)
+    if (cur_proc->state == ACTIVE)
         syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
 }
 
-void *_sys_process_status(proc *cur_proc){
+void *_sys_process_status(proc *cur_proc)
+{
     void *u_ptr = seL4_GetMR(1);
     int max = seL4_GetMR(2);
 
     sos_process_t k_processes[max];
 
     int index = 0;
-    for(int i = 0;i < PROCESS_ARRAY_SIZE;i++){
-        printf("%d is %d\n", i , process_array[i].state);
-        if(process_array[i].state == ACTIVE){
+    for (int i = 0; i < PROCESS_ARRAY_SIZE; i++) {
+        printf("%d is %d\n", i, process_array[i].state);
+        if (process_array[i].state == ACTIVE) {
             k_processes[index] = process_array[i].status;
             index++;
-            if(index > max){
+            if (index > max) {
                 break;
             }
         }
     }
-    int ret = mem_move(cur_proc, (seL4_Word) u_ptr, (seL4_Word) &k_processes, sizeof(sos_process_t) * index, READ);
+    int ret = mem_move(cur_proc, (seL4_Word) u_ptr, (seL4_Word) &k_processes,
+                       sizeof(sos_process_t) * index, READ);
     printf("ret is %d\n", ret);
 
-    if(ret == -1){
+    if (ret == -1) {
         syscall_reply(cur_proc->reply, 0, -1);
         return NULL;
     }

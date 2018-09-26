@@ -62,12 +62,12 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
     ut_t *ut = ut_alloc(size_bits, global_cspace);
     if (ut == NULL) {
         err = try_swap_out();
-        if(err){
+        if (err) {
             ZF_LOGE("No memory for object of size %zu", size_bits);
             return NULL;
         }
         ut = ut_alloc(size_bits, global_cspace);
-        if(ut == NULL){
+        if (ut == NULL) {
             ZF_LOGE("No memory for object of size %zu", size_bits);
             return NULL;
         }
@@ -83,7 +83,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
 
     /* now do the retype */
     err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type,
-                                           size_bits);
+                                size_bits);
     ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
         ut_free(ut, size_bits);

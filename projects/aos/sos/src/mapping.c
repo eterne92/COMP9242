@@ -160,7 +160,7 @@ seL4_Error map_frame_cspace(cspace_t *cspace, seL4_CPtr frame_cap,
 }
 
 seL4_Error map_frame(cspace_t *cspace, seL4_CPtr frame_cap, seL4_CPtr vspace,
-                     seL4_Word vaddr, seL4_CapRights_t rights, 
+                     seL4_Word vaddr, seL4_CapRights_t rights,
                      seL4_ARM_VMAttributes attr)
 {
     return map_frame_impl(cspace, frame_cap, vspace, vaddr, rights, attr, NULL,
@@ -214,7 +214,7 @@ seL4_Error sos_map_frame(cspace_t *cspace, int frame, proc *cur_proc,
             }
             // printf("sos map\n");
             ut = ut_alloc_4k_untyped(NULL);
-            if(ut == NULL){
+            if (ut == NULL) {
                 goto cleanup;
             }
         }

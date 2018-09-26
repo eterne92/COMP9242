@@ -145,13 +145,13 @@ void *bootstrap_cspace_map_frame(void *cookie, seL4_CPtr cap, seL4_CPtr free_slo
 void *bootstrap_cspace_alloc_4k_ut(UNUSED void *cookie, seL4_CPtr *cap)
 {
     ut_t *untyped = ut_alloc_4k_untyped(NULL);
-    if(untyped == NULL){
+    if (untyped == NULL) {
         seL4_Error err = try_swap_out();
-        if(err){
+        if (err) {
             return NULL;
         }
         untyped = ut_alloc_4k_untyped(NULL);
-        if(untyped == NULL){
+        if (untyped == NULL) {
             return NULL;
         }
     }

@@ -72,7 +72,6 @@ int mem_move(proc *proc, seL4_Word u_vaddr, seL4_Word k_vaddr, size_t len,
         return -1;
     }
     size_t n = PAGE_SIZE_4K - (u_vaddr & PAGE_MASK_4K);
-    int nbytes = 0;
     if (len < n) {
         n = len;
     }

@@ -302,7 +302,7 @@ void *_sys_handle_page_fault(proc *cur_proc)
                                        seL4_GetMR(seL4_VMFault_FSR));
     if (err) {
         /* we will deal with this later */
-        printf("vaddr is %p\n", vaddr);
+        //printf("vaddr is %p\n", (void *)vaddr);
         ZF_LOGE("Segment fault");
         int waiting_list = cur_proc->waiting_list;
         kill_process(cur_proc->status.pid);
@@ -452,7 +452,7 @@ void *_sys_kill_process(proc *cur_proc)
 
 void *_sys_process_status(proc *cur_proc)
 {
-    void *u_ptr = seL4_GetMR(1);
+    void *u_ptr = (void *)seL4_GetMR(1);
     int max = seL4_GetMR(2);
 
     sos_process_t k_processes[max];

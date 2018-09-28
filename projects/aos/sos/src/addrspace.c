@@ -81,7 +81,7 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         last_vaddr -= PAGE_SIZE_4K;
     }
 
-    printf("first %p, last %p\n", first_vaddr, last_vaddr);
+    //printf("first %p, last %p\n", (void *)first_vaddr, (void *)last_vaddr);
 
     for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
         // printf("destroy %p\n", i);

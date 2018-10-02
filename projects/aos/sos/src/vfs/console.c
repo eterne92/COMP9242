@@ -55,6 +55,7 @@
 #include <picoro/picoro.h>
 #include <stdlib.h>
 
+typedef  void *(*coro_t)(void *);
 /*
  * The console device.
  */
@@ -74,9 +75,6 @@ static int con_eachopen(struct device *dev, int openflags)
     // only one process could open console in read mode
     if (how == O_RDONLY || how == O_RDWR) {
         if (console.proc == NULL) {
-            printf("real open\n");
-            console.proc = get_cur_proc();
-            printf("now console proc is %p\n", console.proc);
             return 0;
         } else {
             return -1;
@@ -85,12 +83,12 @@ static int con_eachopen(struct device *dev, int openflags)
     return 0;
 }
 
-static void putchar_to_user(void)
+static void *putchar_to_user(void)
 {
     struct uio *uio = the_console->uio;
     if (uio->vaddr == 0) {
         /* shouldn't handle this call */
-        return;
+        return NULL;
     }
     int idx = uio->length - uio->uio_resid;
     char c;
@@ -103,7 +101,7 @@ static void putchar_to_user(void)
                 err = handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
                 if (err) {
                     // not enough memory
-                    return;
+                    return NULL;
                 }
                 sos_vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
             }
@@ -120,14 +118,15 @@ static void putchar_to_user(void)
             // finish reading
             the_console->uio = NULL;
             // syscall_reply(the_console->proc->reply, idx + 1, 0);
-            return;
+            return NULL;
         } else if (c == '\n') {
             the_console->uio = NULL;
             // syscall_reply(the_console->proc->reply, idx + 1, 0);
-            return;
+            return NULL;
         }
         ++idx;
     }
+    return NULL;
 }
 
 static void read_handler(struct serial *serial, char c)
@@ -139,7 +138,9 @@ static void read_handler(struct serial *serial, char c)
                                         BUFFER_SIZE;
         ++the_console->n;
         if (the_console->uio) {
-            putchar_to_user();
+            coro c = coroutine((coro_t) putchar_to_user);
+            resume(c, NULL);
+            create_coroutine(c);
         }
     }
 }
@@ -160,6 +161,8 @@ static int con_io(struct device *dev, struct uio *uio)
         // the_console->vaddr = uio->vaddr;
         // putchar_to_user(uio);
         the_console->uio = uio;
+        the_console->proc = uio->proc;
+        printf("read came\n");
         putchar_to_user();
         while (the_console->uio != NULL) {
             yield(NULL);

@@ -90,6 +90,7 @@ static int load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
 
         /* allocate the untyped for the loadees address space */
         int frame = frame_alloc(NULL);
+        ++cur_proc->status.size;
         uintptr_t loader_vaddr = FRAME_BASE + frame * PAGE_SIZE_4K;
         if (frame == -1) {
             ZF_LOGE("fail to alloc frame in elf load");

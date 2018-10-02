@@ -24,12 +24,24 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
     int result = 0;
     struct uio k_uio;
     unsigned tmp = 0;
+    void *aborted = 0;
+
+    while (swap_lock == 1) {
+        aborted = yield(NULL);
+    }
+    if (aborted) {
+        swap_lock = 0;
+        return seL4_IllegalOperation;
+    }
+    swap_lock = 1;
+
     // printf("load page start\n");
     // printf("%d, vaddr %p\n", offset, vaddr);
     offset = offset - 1;
     uio_kinit(&k_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
     result = VOP_READ(swap_file, &k_uio);
     if (result) {
+        swap_lock = 0;
         return result;
     }
     // printf("read finish\n");
@@ -40,6 +52,7 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
         uio_kinit(&k_uio, (seL4_Word)&tmp, sizeof(unsigned), offset, UIO_WRITE);
         result = VOP_WRITE(swap_file, &k_uio);
     }
+    swap_lock = 0;
     return result;
 }
 
@@ -64,6 +77,7 @@ seL4_Error try_swap_out(void)
         swap_lock = 0;
         return seL4_IllegalOperation;
     }
+    swap_lock = 1;
     // go through the frame table to find the victim
     for (unsigned j = first_available_frame; j < size * 2; ++j) {
         if (clock_hand == frame_table.max - 1u) {

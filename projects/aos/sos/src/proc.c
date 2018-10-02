@@ -27,13 +27,19 @@ static int kill_lock = 0;
 static int get_next_available_pid(void)
 {
     int pid = -1;
+    bool full = true;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         pid = (i + available_pid) % PROCESS_ARRAY_SIZE;
         if (process_array[pid].state == DEAD) {
             available_pid = pid + 1;
+            full = false;
             break;
         }
     }
+    if(full){
+        return -1;
+    }
+    
     return pid;
 }
 
@@ -185,6 +191,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     proc *process = &process_array[pid];
     process->status.pid = pid;
+    process->status.size = 0;
 
     printf("vspace\n");
     /* Create a VSpace */
@@ -332,7 +339,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
-    process->status.size = 0;
     process->waiting_list = 0;
     process->status.stime = get_now_since_boot();
     strcpy(process->status.command, app_name);

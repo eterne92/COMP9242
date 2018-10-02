@@ -2,6 +2,7 @@
 
 #include <sel4/sel4.h>
 #include <utils/util.h>
+#include <picoro/picoro.h>
 /*
  * our new syscall
  */
@@ -39,6 +40,7 @@ typedef struct proc proc;
 #define SOS_SYSCALL_MUNMAP          200
 
 
+void create_coroutine(coro c);
 void run_coroutine(void *arg);
 NORETURN void syscall_loop(seL4_CPtr ep);
 void handle_syscall(seL4_Word badge, int num_args);

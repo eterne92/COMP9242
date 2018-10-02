@@ -69,7 +69,7 @@ static void add_coroutine(coroutines *coroutine)
     }
 }
 
-static void create_coroutine(coro c)
+void create_coroutine(coro c)
 {
     coroutines *list_node = (coroutines *)malloc(sizeof(coroutine));
     if (!list_node)
@@ -214,13 +214,11 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
 
     case SOS_SYS_MY_ID: {
-        printf("id is %d\n", cur_proc->status.pid);
         syscall_reply(cur_proc->reply, cur_proc->status.pid, 0);
         break;
     }
 
     case SOS_SYS_PROCESS_STATUS: {
-
         coro c = coroutine((coro_t)_sys_process_status);
         resume(c, cur_proc);
         create_coroutine(c);
@@ -283,8 +281,13 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 resume(c, cur_proc);
                 create_coroutine(c);
             } else {
+                printf("not page fault\n");
+                char c[3];
+                c[0] = badge / 10 - '0';
+                c[1] = badge % 10 - '0';
+                c[2] = 0;
                 /* some kind of fault */
-                debug_print_fault(message, "TTY_NAME");
+                debug_print_fault(message, c);
                 /* dump registers too */
                 debug_dump_registers(cur_proc->tcb);
 
@@ -463,14 +466,14 @@ void *_sys_process_status(proc *cur_proc)
         if (process_array[i].state == ACTIVE) {
             k_processes[index] = process_array[i].status;
             index++;
-            if (index > max) {
+            if (index == max) {
                 break;
             }
         }
     }
+
     int ret = mem_move(cur_proc, (seL4_Word) u_ptr, (seL4_Word) &k_processes,
                        sizeof(sos_process_t) * index, READ);
-    printf("ret is %d\n", ret);
 
     if (ret == -1) {
         syscall_reply(cur_proc->reply, 0, -1);

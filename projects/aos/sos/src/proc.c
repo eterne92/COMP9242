@@ -36,10 +36,10 @@ static int get_next_available_pid(void)
             break;
         }
     }
-    if(full){
+    if (full) {
         return -1;
     }
-    
+
     return pid;
 }
 

@@ -62,6 +62,7 @@
 #define TTY_PRIORITY (0)
 #define TTY_EP_BADGE (101)
 
+typedef  void *(*coro_t)(void *);
 /*
  * A dummy starting syscall
  */
@@ -193,13 +194,18 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
 
 /* Start the first process, and return true if successful
  *
- * This function will leak memory if the process does not start successfully.
- * TODO: avoid leaking memory once you implement real processes, otherwise a user
- *       can force your OS to run out of memory by creating lots of failed processes.
  */
-bool start_first_process(char *app_name, seL4_CPtr ep, pid_t *pid)
+void *_start_process(char *app_name){
+    int pid;
+    start_process(app_name, ipc_ep, &pid);
+    return (void *)pid;
+}
+
+void start_first_process(char *app_name, seL4_CPtr ep)
 {
-    return start_process(app_name, ep, pid);
+    coro c = coroutine((coro_t)_start_process);
+    resume(c, app_name);
+    create_coroutine(c);
 }
 
 /* Allocate an endpoint and a notification object for sos.
@@ -279,23 +285,6 @@ void init_muslc(void)
     muslcsys_install_syscall(__NR_madvise, sys_madvise);
 }
 
-void anotherdummycallback(uint64_t id, void *data)
-{
-    (void)data;
-    uint64_t now = timestamp_us(timestamp_get_freq());
-    printf("timstamp = %ld;\t id = %ld; diff = %ld\n", now, id, now - id);
-}
-
-void dummycallback(uint64_t id, void *data)
-{
-    (void)data;
-    uint64_t now = timestamp_us(timestamp_get_freq());
-    printf("timstamp = %ld;\t id = %ld; diff = %ld\n", now, id, now - id);
-    register_timer(500000, &anotherdummycallback, NULL, F, ONE_SHOT);
-    register_timer(1000000, &anotherdummycallback, NULL, F, ONE_SHOT);
-}
-
-
 
 NORETURN void *main_continued(UNUSED void *arg)
 {
@@ -329,18 +318,18 @@ NORETURN void *main_continued(UNUSED void *arg)
     // frametable_test();
     /* Start the user application */
     printf("Start first process\n");
-    pid_t pid;
-    bool success = start_first_process(TTY_NAME,ipc_ep, &pid);
-    ZF_LOGF_IF(!success, "Failed to start first process");
+    // pid_t pid;
+    start_first_process(TTY_NAME,ipc_ep);
+    // ZF_LOGF_IF(!success, "Failed to start first process");
 
-    proc *cur_proc = get_process(pid);
-    set_cur_proc(cur_proc);
+    // proc *cur_proc = get_process(pid);
+    // set_cur_proc(cur_proc);
 
-    struct as_region *region = cur_proc->as->regions;
-    while(region != NULL){
-        printf("region start %p, size %ld\n", (void *)region->vaddr, region->size);
-        region = region->next;
-    }
+    // struct as_region *region = cur_proc->as->regions;
+    // while(region != NULL){
+    //     printf("region start %p, size %ld\n", (void *)region->vaddr, region->size);
+    //     region = region->next;
+    // }
 
     printf("\nSOS entering syscall loop\n");
     syscall_loop(ipc_ep);

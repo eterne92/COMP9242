@@ -414,18 +414,21 @@ void *_sys_create_process(proc *cur_proc)
 
 void _sys_process_wait(proc *cur_proc)
 {
+    proc *process;
     int pid = seL4_GetMR(1);
     if (pid == -1) {
         for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-            if (process_array[pid].state == ACTIVE) {
-                SET_BIT(process_array[pid].waiting_list, cur_proc->status.pid);
+            process = get_process(i);
+            if (process->state == ACTIVE) {
+                SET_BIT(process->waiting_list, cur_proc->status.pid);
             }
         }
     } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
         syscall_reply(cur_proc->reply, 0, 0);
     } else {
-        if (process_array[pid].state == ACTIVE) {
-            SET_BIT(process_array[pid].waiting_list, cur_proc->status.pid);
+        process = get_process(pid);
+        if (process->state == ACTIVE) {
+            SET_BIT(process->waiting_list, cur_proc->status.pid);
         } else {
             syscall_reply(cur_proc->reply, 0, 0);
         }
@@ -434,12 +437,15 @@ void _sys_process_wait(proc *cur_proc)
 
 void *_sys_kill_process(proc *cur_proc)
 {
+    proc *process;
     int pid = seL4_GetMR(1);
     if (pid < 0 || pid > PROCESS_ARRAY_SIZE - 1) {
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
-    if (process_array[pid].state == DEAD) {
+
+    process = get_process(pid);
+    if (process->state == DEAD) {
         syscall_reply(cur_proc->reply, 0, 0);
         return NULL;
     }
@@ -462,9 +468,8 @@ void *_sys_process_status(proc *cur_proc)
 
     int index = 0;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; i++) {
-        printf("%d is %d\n", i, process_array[i].state);
-        if (process_array[i].state == ACTIVE) {
-            k_processes[index] = process_array[i].status;
+        if (get_process(i)->state == ACTIVE) {
+            k_processes[index] = get_process(i)->status;
             index++;
             if (index == max) {
                 break;

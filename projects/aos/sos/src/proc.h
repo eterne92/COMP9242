@@ -52,8 +52,6 @@ extern seL4_CPtr ipc_ep;
  * of an archive of attached applications.                */
 extern char _cpio_archive[];
 
-extern proc process_array[];
-
 void set_cur_proc(proc *p);
 
 proc *get_cur_proc(void);

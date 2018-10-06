@@ -17,7 +17,7 @@
 
 #define DEFAULT_PRIORITY (0)
 
-proc process_array[PROCESS_ARRAY_SIZE];
+static proc process_array[PROCESS_ARRAY_SIZE];
 
 static proc *cur_proc;
 
@@ -55,9 +55,11 @@ proc *get_cur_proc(void)
 
 proc *get_process(int pid)
 {
-    if (pid < 0 || pid > 32)
+    int index = pid % PROCESS_ARRAY_SIZE;
+    if(process_array[index].status.pid != pid){
         return NULL;
-    return &process_array[pid];
+    }
+    return &process_array[index];
 }
 
 /* helper to allocate a ut + cslot, and retype the ut into the cslot */

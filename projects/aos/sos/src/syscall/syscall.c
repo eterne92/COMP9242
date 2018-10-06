@@ -32,8 +32,10 @@ static void wake_up(int waiting_list)
         if (GET_BIT(waiting_list, i)) {
             p = get_process(i);
             /* clear other processes' waiting list  */
+            printf("pid = %d\n", p->status.pid);
             for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
-                RST_BIT(get_process(j)->waiting_list, i);
+                if(get_process(j))
+                    RST_BIT(get_process(j)->waiting_list, i);
             }
             if (p->state == ACTIVE)
                 syscall_reply(p->reply, 0, 0);
@@ -454,6 +456,7 @@ void *_sys_kill_process(proc *cur_proc)
 
     kill_process(pid);
     wake_up(waiting_list);
+    printf("wakeup done\n");
     if (cur_proc->state == ACTIVE)
         syscall_reply(cur_proc->reply, 0, 0);
     return NULL;
@@ -468,7 +471,7 @@ void *_sys_process_status(proc *cur_proc)
 
     int index = 0;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; i++) {
-        if (get_process(i)->state == ACTIVE) {
+        if (get_process(i) && get_process(i)->state == ACTIVE) {
             k_processes[index] = get_process(i)->status;
             index++;
             if (index == max) {

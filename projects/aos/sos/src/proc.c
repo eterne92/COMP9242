@@ -12,6 +12,10 @@
 #include "mapping.h"
 #include "pagetable.h"
 #include "syscall/filetable.h"
+#include "vfs/uio.h"
+#include "vfs/vfs.h"
+#include "vfs/vnode.h"
+#include <fcntl.h>
 #include <picoro/picoro.h>
 #include <string.h>
 
@@ -56,9 +60,10 @@ proc *get_cur_proc(void)
 proc *get_process(int pid)
 {
     int index = pid % PROCESS_ARRAY_SIZE;
-    if(process_array[index].status.pid != pid){
-        return NULL;
-    }
+    // if(process_array[index].status.pid != pid){
+    //     printf("%d %d not same\n", process_array[index].status.pid, pid);
+    //     return NULL;
+    // }
     return &process_array[index];
 }
 
@@ -110,7 +115,7 @@ static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
 
 /* set up System V ABI compliant stack, so that the process can
  * start up and initialise the C library */
-static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file)
+static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file, struct vnode *elf_vn)
 {
     /* Create a stack frame */
     seL4_Error err;
@@ -133,9 +138,38 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file)
     uintptr_t local_stack_bottom = (uintptr_t)(offset + FRAME_BASE);
     void *local_stack_top = (void *)(local_stack_bottom + PAGE_SIZE_4K);
 
+    /* since sysinfo is at some very high offset, do it by hand */
+    struct Elf64_Header *fileHdr = (struct Elf64_Header *) elf_file;
+    struct Elf64_Shdr sections[fileHdr->e_shentsize];
+    struct uio k_uio;
+    uio_kinit(&k_uio, sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize, fileHdr->e_shoff, UIO_READ);
+    VOP_READ(elf_vn, &k_uio);
+
+    printf("%d shstrndx\n", fileHdr->e_shstrndx);
+
+    size_t string_table_offset = sections[fileHdr->e_shstrndx].sh_offset;
+    char str[4096];
+    uio_kinit(&k_uio, str, 4096, string_table_offset, UIO_READ);
+
+    VOP_READ(elf_vn, &k_uio);
+    size_t sysinfo_offset;
+
+    for(int i = 0;i < fileHdr->e_shentsize;i++){
+        if(strcmp("__vsyscall", (char *) str + sections[i].sh_name) == 0){
+            printf("find %d\n", i);
+            sysinfo_offset = sections[i].sh_offset;
+            break;
+        }
+    }
+
+    printf("%p\n", sysinfo_offset);
+    uintptr_t sysinfo;
+    uio_kinit(&k_uio, &sysinfo, sizeof(uintptr_t), sysinfo_offset, UIO_READ);
+    VOP_READ(elf_vn, &k_uio);
+
+    printf("read done\n");
+
     /* find the vsyscall table */
-    uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall",
-                          NULL));
     if (sysinfo == 0) {
         ZF_LOGE("could not find syscall table for c library");
         return 0;
@@ -195,7 +229,20 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     process->status.pid = pid;
     process->status.size = 0;
 
-    printf("vspace\n");
+
+    printf("load elf\n");
+
+    char elf_base[4096];
+    struct vnode *elf_vn;
+
+    vfs_open(app_name, O_RDONLY, 0, &elf_vn);
+
+    printf("%p\n", elf_vn);
+
+    struct uio k_uio;
+    uio_kinit(&k_uio, elf_base, 4096, 0, UIO_READ);
+    VOP_READ(elf_vn, &k_uio);
+
     /* Create a VSpace */
     process->vspace_ut = alloc_retype(&(process->vspace),
                                       seL4_ARM_PageGlobalDirectoryObject, seL4_PGDBits);
@@ -211,7 +258,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
-    printf("as\n");
     /* create addrspace of ttytest */
     process->as = addrspace_init();
     if (!process->as) {
@@ -219,7 +265,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
-    printf("pt\n");
     /* initialize level 1 shadow page table */
     process->pt = initialize_page_table();
     if (!process->pt) {
@@ -228,20 +273,17 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     }
     /* Create a simple 1 level CSpace */
 
-    printf("cspace, global_cspace %p\n", &process->cspace);
     err = cspace_create_one_level(global_cspace, &process->cspace);
     if (err != CSPACE_NOERROR) {
         ZF_LOGE("Failed to create cspace");
         return false;
     }
 
-    printf("filetable\n");
     /* Create open file table */
     process->openfile_table = filetable_create();
 
     /* Create an IPC buffer */
 
-    printf("ipc\n");
     as_define_ipcbuffer(process->as);
     frame = frame_alloc(NULL);
     err = sos_map_frame(global_cspace, frame, process, USERIPCBUFFER,
@@ -253,7 +295,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
-    printf("endpoint\n");
     /* allocate a new slot in the target cspace which we will mint a badged endpoint cap into --
      * the badge is used to identify the process, which will come in handy when you have multiple
      * processes. */
@@ -273,7 +314,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     }
     process->user_endpoint = user_ep;
 
-    printf("tcb\n");
     /* Create a new TCB object */
     process->tcb_ut = alloc_retype(&(process->tcb), seL4_TCBObject, seL4_TCBBits);
     if (process->tcb_ut == NULL) {
@@ -304,21 +344,20 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     NAME_THREAD(process->tcb, app_name);
 
     /* parse the cpio image */
-    ZF_LOGI("\nStarting \"%s\"...\n", app_name);
-    unsigned long elf_size;
-    char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
-    if (elf_base == NULL) {
-        ZF_LOGE("Unable to locate cpio header for %s", app_name);
-        return false;
-    }
+    // ZF_LOGI("\nStarting \"%s\"...\n", app_name);
+    // unsigned long elf_size;
+    // char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
+    // if (elf_base == NULL) {
+    //     ZF_LOGE("Unable to locate cpio header for %s", app_name);
+    //     return false;
+    // }
 
-    printf("stack\n");
     /* set up the stack */
     as_define_stack(process->as);
-    seL4_Word sp = init_process_stack(pid, global_cspace, elf_base);
+    seL4_Word sp = init_process_stack(pid, global_cspace, elf_base, elf_vn);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
     if (err) {
         ZF_LOGE("Failed to load elf image");
         return false;

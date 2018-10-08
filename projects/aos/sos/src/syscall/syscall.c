@@ -31,6 +31,7 @@ static void wake_up(int waiting_list)
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         if (GET_BIT(waiting_list, i)) {
             p = get_process(i);
+            if (!p) continue;
             /* clear other processes' waiting list  */
             printf("pid = %d\n", p->status.pid);
             for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {

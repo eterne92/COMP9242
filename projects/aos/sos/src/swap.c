@@ -89,6 +89,7 @@ seL4_Error try_swap_out(void)
             clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
             int pid = GET_PID(clock_hand);
             process = get_process(pid);
+            assert(process);
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);

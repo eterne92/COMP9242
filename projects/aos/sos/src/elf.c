@@ -160,6 +160,8 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         /* create regions of the process iamge */
         as_region *region = as_define_region(cur_proc->as, vaddr, segment_size,
                                              (unsigned char)flags);
+        printf("vaddr %p, flags %p\n", vaddr, flags);
+        printf("region->vaddr %p, region->flags %p\n", region->vaddr, region->flags);
         if (region == NULL) {
             ZF_LOGE("elf loading region alloc failed!");
         }

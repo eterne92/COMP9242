@@ -129,7 +129,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
 
             } else if ((frame & PRESENT) && (frame & UNMAPPED) == false) {
                 // write on read-only page segmentation fault
-
+                return seL4_RangeError;
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
                 seL4_Word offset = frame & OFFSET;

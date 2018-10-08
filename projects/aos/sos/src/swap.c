@@ -96,11 +96,11 @@ seL4_Error try_swap_out(void)
                                                    frame_table.frames[clock_hand].vaddr);
                 // printf("clock hand %d, cap %d, pid is %d, %p\n", clock_hand, cap, pid,
                 // frame_table.frames[clock_hand].vaddr);
-
                 seL4_ARM_Page_Unmap(cap);
-
                 cspace_delete(global_cspace, cap);
                 cspace_free_slot(global_cspace, cap);
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, true, false, 0);
+
             } else {
                 // victim found
                 // printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
@@ -138,7 +138,7 @@ seL4_Error try_swap_out(void)
 
                 // update the present bit & offset
                 // printf("try update\n");
-                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false, true,
                                    file_offset + 1);
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,

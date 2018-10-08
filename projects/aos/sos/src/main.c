@@ -106,7 +106,8 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
     }
 
     /* now do the retype */
-    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type, size_bits);
+    seL4_Error err = cspace_untyped_retype(global_cspace, ut->cap, *cptr, type,
+                                           size_bits);
     ZF_LOGE_IFERR(err, "Failed retype untyped");
     if (err != seL4_NoError) {
         ut_free(ut, size_bits);
@@ -195,7 +196,8 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type, size_t size_bits)
 /* Start the first process, and return true if successful
  *
  */
-void *_start_process(char *app_name){
+void *_start_process(char *app_name)
+{
     int pid;
     start_process(app_name, ipc_ep, &pid);
     return (void *)pid;
@@ -234,7 +236,8 @@ static inline seL4_CPtr badge_irq_ntfn(seL4_CPtr ntfn, seL4_Word badge)
     ZF_LOGF_IF(badged_cap == seL4_CapNull, "Failed to allocate slot");
 
     /* mint the cap, which sets the badge */
-    seL4_Error err = cspace_mint(global_cspace, badged_cap, global_cspace, ntfn, seL4_AllRights, badge | IRQ_EP_BADGE);
+    seL4_Error err = cspace_mint(global_cspace, badged_cap, global_cspace, ntfn,
+                                 seL4_AllRights, badge | IRQ_EP_BADGE);
     ZF_LOGE_IFERR(err, "Failed to mint cap");
 
     /* return the badged cptr */
@@ -298,19 +301,20 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Map the timer device (NOTE: this is the same mapping you will use for your timer driver -
      * sos uses the watchdog timers on this page to implement reset infrastructure & network ticks,
      * so touching the watchdog timers here is not recommended!) */
-    void *timer_vaddr = sos_map_device(global_cspace, PAGE_ALIGN_4K(TIMER_PADDR), PAGE_SIZE_4K);
+    void *timer_vaddr = sos_map_device(global_cspace, PAGE_ALIGN_4K(TIMER_PADDR),
+                                       PAGE_SIZE_4K);
 
     /* Initialise the network hardware. */
     printf("Network init\n");
     network_init(global_cspace,
-        badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_IRQ),
-        badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
-        timer_vaddr);
+                 badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_IRQ),
+                 badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
+                 timer_vaddr);
 
     start_timer(global_cspace,
-        badge_irq_ntfn(ntfn, IRQ_BADGE_TIMER),
-        timer_vaddr,
-        F);
+                badge_irq_ntfn(ntfn, IRQ_BADGE_TIMER),
+                timer_vaddr,
+                F);
 
     /* Initialise libserial */
     vfs_bootstrap();
@@ -319,7 +323,7 @@ NORETURN void *main_continued(UNUSED void *arg)
     /* Start the user application */
     printf("Start first process\n");
     // pid_t pid;
-    start_first_process(TTY_NAME,ipc_ep);
+    start_first_process(TTY_NAME, ipc_ep);
     // ZF_LOGF_IF(!success, "Failed to start first process");
 
     // proc *cur_proc = get_process(pid);
@@ -384,7 +388,7 @@ int main(void)
         ut_t *frame = alloc_retype(&frame_cap, seL4_ARM_SmallPageObject, seL4_PageBits);
         ZF_LOGF_IF(frame == NULL, "Failed to allocate stack page");
         seL4_Error err = map_frame(global_cspace, frame_cap, seL4_CapInitThreadVSpace,
-            vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
+                                   vaddr, seL4_AllRights, seL4_ARM_Default_VMAttributes);
         ZF_LOGF_IFERR(err, "Failed to map stack");
         vaddr += PAGE_SIZE_4K;
     }

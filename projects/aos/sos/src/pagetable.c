@@ -4,9 +4,9 @@
 #include "mapping.h"
 #include "proc.h"
 
-
-#define PRESENT (1lu << 50)
-#define PAGE_RW (1lu << 51)
+#define PRESENT  (1lu << 50)
+#define PAGE_RW  (1lu << 51)
+#define UNMAPPED (1lu << 52)
 #define OFFSET 0xffffffffffff
 
 extern cspace_t *global_cspace;
@@ -121,11 +121,14 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
                 // update process_status->size
                 ++cur_proc->status.size;
-            } else if (frame & PRESENT) {
-                /* the page is still there */
+            } else if ((frame & PRESENT) && (frame & UNMAPPED))  {
+                /* the page is still there and is not swapped*/
                 frame = frame & OFFSET;
                 err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+
+            } else if ((frame & PRESENT) && (frame & UNMAPPED) == false) {
+                // write on read-only page segmentation fault
 
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
@@ -225,15 +228,20 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr)
     return 0;
 }
 
-void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
+void update_page_status(page_table_t *table, seL4_Word vaddr, bool present, bool unmap,
                         seL4_Word file_offset)
 {
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
                        4);
     assert(pt);
     int offset = get_offset(vaddr, 4);
-    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
+    if (unmap) {
+        pt->page_obj_addr[offset] |= UNMAPPED;
+    } else {
+        pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
+    }
+    
     // seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     // printf("cap %d\n", cap);
     // seL4_Error err = seL4_ARM_Page_Unmap(cap);

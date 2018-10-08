@@ -34,7 +34,7 @@ static void wake_up(int waiting_list)
             /* clear other processes' waiting list  */
             printf("pid = %d\n", p->status.pid);
             for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
-                if(get_process(j))
+                if (get_process(j))
                     RST_BIT(get_process(j)->waiting_list, i);
             }
             if (p->state == ACTIVE)

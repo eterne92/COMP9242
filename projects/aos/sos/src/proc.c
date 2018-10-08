@@ -115,7 +115,8 @@ static int stack_write(seL4_Word *mapped_stack, int index, uintptr_t val)
 
 /* set up System V ABI compliant stack, so that the process can
  * start up and initialise the C library */
-static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file, struct vnode *elf_vn)
+static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
+                                    struct vnode *elf_vn)
 {
     /* Create a stack frame */
     seL4_Error err;
@@ -142,7 +143,8 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file, s
     struct Elf64_Header *fileHdr = (struct Elf64_Header *) elf_file;
     struct Elf64_Shdr sections[fileHdr->e_shentsize];
     struct uio k_uio;
-    uio_kinit(&k_uio, sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize, fileHdr->e_shoff, UIO_READ);
+    uio_kinit(&k_uio, sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize,
+              fileHdr->e_shoff, UIO_READ);
     VOP_READ(elf_vn, &k_uio);
 
     printf("%d shstrndx\n", fileHdr->e_shstrndx);
@@ -154,8 +156,8 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file, s
     VOP_READ(elf_vn, &k_uio);
     size_t sysinfo_offset;
 
-    for(int i = 0;i < fileHdr->e_shentsize;i++){
-        if(strcmp("__vsyscall", (char *) str + sections[i].sh_name) == 0){
+    for (int i = 0; i < fileHdr->e_shentsize; i++) {
+        if (strcmp("__vsyscall", (char *) str + sections[i].sh_name) == 0) {
             printf("find %d\n", i);
             sysinfo_offset = sections[i].sh_offset;
             break;
@@ -357,7 +359,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     seL4_Word sp = init_process_stack(pid, global_cspace, elf_base, elf_vn);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
+                   elf_vn);
     if (err) {
         ZF_LOGE("Failed to load elf image");
         return false;

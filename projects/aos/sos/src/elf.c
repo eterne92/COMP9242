@@ -80,9 +80,9 @@ static inline seL4_CapRights_t get_sel4_rights_from_elf(
 static int load_segment_into_vspace(cspace_t *cspace,
                                     proc *cur_proc,
                                     size_t pm_offset, size_t segment_size,
-                                    size_t file_size, uintptr_t dst, 
+                                    size_t file_size, uintptr_t dst,
                                     seL4_CapRights_t permissions,
-                                    struct vnode* elf_vn)
+                                    struct vnode *elf_vn)
 {
     assert(file_size <= segment_size);
 
@@ -91,7 +91,7 @@ static int load_segment_into_vspace(cspace_t *cspace,
     seL4_Error err = seL4_NoError;
 
     struct uio u_uio;
-    uio_uinit(&u_uio, dst,segment_size, pm_offset, UIO_READ, cur_proc);
+    uio_uinit(&u_uio, dst, segment_size, pm_offset, UIO_READ, cur_proc);
     VOP_READ(elf_vn, &u_uio);
 
     // while (pos < segment_size) {
@@ -106,7 +106,7 @@ static int load_segment_into_vspace(cspace_t *cspace,
     //         ZF_LOGE("fail to alloc frame in elf load");
     //     }
 
-    //     err = sos_map_frame(cspace, frame, cur_proc, 
+    //     err = sos_map_frame(cspace, frame, cur_proc,
     //                         loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
     //     /* finally copy the data */

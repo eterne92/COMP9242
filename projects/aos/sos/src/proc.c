@@ -237,13 +237,19 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     char elf_base[4096];
     struct vnode *elf_vn;
 
-    vfs_open(app_name, O_RDONLY, 0, &elf_vn);
+    int ret = vfs_open(app_name, O_RDONLY, 0, &elf_vn);
+    if(ret){
+        return false;
+    }
 
     printf("%p\n", elf_vn);
 
     struct uio k_uio;
     uio_kinit(&k_uio, elf_base, 4096, 0, UIO_READ);
-    VOP_READ(elf_vn, &k_uio);
+    ret = VOP_READ(elf_vn, &k_uio);
+    if(ret){
+        return ret;
+    }
 
     /* Create a VSpace */
     process->vspace_ut = alloc_retype(&(process->vspace),

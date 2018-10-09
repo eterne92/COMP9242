@@ -83,6 +83,7 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
     printf("got vn now, with vn as %p result is %d\n", vn, result);
     /* try create for write */
     if (result && canwrite && !(openflags & O_CREAT)) {
+        printf("try create\n");
         openflags = openflags | O_CREAT;
         char name[NAME_MAX + 1];
         struct vnode *dir;

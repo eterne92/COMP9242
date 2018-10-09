@@ -237,10 +237,9 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present, bool
     int offset = get_offset(vaddr, 4);
     if (unmap) {
         pt->page_obj_addr[offset] |= UNMAPPED;
-    } else {
-        pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
-                                (~PRESENT);
     }
+    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
+                                (~PRESENT);
     
     // seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     // printf("cap %d\n", cap);

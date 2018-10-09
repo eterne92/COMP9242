@@ -100,7 +100,7 @@ seL4_Error try_swap_out(void)
                 seL4_ARM_Page_Unmap(cap);
                 cspace_delete(global_cspace, cap);
                 cspace_free_slot(global_cspace, cap);
-                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, true, false, 0);
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, true, true, 0);
 
             } else {
                 // victim found

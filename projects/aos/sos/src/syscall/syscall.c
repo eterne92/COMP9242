@@ -359,11 +359,23 @@ void _sys_mmap(proc *cur_proc)
         cur_proc->as->used_top = cur_proc->as->heap->vaddr;
     }
     seL4_Word size = seL4_GetMR(2);
-    seL4_Word vtop = cur_proc->as->used_top;
-    seL4_Word vbase = vtop - size;
-    region = as_define_region(cur_proc->as, vbase, size, RG_R | RG_W);
 
-    syscall_reply(cur_proc->reply, region->vaddr, 0);
+    region = cur_proc->as->regions;
+    as_region* ret = NULL;
+    while(region->next != NULL){
+        seL4_Word base = region->vaddr + region->size;
+        seL4_Word top = region->next->vaddr;
+        if(top - base > size){
+            ret = as_define_region(cur_proc->as, base, size, RG_R | RG_W);
+            break;
+        }
+    }
+    if(ret){
+        syscall_reply(cur_proc->reply, region->vaddr, 0);
+    }
+    else{
+        syscall_reply(cur_proc->reply, 0, 0);
+    }
 }
 
 void _sys_munmap(proc *cur_proc)
@@ -374,7 +386,6 @@ void _sys_munmap(proc *cur_proc)
     seL4_Word base = seL4_GetMR(1);
     while (region) {
         if (region->vaddr == base) {
-            cur_proc->as->used_top = region->vaddr + region->size;
             as_destroy_region(cur_proc->as, region, cur_proc);
             break;
         }

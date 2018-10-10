@@ -158,7 +158,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 
     for (int i = 0; i < fileHdr->e_shentsize; i++) {
         if (strcmp("__vsyscall", (char *) str + sections[i].sh_name) == 0) {
-            printf("find %d\n", i);
+            printf("__vsyscall find %d\n", i);
             sysinfo_offset = sections[i].sh_offset;
             break;
         }
@@ -172,6 +172,76 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
     printf("read done\n");
 
     /* find the vsyscall table */
+    if (sysinfo == 0) {
+        ZF_LOGE("could not find syscall table for c library");
+        return 0;
+    }
+
+    int index = -2;
+
+    /* null terminate the aux vectors */
+    index = stack_write(local_stack_top, index, 0);
+    index = stack_write(local_stack_top, index, 0);
+
+    /* write the aux vectors */
+    index = stack_write(local_stack_top, index, PAGE_SIZE_4K);
+    index = stack_write(local_stack_top, index, AT_PAGESZ);
+
+    index = stack_write(local_stack_top, index, sysinfo);
+    index = stack_write(local_stack_top, index, AT_SYSINFO);
+
+    /* null terminate the environment pointers */
+    index = stack_write(local_stack_top, index, 0);
+
+    /* we don't have any env pointers - skip */
+
+    /* null terminate the argument pointers */
+    index = stack_write(local_stack_top, index, 0);
+
+    /* no argpointers - skip */
+
+    /* set argc to 0 */
+    stack_write(local_stack_top, index, 0);
+
+    /* adjust the initial stack top */
+    stack_top += (index * sizeof(seL4_Word));
+
+    /* the stack *must* remain aligned to a double word boundary,
+     * as GCC assumes this, and horrible bugs occur if this is wrong */
+    assert(index % 2 == 0);
+    assert(stack_top % (sizeof(seL4_Word) * 2) == 0);
+
+    return stack_top;
+}
+
+/* set up System V ABI compliant stack, so that the process can
+ * start up and initialise the C library */
+static uintptr_t cpio_init_process_stack(int pid, cspace_t *cspace, char *elf_file)
+{
+    /* Create a stack frame */
+    seL4_Error err;
+    proc *process = &process_array[pid];
+    int frame = frame_alloc(NULL);
+    err = sos_map_frame(cspace, frame, process,
+                        USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
+                        seL4_ARM_Default_VMAttributes);
+
+    if (err != seL4_NoError) {
+        ZF_LOGE("Failed to allocate stack");
+        return 0;
+    }
+
+    /* virtual addresses in the target process' address space */
+    uintptr_t stack_top = USERSTACKTOP;
+    uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
+    /* virtual addresses in the SOS's address space */
+    int offset = get_frame_from_vaddr(process->pt, stack_bottom) * PAGE_SIZE_4K;
+    uintptr_t local_stack_bottom = (uintptr_t)(offset + FRAME_BASE);
+    void *local_stack_top = (void *)(local_stack_bottom + PAGE_SIZE_4K);
+
+    /* find the vsyscall table */
+    uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall",
+                          NULL));
     if (sysinfo == 0) {
         ZF_LOGE("could not find syscall table for c library");
         return 0;
@@ -347,20 +417,21 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     /* parse the cpio image */
     // ZF_LOGI("\nStarting \"%s\"...\n", app_name);
-    // unsigned long elf_size;
-    // char *elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
-    // if (elf_base == NULL) {
-    //     ZF_LOGE("Unable to locate cpio header for %s", app_name);
-    //     return false;
-    // }
+    unsigned long elf_size;
+    char *cpio_elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
+    if (elf_base == NULL) {
+        ZF_LOGE("Unable to locate cpio header for %s", app_name);
+        return false;
+    }
 
     /* set up the stack */
     as_define_stack(process->as);
     seL4_Word sp = init_process_stack(pid, global_cspace, elf_base, elf_vn);
+    //seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
-                   elf_vn);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
+    // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
     if (err) {
         ZF_LOGE("Failed to load elf image");
         return false;

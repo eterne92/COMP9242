@@ -101,7 +101,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
     seL4_Error err;
 
     region = cur_proc->as->regions;
-    // printf("handle page fault for vaddr %p\n", vaddr);
+    printf("handle page fault for vaddr %p\n", vaddr);
     while (region) {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
             execute = region->flags & RG_X;

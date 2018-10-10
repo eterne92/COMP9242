@@ -1,6 +1,4 @@
-#include <autoconf.h>
 #include <assert.h>
-#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +7,9 @@
 #include <fcntl.h>
 #include <time.h>
 #include <sys/time.h>
+#include <utils/time.h>
 #include <syscalls.h>
-#include <utils/util.h>
-
+/* Your OS header file */
 #include <sos.h>
 
 size_t sos_write(void *vData, size_t count)
@@ -29,7 +27,7 @@ size_t sos_read(void *vData, size_t count)
 
 int main(int argc, char const *argv[])
 {
-    // sosapi_init_syscall_table();
+    sosapi_init_syscall_table();
 
     // int pid = sos_my_id();
     // printf("I am %d\n", pid);
@@ -42,8 +40,10 @@ int main(int argc, char const *argv[])
     // else{
     //     sos_process_wait(0);
     // }
-    int *p = (int *)0x400000 + 512;
-    printf("%d\n", *p);
-    *p = 5;
+    // int *p = (int *)0x400000 + 512;
+    // printf("%d\n", *p);
+    // *p = 5;
+    //printf("hello world!\n");
+    printf("bye world!\n");
     return 0;
 }

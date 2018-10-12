@@ -228,19 +228,21 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr)
     return 0;
 }
 
-void update_page_status(page_table_t *table, seL4_Word vaddr, bool present, bool unmap,
-                        seL4_Word file_offset)
+void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
+                        bool unmap, seL4_Word file_offset)
 {
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
                        4);
     assert(pt);
     int offset = get_offset(vaddr, 4);
     if (unmap) {
+        // clock hand will iterate through all the pages 
+        // set set the unmap bit
         pt->page_obj_addr[offset] |= UNMAPPED;
     }
     pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
-    
+
     // seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     // printf("cap %d\n", cap);
     // seL4_Error err = seL4_ARM_Page_Unmap(cap);

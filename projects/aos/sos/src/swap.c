@@ -100,7 +100,8 @@ seL4_Error try_swap_out(void)
                 seL4_ARM_Page_Unmap(cap);
                 cspace_delete(global_cspace, cap);
                 cspace_free_slot(global_cspace, cap);
-                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, true, true, 0);
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, true,
+                                   true, 0);
 
             } else {
                 // victim found
@@ -139,7 +140,8 @@ seL4_Error try_swap_out(void)
 
                 // update the present bit & offset
                 // printf("try update\n");
-                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false, true,
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
+                                   true,
                                    file_offset + 1);
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,

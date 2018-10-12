@@ -170,7 +170,7 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *)vaddr,
                 (void *)(vaddr + segment_size));
         printf(" * Loading segment %p-->%p\n", (void *)vaddr,
-                (void *)(vaddr + segment_size));
+               (void *)(vaddr + segment_size));
         printf("offset is %u\n", pm_offset);
         //printf("try load\n");
         int err = load_segment_into_vspace(cspace, cur_proc,
@@ -222,9 +222,9 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
  *
  */
 static int cpio_load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
-                                    proc *cur_proc,
-                                    char *src, size_t segment_size,
-                                    size_t file_size, uintptr_t dst, seL4_CapRights_t permissions)
+        proc *cur_proc,
+        char *src, size_t segment_size,
+        size_t file_size, uintptr_t dst, seL4_CapRights_t permissions)
 {
     assert(file_size <= segment_size);
 
@@ -243,7 +243,7 @@ static int cpio_load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
             ZF_LOGE("fail to alloc frame in elf load");
         }
 
-        err = sos_map_frame(cspace, frame, cur_proc, 
+        err = sos_map_frame(cspace, frame, cur_proc,
                             loadee_vaddr, permissions, seL4_ARM_Default_VMAttributes);
 
         /* finally copy the data */
@@ -269,7 +269,7 @@ static int cpio_load_segment_into_vspace(cspace_t *cspace, seL4_CPtr loader,
 }
 
 int cpio_elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
-             char *elf_file, struct vnode *elf_vn)
+                  char *elf_file, struct vnode *elf_vn)
 {
 
     /* Ensure that the file is an elf file. */
@@ -304,12 +304,12 @@ int cpio_elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
 
         /* Copy it across into the vspace. */
         printf(" * Loading segment %p-->%p\n", (void *)vaddr,
-                (void *)(vaddr + segment_size));
+               (void *)(vaddr + segment_size));
         printf("source address is %p\n", source_addr);
         printf("offset is %d\n", source_addr - elf_file);
         int err = cpio_load_segment_into_vspace(cspace, loader_vspace, cur_proc,
-                                           source_addr, segment_size, file_size, vaddr,
-                                           get_sel4_rights_from_elf(flags));
+                                                source_addr, segment_size, file_size, vaddr,
+                                                get_sel4_rights_from_elf(flags));
         if (err) {
             ZF_LOGE("Elf loading failed!");
             return -1;

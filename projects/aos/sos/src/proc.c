@@ -216,7 +216,8 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 
 /* set up System V ABI compliant stack, so that the process can
  * start up and initialise the C library */
-static uintptr_t cpio_init_process_stack(int pid, cspace_t *cspace, char *elf_file)
+static uintptr_t cpio_init_process_stack(int pid, cspace_t *cspace,
+        char *elf_file)
 {
     /* Create a stack frame */
     seL4_Error err;
@@ -430,7 +431,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     //seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
+                   elf_vn);
     // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
     if (err) {
         ZF_LOGE("Failed to load elf image");

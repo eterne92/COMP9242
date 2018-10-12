@@ -22,5 +22,5 @@ typedef struct proc proc;
 int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
              char *elf_file, struct vnode *elf_vn);
 
-int cpio_elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc, 
+int cpio_elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
                   char *elf_file, struct vnode *elf_vn);

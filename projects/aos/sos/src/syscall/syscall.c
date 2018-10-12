@@ -361,19 +361,18 @@ void _sys_mmap(proc *cur_proc)
     seL4_Word size = seL4_GetMR(2);
 
     region = cur_proc->as->regions;
-    as_region* ret = NULL;
-    while(region->next != NULL){
+    as_region *ret = NULL;
+    while (region->next != NULL) {
         seL4_Word base = region->vaddr + region->size;
         seL4_Word top = region->next->vaddr;
-        if(top - base > size){
+        if (top - base > size) {
             ret = as_define_region(cur_proc->as, base, size, RG_R | RG_W);
             break;
         }
     }
-    if(ret){
+    if (ret) {
         syscall_reply(cur_proc->reply, region->vaddr, 0);
-    }
-    else{
+    } else {
         syscall_reply(cur_proc->reply, 0, 0);
     }
 }

@@ -369,6 +369,7 @@ void _sys_mmap(proc *cur_proc)
             ret = as_define_region(cur_proc->as, base, size, RG_R | RG_W);
             break;
         }
+        region = region->next;
     }
     if (ret) {
         syscall_reply(cur_proc->reply, region->vaddr, 0);
@@ -390,7 +391,7 @@ void _sys_munmap(proc *cur_proc)
         }
         region = region->next;
     }
-    if (region == NULL) {
+    if (region) {
         ret = region->vaddr;
     } else {
         ret = 0;

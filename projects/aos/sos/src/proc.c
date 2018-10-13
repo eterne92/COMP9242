@@ -465,6 +465,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     process->waiting_list = 0;
     process->status.stime = get_now_since_boot();
     strcpy(process->status.command, app_name);
+    vfs_close(elf_vn);
     return err == seL4_NoError;
 }
 

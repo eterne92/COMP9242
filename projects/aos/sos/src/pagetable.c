@@ -240,8 +240,11 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
         // set set the unmap bit
         pt->page_obj_addr[offset] |= UNMAPPED;
     }
-    pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
+    if (!present) {
+        pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
                                 (~PRESENT);
+    }
+        
 
     // seL4_Word cap = get_cap_from_vaddr(table, vaddr);
     // printf("cap %d\n", cap);

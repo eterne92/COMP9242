@@ -170,8 +170,20 @@ void clean_up_swapping(unsigned offset)
 {
     struct uio k_uio;
     int result;
+    int *aborted;
+
+    while (swap_lock == 1) {
+        aborted = yield(NULL);
+    }
+    if (aborted) {
+        swap_lock = 0;
+        return;
+    }
+    swap_lock = 1;
+
     uio_kinit(&k_uio, (seL4_Word)&header, sizeof(unsigned), offset, UIO_WRITE);
     result = VOP_WRITE(swap_file, &k_uio);
     header = offset / PAGE_SIZE_4K;
-    assert(result == 0);
+
+    swap_lock = 0;
 }

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <stdbool.h>
 #include <sys/time.h>
 #include <utils/time.h>
 #include <syscalls.h>
@@ -23,6 +24,19 @@ size_t sos_read(void *vData, size_t count)
 {
     // use the content of tty test
     return 0;
+}
+
+static int threshold = 5000;
+
+void recursive_test(int i)
+{
+    if (i > threshold) return;
+    char *p = (char *)malloc(sizeof(char) * 1024);
+    memset(p, 'H', sizeof(char) * 1024);
+    recursive_test(i + 1);
+    memset(p, 0, sizeof(char) * 1024);
+    free(p);
+    return;
 }
 
 int main(int argc, char const *argv[])
@@ -44,6 +58,8 @@ int main(int argc, char const *argv[])
     // printf("%d\n", *p);
     // *p = 5;
     //printf("hello world!\n");
-    printf("bye world!\n");
+    // printf("bye world!\n");
+    recursive_test(0);
+    while(true);
     return 0;
 }

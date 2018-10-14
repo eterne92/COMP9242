@@ -87,7 +87,7 @@ static int load_segment_into_vspace(cspace_t *cspace,
     assert(file_size <= segment_size);
 
     /* We work a page at a time in the destination vspace. */
-    unsigned int pos = 0;
+    //unsigned int pos = 0;
     seL4_Error err = seL4_NoError;
 
     struct uio u_uio;
@@ -160,8 +160,8 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         /* create regions of the process iamge */
         as_region *region = as_define_region(cur_proc->as, vaddr, segment_size,
                                              (unsigned char)flags);
-        printf("vaddr %p, flags %p\n", vaddr, flags);
-        printf("region->vaddr %p, region->flags %p\n", region->vaddr, region->flags);
+        // printf("vaddr %p, flags %x\n", (void *)vaddr, flags);
+        //printf("region->vaddr %p, region->flags %x\n", (void *)region->vaddr, region->flags);
         if (region == NULL) {
             ZF_LOGE("elf loading region alloc failed!");
         }
@@ -169,9 +169,8 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *)vaddr,
                 (void *)(vaddr + segment_size));
-        printf(" * Loading segment %p-->%p\n", (void *)vaddr,
-               (void *)(vaddr + segment_size));
-        printf("offset is %u\n", pm_offset);
+        // printf(" * Loading segment %p-->%p\n", (void *)vaddr, (void *)(vaddr + segment_size));
+        // printf("offset is %u\n", pm_offset);
         //printf("try load\n");
         int err = load_segment_into_vspace(cspace, cur_proc,
                                            pm_offset, segment_size, file_size, vaddr,

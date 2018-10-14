@@ -44,6 +44,10 @@ int main(int argc, char const *argv[])
     // printf("%d\n", *p);
     // *p = 5;
     //printf("hello world!\n");
-    printf("bye world!\n");
+    int pid = sos_process_create("test_2");
+    printf("I am No.%d test_2\n", pid);
+    pid = sos_process_create("test_2");
+    printf("I am No.%d test_2\n", pid);
+    sos_process_wait(-1);
     return 0;
 }

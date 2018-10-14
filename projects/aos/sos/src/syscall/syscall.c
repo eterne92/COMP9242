@@ -25,21 +25,29 @@ typedef struct coroutines {
 static coroutines *coro_list = NULL;
 static coroutines *tail = NULL;
 
-static void wake_up(int waiting_list)
+static void wake_up(int pid)
 {
-    proc *p;
+    proc *p = NULL;
+    // for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+    //     if (GET_BIT(waiting_list, i)) {
+    //         p = get_process(i);
+    //         if (!p) continue;
+    //         /* clear other processes' waiting list  */
+    //         printf("pid = %d\n", p->status.pid);
+    //         for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
+    //             if (get_process(j))
+    //                 RST_BIT(get_process(j)->waiting_list, i);
+    //         }
+    //         if (p->state == ACTIVE)
+    //             syscall_reply(p->reply, 0, 0);
+    //     }
+    // }
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-        if (GET_BIT(waiting_list, i)) {
-            p = get_process(i);
-            if (!p) continue;
-            /* clear other processes' waiting list  */
-            printf("pid = %d\n", p->status.pid);
-            for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
-                if (get_process(j))
-                    RST_BIT(get_process(j)->waiting_list, i);
-            }
-            if (p->state == ACTIVE)
-                syscall_reply(p->reply, 0, 0);
+        p = get_process(i);
+        if (p && p->state == ACTIVE && (p->waiting_pid == pid || p->waiting_pid == -1)) {
+            p->waiting_pid = -99;
+            printf("wake up process %d\n", p->status.pid);
+            syscall_reply(p->reply, 0, 0);
         }
     }
 }
@@ -310,9 +318,9 @@ void *_sys_handle_page_fault(proc *cur_proc)
         /* we will deal with this later */
         //printf("vaddr is %p\n", (void *)vaddr);
         ZF_LOGE("Segment fault");
-        int waiting_list = cur_proc->waiting_list;
+        //int waiting_list = cur_proc->waiting_list;
         kill_process(cur_proc->status.pid);
-        wake_up(waiting_list);
+        wake_up(cur_proc->status.pid);
         return NULL;
     }
     syscall_reply(cur_proc->reply, 0, 0);
@@ -347,7 +355,7 @@ void _sys_brk(proc *cur_proc)
 
 void _sys_mmap(proc *cur_proc)
 {
-    printf("mmap called\n");
+    printf("enter _sys_mmap -> mmap called\n");
     seL4_Error err;
     as_region *region;
     if (cur_proc->as->heap == NULL) {
@@ -372,7 +380,7 @@ void _sys_mmap(proc *cur_proc)
         region = region->next;
     }
     if (ret) {
-        syscall_reply(cur_proc->reply, region->vaddr, 0);
+        syscall_reply(cur_proc->reply, ret->vaddr, 0);
     } else {
         syscall_reply(cur_proc->reply, 0, 0);
     }
@@ -430,23 +438,25 @@ void _sys_process_wait(proc *cur_proc)
 {
     proc *process;
     int pid = seL4_GetMR(1);
-    if (pid == -1) {
-        for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-            process = get_process(i);
-            if (process->state == ACTIVE) {
-                SET_BIT(process->waiting_list, cur_proc->status.pid);
-            }
-        }
-    } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
-        syscall_reply(cur_proc->reply, 0, 0);
-    } else {
-        process = get_process(pid);
-        if (process->state == ACTIVE) {
-            SET_BIT(process->waiting_list, cur_proc->status.pid);
-        } else {
-            syscall_reply(cur_proc->reply, 0, 0);
-        }
-    }
+    // if (pid == -1) {
+    //     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
+    //         process = get_process(i);
+    //         if (process->state == ACTIVE) {
+    //             SET_BIT(process->waiting_list, cur_proc->status.pid);
+    //         }
+    //     }
+    // } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
+    //     syscall_reply(cur_proc->reply, 0, 0);
+    // } else {
+    //     process = get_process(pid);
+    //     if (process->state == ACTIVE) {
+    //         SET_BIT(process->waiting_list, cur_proc->status.pid);
+    //     } else {
+    //         syscall_reply(cur_proc->reply, 0, 0);
+    //     }
+    // }
+    printf("process %d wait on process %d\n", cur_proc->status.pid, pid);
+    cur_proc->waiting_pid = pid;
 }
 
 void *_sys_kill_process(proc *cur_proc)
@@ -464,13 +474,15 @@ void *_sys_kill_process(proc *cur_proc)
         return NULL;
     }
 
-    int waiting_list = get_process(pid)->waiting_list;
+    //int waiting_list = get_process(pid)->waiting_list;
 
     kill_process(pid);
-    wake_up(waiting_list);
+    wake_up(pid);
     printf("wakeup done\n");
-    if (cur_proc->state == ACTIVE)
+    if (cur_proc->state == ACTIVE) {
+        printf("send wakeup reply\n");
         syscall_reply(cur_proc->reply, 0, 0);
+    }
     return NULL;
 }
 

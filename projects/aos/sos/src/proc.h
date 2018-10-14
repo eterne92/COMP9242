@@ -40,6 +40,7 @@ typedef struct proc {
     seL4_CPtr user_endpoint;
     sos_process_t status;
     unsigned waiting_list;
+    int waiting_pid;
     enum process_state state;
 } proc;
 

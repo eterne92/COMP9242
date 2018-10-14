@@ -60,6 +60,7 @@ int main(int argc, char const *argv[])
     //printf("hello world!\n");
     // printf("bye world!\n");
     recursive_test(0);
-    while(true);
+    printf("recursive function call finished!\n enter infinite loop");
+    sleep(5);
     return 0;
 }

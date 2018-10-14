@@ -437,8 +437,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     //seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
-                   elf_vn);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
     // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
     if (err) {
         ZF_LOGE("Failed to load elf image");
@@ -463,6 +462,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
     process->waiting_list = 0;
+    process->waiting_pid = -99;
     process->status.stime = get_now_since_boot();
     strcpy(process->status.command, app_name);
     vfs_close(elf_vn);
@@ -522,6 +522,7 @@ void kill_process(int pid)
     process->status.pid = -1;
     process->waiting_list = 0;
     process->status.stime = 0;
+    process->waiting_pid = -99;
     process->reply = seL4_CapNull;
     kill_lock = 0;
     printf("all done\n");

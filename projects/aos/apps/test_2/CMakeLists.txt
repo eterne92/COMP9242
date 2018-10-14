@@ -11,15 +11,15 @@
 #
 cmake_minimum_required(VERSION 3.7.2)
 
-project(test C)
+project(test_2 C)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -u __vsyscall_ptr")
 
-add_executable(test EXCLUDE_FROM_ALL src/test.c)
-target_include_directories(test PRIVATE include)
-target_link_libraries(test muslc sel4 sosapi utils)
+add_executable(test_2 EXCLUDE_FROM_ALL src/test_2.c)
+target_include_directories(test_2 PRIVATE include)
+target_link_libraries(test_2 muslc sel4 sosapi utils)
 
 # warn about everything
 add_compile_options(-Wall -Werror -W -Wextra)
 
-set_property(GLOBAL APPEND PROPERTY apps_property "$<TARGET_FILE:test>")
+set_property(GLOBAL APPEND PROPERTY apps_property "$<TARGET_FILE:test_2>")

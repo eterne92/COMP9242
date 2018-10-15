@@ -70,7 +70,7 @@ long sys_brk(va_list ap)
    here to support that. We make a bunch of assumptions in the process */
 long sys_mmap(va_list ap)
 {
-    void *addr = va_arg(ap, void*);
+    void *addr = va_arg(ap, void *);
     size_t length = va_arg(ap, size_t);
     int prot = va_arg(ap, int);
     int flags = va_arg(ap, int);
@@ -89,7 +89,7 @@ long sys_mmap(va_list ap)
     seL4_Call(SOS_IPC_EP_CAP, tag);
 
     seL4_Word ret = seL4_GetMR(0);
-    if(ret != 0) {
+    if (ret != 0) {
         return ret;
     } else {
         return -ENOMEM;
@@ -97,9 +97,9 @@ long sys_mmap(va_list ap)
 
 }
 
-long sys_munmap(va_list ap) 
+long sys_munmap(va_list ap)
 {
-    char *base = va_arg(ap, char*);
+    char *base = va_arg(ap, char *);
     size_t length = va_arg(ap, size_t);
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
@@ -109,7 +109,7 @@ long sys_munmap(va_list ap)
     seL4_SetMR(2, length);
     seL4_Call(SOS_IPC_EP_CAP, tag);
     seL4_Word ret = seL4_GetMR(0);
-    if(ret == 0) {
+    if (ret == 0) {
         return ret;
     } else {
         return -1;

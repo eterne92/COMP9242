@@ -32,7 +32,8 @@ static void wake_up(int pid)
     proc *p = NULL;
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         p = get_process(i);
-        if (p && p->state == ACTIVE && (p->waiting_pid == pid || p->waiting_pid == -1)) {
+        if (p && p->state == ACTIVE && (p->waiting_pid == pid
+                                        || p->waiting_pid == -1)) {
             p->waiting_pid = -99;
             printf("wake up process %d\n", p->status.pid);
             syscall_reply(p->reply, 0, 0);
@@ -355,7 +356,7 @@ void _sys_brk(proc *cur_proc)
         } else {
             region->size = newbrk - region->vaddr;
         }
-            
+
     }
     seL4_Word ret = region->vaddr + region->size;
     syscall_reply(cur_proc->reply, ret, 0);

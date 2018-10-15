@@ -309,7 +309,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     struct vnode *elf_vn;
 
     int ret = vfs_open(app_name, O_RDONLY, 0, &elf_vn);
-    if(ret){
+    if (ret) {
         return false;
     }
 
@@ -318,7 +318,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     struct uio k_uio;
     uio_kinit(&k_uio, elf_base, 4096, 0, UIO_READ);
     ret = VOP_READ(elf_vn, &k_uio);
-    if(ret){
+    if (ret) {
         return ret;
     }
 
@@ -437,7 +437,8 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     // seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
-    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
+    err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
+                   elf_vn);
     // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
     printf("elf load finished\n");
     if (err) {

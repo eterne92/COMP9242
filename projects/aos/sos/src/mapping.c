@@ -107,7 +107,7 @@ static seL4_Error map_frame_impl(cspace_t *cspace, seL4_CPtr frame_cap,
             ut = ut_alloc_4k_untyped(NULL);
             // ZF_LOGE("Out of 4k untyped");
             // return -1;
-            return -1;
+            if (ut == NULL) return -1;
         }
 
         /* figure out which cptr to use to retype into*/

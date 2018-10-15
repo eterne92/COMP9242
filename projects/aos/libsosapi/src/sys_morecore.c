@@ -76,8 +76,6 @@ long sys_mmap(va_list ap)
     int flags = va_arg(ap, int);
     int fd = va_arg(ap, int);
     off_t offset = va_arg(ap, off_t);
-
-
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 7);
@@ -91,20 +89,18 @@ long sys_mmap(va_list ap)
     seL4_Call(SOS_IPC_EP_CAP, tag);
 
     seL4_Word ret = seL4_GetMR(0);
-    if(ret != 0){
+    if(ret != 0) {
         return ret;
-    }
-    else{
+    } else {
         return -ENOMEM;
     }
 
 }
 
-
-long sys_munmap(va_list ap){
+long sys_munmap(va_list ap) 
+{
     char *base = va_arg(ap, char*);
     size_t length = va_arg(ap, size_t);
-
     seL4_MessageInfo_t tag;
     seL4_MessageInfo_t retmsg;
     tag = seL4_MessageInfo_new(0, 0, 0, 3);
@@ -113,10 +109,9 @@ long sys_munmap(va_list ap){
     seL4_SetMR(2, length);
     seL4_Call(SOS_IPC_EP_CAP, tag);
     seL4_Word ret = seL4_GetMR(0);
-    if(ret == 0){
+    if(ret == 0) {
         return ret;
-    }
-    else{
+    } else {
         return -1;
     }
 }

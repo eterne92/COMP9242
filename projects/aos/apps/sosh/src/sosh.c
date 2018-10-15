@@ -78,6 +78,7 @@ static int thrash(int argc, char **argv){
         }
         bufs[i] = malloc(4096);
         bufs[i][0] = i % 26;
+        memset(bufs[i], i % 26, 4096);
     }
     // printf("all allocated\n");
     // for(int i =0 ;i < bfsize;i++){
@@ -91,6 +92,25 @@ static int thrash(int argc, char **argv){
     //     free(bufs[i]);
     // }
     return 0;
+}
+
+static threshold = 3500;
+static int recursive_test(int i)
+{
+    if (i >= threshold) return;
+    char *p = (char *)malloc(sizeof(char) * 8192);
+    assert(p);
+    memset(p, 'H', sizeof(char) * 8192);
+    recursive_test(i + 1);
+    assert(p);
+    memset(p, 0, sizeof(char) * 8192);
+    free(p);
+    return;
+}
+
+static int rtest(int argc, char **argv)
+{
+    recursive_test(1);
 }
 
 static int cat(int argc, char **argv)
@@ -348,7 +368,7 @@ struct command commands[] = { { "dir", dir }, { "ls", dir }, { "cat", cat }, {
         "cp", cp
     }, { "ps", ps }, { "exec", exec }, {"sleep", second_sleep}, {"msleep", milli_sleep},
     {"time", second_time}, {"mtime", micro_time}, {"kill", kill},
-    {"benchmark", benchmark}, {"thrash", thrash}, {"id", my_id}
+    {"benchmark", benchmark}, {"thrash", thrash}, {"id", my_id}, {"rtest", rtest}
 };
 
 int main(void)

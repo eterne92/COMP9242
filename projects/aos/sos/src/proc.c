@@ -434,11 +434,12 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* set up the stack */
     as_define_stack(process->as);
     seL4_Word sp = init_process_stack(pid, global_cspace, elf_base, elf_vn);
-    //seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
+    // seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
     err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base, elf_vn);
     // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
+    printf("elf load finished\n");
     if (err) {
         ZF_LOGE("Failed to load elf image");
         return false;
@@ -457,12 +458,15 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     err = seL4_TCB_WriteRegisters(process->tcb, 1, 0, 2, &context);
     ZF_LOGE_IF(err, "Failed to write registers");
+
+    // as_define_heap(process->as);
+
     /* open stdin, stdout, stderr */
     _sys_do_open(process, "console", 1, 1);
     _sys_do_open(process, "console", 1, 2);
     process->state = ACTIVE;
-    process->waiting_list = 0;
     process->waiting_pid = -99;
+    process->c = 0;
     process->status.stime = get_now_since_boot();
     strcpy(process->status.command, app_name);
     vfs_close(elf_vn);
@@ -475,7 +479,10 @@ void kill_process(int pid)
     kill_lock = 1;
     proc *process = get_process(pid);
     if (!process) return;
-
+    // abort syscall
+    if (resumable(process->c)) {
+        resume(process->c, 1);
+    }
     printf("try suspend\n");
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
     process->state = INACTIVE;
@@ -495,8 +502,6 @@ void kill_process(int pid)
         cspace_delete(&process->cspace, process->user_endpoint);
         cspace_free_slot(&process->cspace, process->user_endpoint);
     }
-
-
 
     if (process->vspace_ut) {
         ut_free(process->vspace_ut, seL4_PGDBits);
@@ -520,9 +525,9 @@ void kill_process(int pid)
     process->state = DEAD;
     process->status.size = 0;
     process->status.pid = -1;
-    process->waiting_list = 0;
     process->status.stime = 0;
     process->waiting_pid = -99;
+    process->c = 0;
     process->reply = seL4_CapNull;
     kill_lock = 0;
     printf("all done\n");

@@ -15,6 +15,7 @@
 typedef struct page_table page_table_t;
 typedef struct addrspace addrspace;
 typedef struct filetable filetable;
+struct coro;
 
 enum process_state {
     DEAD, ACTIVE, INACTIVE
@@ -39,9 +40,9 @@ typedef struct proc {
     filetable *openfile_table;
     seL4_CPtr user_endpoint;
     sos_process_t status;
-    unsigned waiting_list;
     int waiting_pid;
     enum process_state state;
+    struct coro *c;
 } proc;
 
 extern cspace_t *global_cspace;

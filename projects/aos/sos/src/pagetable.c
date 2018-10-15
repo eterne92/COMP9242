@@ -4,6 +4,8 @@
 #include "mapping.h"
 #include "proc.h"
 
+#include <string.h>
+
 #define PRESENT  (1lu << 50)
 #define PAGE_RW  (1lu << 51)
 #define UNMAPPED (1lu << 52)
@@ -89,6 +91,7 @@ seL4_Error insert_page_table_entry(page_table_t *table, page_table_entry *entry,
     return seL4_NoError;
 }
 
+
 seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                              seL4_Word fault_info)
 {
@@ -101,7 +104,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
     seL4_Error err;
 
     region = cur_proc->as->regions;
-    printf("handle page fault for vaddr %p\n", vaddr);
+    // printf("handle page fault for vaddr %p\n", vaddr);
     while (region) {
         if (vaddr >= region->vaddr && vaddr < region->vaddr + region->size) {
             execute = region->flags & RG_X;
@@ -150,7 +153,6 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 /* later it will be copy on write */
                 return seL4_RangeError;
             }
-
             return err;
         }
         region = region->next;
@@ -241,8 +243,7 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
         pt->page_obj_addr[offset] |= UNMAPPED;
     }
     if (!present) {
-        pt->page_obj_addr[offset] = present ? file_offset | PRESENT : file_offset &
-                                (~PRESENT);
+        pt->page_obj_addr[offset] = file_offset & (~PRESENT);
     }
         
 

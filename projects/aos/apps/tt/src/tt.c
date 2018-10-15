@@ -26,17 +26,37 @@ size_t sos_read(void *vData, size_t count)
     return 0;
 }
 
-static int threshold = 5000;
+static int threshold = 3500;
 
 void recursive_test(int i)
 {
-    if (i > threshold) return;
-    char *p = (char *)malloc(sizeof(char) * 1024);
-    memset(p, 'H', sizeof(char) * 1024);
+    if (i >= threshold) return;
+    char *p = (char *)malloc(sizeof(char) * 8192);
+   // assert(p);
+    memset(p, 'H', sizeof(char) * 8192);
     recursive_test(i + 1);
-    memset(p, 0, sizeof(char) * 1024);
+    //assert(p);
+    memset(p, 0, sizeof(char) * 8192);
     free(p);
     return;
+}
+
+int recursive_test2(int i)
+{
+    if (i < 2) return 1;
+    int a = recursive_test2(i - 1);
+    int b = recursive_test2(i - 2);
+    int count = a + b;
+    return count;
+}
+
+void loop_leak_test(int count)
+{
+    for (int i = 0; i < count; ++i) {
+        void *p = malloc(8192);
+        //printf("%p\n", p);
+        memset(p, 'H', 8192);
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -59,8 +79,18 @@ int main(int argc, char const *argv[])
     // *p = 5;
     //printf("hello world!\n");
     // printf("bye world!\n");
-    recursive_test(0);
-    printf("recursive function call finished!\n enter infinite loop");
-    sleep(5);
+    // printf("start calling recursive test\n");
+    recursive_test(1);
+    // // int v = recursive_test2(35);
+    //loop_leak_test(2500);
+    // int count = 2000;
+    // for (int i = 0; i < count; ++i) {
+    //     void *p = malloc(8192);
+    //     assert(p);
+    //     memset(p, 'B', 8192);
+    // }
+    // printf("recursive function call finished!\n enter infinite loop\n");
+    // printf("%d\n", v);
+    while(true);
     return 0;
 }

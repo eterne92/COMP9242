@@ -13,6 +13,8 @@
 #include "../network.h"
 #include "../vfs/uio.h"
 
+int get_header(void);
+
 typedef  void *(*coro_t)(void *);
 cspace_t *global_cspace;
 struct serial *serial;
@@ -28,20 +30,6 @@ static coroutines *tail = NULL;
 static void wake_up(int pid)
 {
     proc *p = NULL;
-    // for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-    //     if (GET_BIT(waiting_list, i)) {
-    //         p = get_process(i);
-    //         if (!p) continue;
-    //         /* clear other processes' waiting list  */
-    //         printf("pid = %d\n", p->status.pid);
-    //         for (int j = 0; j < PROCESS_ARRAY_SIZE; ++j) {
-    //             if (get_process(j))
-    //                 RST_BIT(get_process(j)->waiting_list, i);
-    //         }
-    //         if (p->state == ACTIVE)
-    //             syscall_reply(p->reply, 0, 0);
-    //     }
-    // }
     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
         p = get_process(i);
         if (p && p->state == ACTIVE && (p->waiting_pid == pid || p->waiting_pid == -1)) {
@@ -154,36 +142,42 @@ void handle_syscall(seL4_Word badge, int num_args)
     //     break;
     case SOS_SYS_OPEN: {
         coro c = coroutine((coro_t)&_sys_open);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
     case SOS_SYS_READ: {
         coro c = coroutine((coro_t)&_sys_read);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
     case SOS_SYS_WRITE: {
         coro c = coroutine((coro_t)&_sys_write);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
     case SOS_SYS_STAT: {
         coro c = coroutine((coro_t)&_sys_stat);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
     case SOS_SYS_CLOSE: {
         coro c = coroutine((coro_t)&_sys_close);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
     }
     case SOS_SYS_GET_DIRDENTS: {
         coro c = coroutine((coro_t)_sys_getdirent);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
@@ -209,6 +203,7 @@ void handle_syscall(seL4_Word badge, int num_args)
 
     case SOS_SYS_PROCESS_CREATE: {
         coro c = coroutine((coro_t)_sys_create_process);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
@@ -217,8 +212,10 @@ void handle_syscall(seL4_Word badge, int num_args)
         _sys_process_wait(cur_proc);
         break;
     }
+
     case SOS_SYS_PROCESS_DELETE: {
         coro c = coroutine((coro_t)_sys_kill_process);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
@@ -231,9 +228,11 @@ void handle_syscall(seL4_Word badge, int num_args)
 
     case SOS_SYS_PROCESS_STATUS: {
         coro c = coroutine((coro_t)_sys_process_status);
+        cur_proc->c = c;
         resume(c, cur_proc);
         create_coroutine(c);
         break;
+
     }
 
     default:
@@ -249,13 +248,9 @@ NORETURN void syscall_loop(seL4_CPtr ep)
     while (1) {
         seL4_Word badge;
         seL4_Word label;
-
-        /* set proc as badge */
-
         /* Block on ep, waiting for an IPC sent over ep, or
          * a notification from our bound notification object */
         seL4_MessageInfo_t message = seL4_Recv(ep, &badge);
-        run_coroutine(NULL);
         /* Awake! We got a message - check the label and badge to
          * see what the message is about */
         label = seL4_MessageInfo_get_label(message);
@@ -289,6 +284,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             /* page fault handler */
             if (label == seL4_Fault_VMFault) {
                 coro c = coroutine((coro_t)_sys_handle_page_fault);
+                cur_proc->c = c;
                 resume(c, cur_proc);
                 create_coroutine(c);
             } else {
@@ -305,6 +301,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 ZF_LOGF("The SOS skeleton does not know how to handle faults!");
             }
         }
+        run_coroutine(NULL);
     }
 }
 
@@ -316,11 +313,11 @@ void *_sys_handle_page_fault(proc *cur_proc)
                                        seL4_GetMR(seL4_VMFault_FSR));
     if (err) {
         /* we will deal with this later */
-        //printf("vaddr is %p\n", (void *)vaddr);
+        int pid = cur_proc->status.pid;
+        printf("process is %d    vaddr is %p\n", pid, (void *)vaddr);
         ZF_LOGE("Segment fault");
-        //int waiting_list = cur_proc->waiting_list;
-        kill_process(cur_proc->status.pid);
-        wake_up(cur_proc->status.pid);
+        kill_process(pid);
+        wake_up(pid);
         return NULL;
     }
     syscall_reply(cur_proc->reply, 0, 0);
@@ -339,15 +336,26 @@ void _sys_brk(proc *cur_proc)
             /* this should be delete process for later stuff */
             ZF_LOGE("region error");
         }
-        cur_proc->as->used_top = cur_proc->as->heap->vaddr;
+        //cur_proc->as->used_top = cur_proc->as->heap->vaddr;
     }
     region = cur_proc->as->heap;
-
+    //printf("**************newbrk is %lx\n", newbrk);
+    //printf("**************region->size %x region->vaddr %p\n", region->size, (void *)region->vaddr);
     if (!newbrk) {
     } else if (newbrk < region->size + region->vaddr) {
         /* shouldn't shrink heap */
+        printf("should not be here\n");
     } else {
-        region->size = newbrk - region->vaddr;
+        int tmp = newbrk - region->vaddr;
+        //printf("**************tmp is %x\n", tmp);
+        if (tmp > (4096 * 2 * PAGE_SIZE_4K)) {
+            assert(false);
+            syscall_reply(cur_proc->reply, 0, 0);
+            return;
+        } else {
+            region->size = newbrk - region->vaddr;
+        }
+            
     }
     seL4_Word ret = region->vaddr + region->size;
     syscall_reply(cur_proc->reply, ret, 0);
@@ -438,24 +446,6 @@ void _sys_process_wait(proc *cur_proc)
 {
     proc *process;
     int pid = seL4_GetMR(1);
-    // if (pid == -1) {
-    //     for (int i = 0; i < PROCESS_ARRAY_SIZE; ++i) {
-    //         process = get_process(i);
-    //         if (process->state == ACTIVE) {
-    //             SET_BIT(process->waiting_list, cur_proc->status.pid);
-    //         }
-    //     }
-    // } else if (pid > PROCESS_ARRAY_SIZE - 1 || pid < 0) {
-    //     syscall_reply(cur_proc->reply, 0, 0);
-    // } else {
-    //     process = get_process(pid);
-    //     if (process->state == ACTIVE) {
-    //         SET_BIT(process->waiting_list, cur_proc->status.pid);
-    //     } else {
-    //         syscall_reply(cur_proc->reply, 0, 0);
-    //     }
-    // }
-    printf("process %d wait on process %d\n", cur_proc->status.pid, pid);
     cur_proc->waiting_pid = pid;
 }
 
@@ -474,9 +464,8 @@ void *_sys_kill_process(proc *cur_proc)
         return NULL;
     }
 
-    //int waiting_list = get_process(pid)->waiting_list;
-
     kill_process(pid);
+    printf("$$$$$$$$$swapping header is %d\n", get_header());
     wake_up(pid);
     printf("wakeup done\n");
     if (cur_proc->state == ACTIVE) {

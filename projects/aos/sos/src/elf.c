@@ -92,7 +92,7 @@ static int load_segment_into_vspace(cspace_t *cspace,
 
     struct uio u_uio;
     uio_uinit(&u_uio, dst, file_size, pm_offset, UIO_READ, cur_proc);
-    VOP_READ(elf_vn, &u_uio);
+    err = VOP_READ(elf_vn, &u_uio);
 
     // while (pos < segment_size) {
     //     uintptr_t loadee_vaddr = (ROUND_DOWN(dst, PAGE_SIZE_4K));
@@ -169,7 +169,7 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *)vaddr,
                 (void *)(vaddr + segment_size));
-        // printf(" * Loading segment %p-->%p\n", (void *)vaddr, (void *)(vaddr + segment_size));
+        printf(" * Loading segment %p-->%p\n", (void *)vaddr, (void *)(vaddr + segment_size));
         // printf("offset is %u\n", pm_offset);
         //printf("try load\n");
         int err = load_segment_into_vspace(cspace, cur_proc,

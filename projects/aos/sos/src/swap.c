@@ -12,7 +12,12 @@ static struct vnode *swap_file = NULL;
 static unsigned header = 0;
 static unsigned tail = 0;
 static unsigned clock_hand;
-static int swap_lock = 0;
+static int volatile swap_lock = 0;
+
+int get_header(void)
+{
+    return header;
+}
 
 void initialize_swapping_file(void)
 {
@@ -105,7 +110,7 @@ seL4_Error try_swap_out(void)
 
             } else {
                 // victim found
-                // printf("victim's vaddr is %p\n", frame_table.frames[clock_hand].vaddr);
+                // printf("process is %d victim's vaddr is %p\n", pid, frame_table.frames[clock_hand].vaddr);
                 // printf("victim's cap is %d\n", frame_table.frames[clock_hand].ut->cap);
                 file_offset = header * PAGE_SIZE_4K;
                 if (swap_file == NULL) {
@@ -123,7 +128,7 @@ seL4_Error try_swap_out(void)
                     }
                 }
 
-                // printf("try read\n");
+                // printf("###try read\n");
                 if (header == tail) {
                     tail++;
                     header++;
@@ -139,20 +144,20 @@ seL4_Error try_swap_out(void)
                 }
 
                 // update the present bit & offset
-                // printf("try update\n");
+                // printf("###try update\n");
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
-                                   true,
-                                   file_offset + 1);
+                                   true, file_offset + 1);
                 // write out the page into disk
                 uio_kinit(&k_uio, FRAME_BASE + PAGE_SIZE_4K * clock_hand, PAGE_SIZE_4K,
                           file_offset, UIO_WRITE);
-                // printf("try write\n");
+                // printf("###try write\n");
 
                 result = VOP_WRITE(swap_file, &k_uio);
                 if (result) {
                     swap_lock = 0;
                     return seL4_IllegalOperation;
                 }
+                // printf("###write done\n");
                 // free the frame
                 frame_free(clock_hand);
                 err = seL4_NoError;

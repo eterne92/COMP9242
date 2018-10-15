@@ -20,7 +20,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(apps/tty_test)
 add_subdirectory(apps/sosh)
 add_subdirectory(apps/helloworld)
-add_subdirectory(apps/test_2)
+add_subdirectory(apps/tt)
 # add any additional apps here
 
 # add sos itself, this is your OS

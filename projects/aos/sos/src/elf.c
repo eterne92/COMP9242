@@ -85,7 +85,8 @@ static int load_segment_into_vspace(cspace_t *cspace,
                                     struct vnode *elf_vn)
 {
     assert(file_size <= segment_size);
-
+    (void) cspace;
+    (void) permissions;
     /* We work a page at a time in the destination vspace. */
     //unsigned int pos = 0;
     seL4_Error err = seL4_NoError;
@@ -100,7 +101,7 @@ static int load_segment_into_vspace(cspace_t *cspace,
 int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
              char *elf_file, struct vnode *elf_vn)
 {
-
+    (void)loader_vspace;
     /* Ensure that the file is an elf file. */
     if (elf_file == NULL || elf_checkFile(elf_file)) {
         ZF_LOGE("Invalid elf file");

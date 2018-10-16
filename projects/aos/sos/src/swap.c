@@ -14,6 +14,8 @@ static unsigned tail = 0;
 static unsigned clock_hand;
 static int volatile swap_lock = 0;
 
+#define OFFSET 0xffffffffffff
+
 int get_header(void)
 {
     return header;
@@ -24,13 +26,13 @@ void initialize_swapping_file(void)
     clock_hand = first_available_frame;
 }
 
-seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
+seL4_Error load_page(proc *process, seL4_Word vaddr, seL4_Word sos_frame_vaddr)
 {
     int result = 0;
     struct uio k_uio;
     unsigned tmp = 0;
     void *aborted = 0;
-
+    seL4_Word offset;
     while (swap_lock == 1) {
         aborted = yield(NULL);
     }
@@ -39,11 +41,12 @@ seL4_Error load_page(seL4_Word offset, seL4_Word vaddr)
         return seL4_IllegalOperation;
     }
     swap_lock = 1;
-
+    offset = _get_frame_from_vaddr(process->pt, vaddr);
     // printf("load page start\n");
     // printf("%d, vaddr %p\n", offset, vaddr);
-    offset = offset - 1;
-    uio_kinit(&k_uio, vaddr, PAGE_SIZE_4K, offset, UIO_READ);
+    offset &= OFFSET;
+    --offset; // offset is 1 based in pagetable but 0 based in file
+    uio_kinit(&k_uio, sos_frame_vaddr, PAGE_SIZE_4K, offset, UIO_READ);
     result = VOP_READ(swap_file, &k_uio);
     if (result) {
         swap_lock = 0;
@@ -94,7 +97,7 @@ seL4_Error try_swap_out(void)
             clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
             int pid = GET_PID(clock_hand);
             process = get_process(pid);
-            assert(process);
+            //assert(process);
             if (clock_bit) {
                 // unmap the page and set the clock bit to 0
                 FRAME_CLEAR_BIT(clock_hand, CLOCK);
@@ -128,9 +131,17 @@ seL4_Error try_swap_out(void)
                     }
                 }
 
-                int prev_header = header;
-                int prev_tail = tail;
+                //int prev_header = header;
+                //int prev_tail = tail;
                 // printf("###try read\n");
+
+                // set the victim's status to unpresent
+                // here file_offset -1 is a placeholder
+                // and should never be used otherwise it  
+                // will trigger a nfs fault 
+                update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
+                                   true, -1);
+
                 if (header == tail) {
                     tail++;
                     header++;
@@ -145,17 +156,22 @@ seL4_Error try_swap_out(void)
                     header = tmp;
                 }
 
-                clock_bit = FRAME_GET_BIT(clock_hand, CLOCK); 
-                if(clock_bit){
-                    printf("racing issue\n");
-                    header = prev_header;
-                    tail = prev_tail;
-                    clock_hand++;
-                    continue;
-                }
+                // clock_bit = FRAME_GET_BIT(clock_hand, CLOCK); 
+                // if (clock_bit) {
+                //     // should never come here
+                //     assert(false);
+                //     printf("racing issue\n");
+                //     header = prev_header;
+                //     tail = prev_tail;
+                //     clock_hand++;
+                //     continue;
+                // }
 
                 // update the present bit & offset
                 // printf("###try update\n");
+                if (frame_table.frames[clock_hand].vaddr == 0) {
+                    printf("process is %d\n", process->status.pid);
+                }
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
                                    true, file_offset + 1);
                 // write out the page into disk
@@ -189,9 +205,6 @@ void clean_up_swapping(unsigned offset)
     struct uio k_uio;
     int result;
     int *aborted = 0;
-    // while (swap_lock == 1) {
-    //     yield(NULL);
-    // }
     offset = offset - 1;
     while (swap_lock == 1) {
         aborted = yield(NULL);

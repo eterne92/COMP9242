@@ -107,7 +107,7 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
     }
     tmp = as->regions;
 
-    printf("sort region\n");
+    //printf("sort region\n");
     /* we are first region */
     if (tmp == region) {
         as->regions = tmp->next;
@@ -130,7 +130,7 @@ void destroy_regions(addrspace *as, proc *cur_proc)
 {
     as_region *region = as->regions;
     while (region) {
-        printf("%p -> %p region destroyed\n", region->vaddr, region->vaddr + region->size);
+        //printf("%p -> %p region destroyed\n", (void *)region->vaddr, region->vaddr + region->size);
         as_destroy_region(as, region, cur_proc);
         region = as->regions;
     }

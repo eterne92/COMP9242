@@ -152,7 +152,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
         }
     }
 
-    printf("%p\n", sysinfo_offset);
+    //printf("%p\n", sysinfo_offset);
     uintptr_t sysinfo;
     uio_kinit(&k_uio, (seL4_Word)&sysinfo, sizeof(uintptr_t), sysinfo_offset, UIO_READ);
     VOP_READ(elf_vn, &k_uio);
@@ -341,7 +341,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
 
     /* parse the cpio image */
     // ZF_LOGI("\nStarting \"%s\"...\n", app_name);
-    unsigned long elf_size;
+    //unsigned long elf_size;
     if (elf_base == NULL) {
         ZF_LOGE("Unable to locate cpio header for %s", app_name);
         return false;

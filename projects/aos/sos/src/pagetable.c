@@ -3,6 +3,7 @@
 #include "frametable.h"
 #include "mapping.h"
 #include "proc.h"
+#include "backtrace.h"
 
 #include <string.h>
 
@@ -124,9 +125,9 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
                 // update process_status->size
-                if(err != 0){
-                    printf("at no frame err is %d, frame is %ld\n", err, frame);
-                }
+                // if(err != 0){
+                //     printf("at no frame err is %d, frame is %ld\n", err, frame);
+                // }
                 ++cur_proc->status.size;
             } else if ((frame & PRESENT) && (frame & UNMAPPED))  {
                 /* the page is still there and is not swapped*/
@@ -143,18 +144,18 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 return seL4_RangeError;
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
-                seL4_Word offset = frame & OFFSET;
-                int frame = frame_alloc(NULL);
-                if (frame <= 0) {
+                //seL4_Word offset = frame & OFFSET;
+                int frame_handle = frame_alloc(NULL);
+                if (frame_handle <= 0) {
                     return -1;
                 }
-                err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE);
+                err = load_page(cur_proc, vaddr, frame_handle * PAGE_SIZE_4K + FRAME_BASE);
                 if (err) {
                     printf("load page fail\n");
-                    frame_free(frame);
+                    frame_free(frame_handle);
                     return err;
                 }
-                err = sos_map_frame(global_cspace, frame, cur_proc,
+                err = sos_map_frame(global_cspace, frame_handle, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
                 if(err != 0){
                     printf("at load err is %d\n", err);
@@ -247,10 +248,12 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
 {
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
                        4);
-    if(pt == NULL){
-        printf("%p\n", vaddr);
-    }
-    assert(pt);
+    // if(pt == NULL){
+    //     print_backtrace();
+    //     printf("%p\n", vaddr);
+    // }
+    
+    // assert(pt);
     int offset = get_offset(vaddr, 4);
     if (unmap) {
         // clock hand will iterate through all the pages

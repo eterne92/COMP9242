@@ -90,6 +90,7 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         if (frame == 0) {
             continue;
         } else if (!(frame & PRESENT)) {
+            // printf("clean swap\n");
             clean_up_swapping(frame & OFFSET);
         } else if (frame != 0 && slot != 0) {
             frame = (int) frame;
@@ -126,6 +127,7 @@ void destroy_regions(addrspace *as, proc *cur_proc)
 {
     as_region *region = as->regions;
     while (region) {
+        printf("%p -> %p region destroyed\n", region->vaddr, region->vaddr + region->size);
         as_destroy_region(as, region, cur_proc);
         region = as->regions;
     }

@@ -86,8 +86,11 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
     if (at == -1) {
         ret = filetable_place(cur_proc->openfile_table, file, &fd);
     } else {
+        printf("place %p at %d\n", file, at);
         struct openfile *tmp;
         filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
+        if(tmp)
+            openfile_decref(tmp);
     }
     printf("got fd is %d\n", fd);
     if (ret) {
@@ -121,7 +124,7 @@ void *_sys_open(proc *cur_proc)
         return NULL;
     }
 
-    set_cur_proc(cur_proc);
+    // set_cur_proc(cur_proc);
     ret = _sys_do_open(cur_proc, str, openflags, -1);
 
     if (ret < 0) {

@@ -47,15 +47,15 @@ static int get_next_available_pid(void)
     return pid;
 }
 
-void set_cur_proc(proc *p)
-{
-    cur_proc = p;
-}
+// void set_cur_proc(proc *p)
+// {
+//     cur_proc = p;
+// }
 
-proc *get_cur_proc(void)
-{
-    return cur_proc;
-}
+// proc *get_cur_proc(void)
+// {
+//     return cur_proc;
+// }
 
 proc *get_process(int pid)
 {
@@ -480,13 +480,14 @@ void kill_process(int pid)
     kill_lock = 1;
     proc *process = get_process(pid);
     if (!process) return;
+
+    process->state = INACTIVE;
     // abort syscall
     if (resumable(process->c)) {
         resume(process->c, 1);
     }
     printf("try suspend\n");
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
-    process->state = INACTIVE;
 
     printf("try destroy regions\n");
     if (process->as) destroy_regions(process->as, process);

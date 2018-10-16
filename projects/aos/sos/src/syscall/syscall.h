@@ -51,9 +51,9 @@ void set_boottime(void);
 
 unsigned get_now_since_boot(void);
 
-void _sos_sys_time_stamp(void);
+void _sos_sys_time_stamp(proc *cur_proc);
 
-void _sos_sys_usleep(void);
+void _sos_sys_usleep(proc *cur_proc);
 /* file syscalls */
 
 int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at);

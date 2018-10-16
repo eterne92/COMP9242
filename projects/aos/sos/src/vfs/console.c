@@ -117,11 +117,9 @@ static void *putchar_to_user(void)
         if (uio->uio_resid == 0) {
             // finish reading
             the_console->uio = NULL;
-            // syscall_reply(the_console->proc->reply, idx + 1, 0);
             return NULL;
         } else if (c == '\n') {
             the_console->uio = NULL;
-            // syscall_reply(the_console->proc->reply, idx + 1, 0);
             return NULL;
         }
         ++idx;
@@ -221,7 +219,6 @@ static int con_ioctl(struct device *dev, int op, const void *data)
 static int con_reclaim(struct device *dev)
 {
     struct con_softc *cs = (struct con_softc *)dev->d_data;
-    // proc *proc = get_cur_proc();
     // if (proc == cs->proc) {
     cs->vaddr = cs->n = cs->cs_gotchars_head = cs->cs_gotchars_tail = 0;
     cs->uio = NULL;

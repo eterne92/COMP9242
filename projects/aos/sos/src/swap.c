@@ -175,10 +175,11 @@ void clean_up_swapping(unsigned offset)
 {
     struct uio k_uio;
     int result;
-    int *aborted;
+    int *aborted = 0;
     // while (swap_lock == 1) {
     //     yield(NULL);
     // }
+    offset = offset - 1;
     while (swap_lock == 1) {
         aborted = yield(NULL);
     }
@@ -191,5 +192,5 @@ void clean_up_swapping(unsigned offset)
     result = VOP_WRITE(swap_file, &k_uio);
     header = offset / PAGE_SIZE_4K;
     swap_lock = 0;
-    printf("clean up swapping file offset is %u\n", offset);
+    // printf("clean up swapping file offset is %u\n", offset);
 }

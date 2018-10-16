@@ -184,10 +184,10 @@ void handle_syscall(seL4_Word badge, int num_args)
         break;
     }
     case SOS_SYS_USLEEP:
-        _sos_sys_usleep();
+        _sos_sys_usleep(cur_proc);
         break;
     case SOS_SYS_TIMESTAMP:
-        _sos_sys_time_stamp();
+        _sos_sys_time_stamp(cur_proc);
         break;
 
     case SOS_SYSCALLBRK:
@@ -276,7 +276,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
             handle_syscall(badge, seL4_MessageInfo_get_length(message) - 1);
         } else {
             proc *cur_proc = get_process(badge);
-            set_cur_proc(cur_proc);
+            // set_cur_proc(cur_proc);
 
             seL4_CPtr reply = cspace_alloc_slot(global_cspace);
             seL4_Error err = cspace_save_reply_cap(global_cspace, reply);
@@ -317,8 +317,11 @@ void *_sys_handle_page_fault(proc *cur_proc)
         int pid = cur_proc->status.pid;
         printf("process is %d    vaddr is %p\n", pid, (void *)vaddr);
         ZF_LOGE("Segment fault");
-        kill_process(pid);
-        wake_up(pid);
+        if(cur_proc->state == ACTIVE){
+            kill_process(pid);
+            printf("pid %d been killed by it self\n", pid);
+            wake_up(pid);
+        }
         return NULL;
     }
     syscall_reply(cur_proc->reply, 0, 0);
@@ -334,18 +337,16 @@ void _sys_brk(proc *cur_proc)
     if (cur_proc->as->heap == NULL) {
         err = as_define_heap(cur_proc->as);
         if (err != 0) {
-            /* this should be delete process for later stuff */
-            ZF_LOGE("region error");
+            int pid = cur_proc->status.pid;
+            kill_process(pid);
+            printf("pid %d been killed by it self\n", pid);
+            wake_up(pid);
         }
-        //cur_proc->as->used_top = cur_proc->as->heap->vaddr;
     }
     region = cur_proc->as->heap;
-    //printf("**************newbrk is %lx\n", newbrk);
-    //printf("**************region->size %x region->vaddr %p\n", region->size, (void *)region->vaddr);
     if (!newbrk) {
     } else if (newbrk < region->size + region->vaddr) {
         /* shouldn't shrink heap */
-        printf("should not be here\n");
     } else {
         int tmp = newbrk - region->vaddr;
         //printf("**************tmp is %x\n", tmp);
@@ -440,6 +441,7 @@ void *_sys_create_process(proc *cur_proc)
     }
     printf("ret_pid is %d\n", ret_pid);
     syscall_reply(cur_proc->reply, ret_pid, 0);
+    printf("returned\n");
     return NULL;
 }
 

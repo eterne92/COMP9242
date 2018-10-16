@@ -524,6 +524,12 @@ void kill_process(int pid)
 
     if (process->cspace.bootstrap)
         cspace_destroy(&process->cspace);
+    
+    if (process->reply != seL4_CapNull) {
+        printf("destroy reply capability\n")
+        cspace_delete(global_cspace, process->reply);
+        cspace_free_slot(global_cspace, process->reply);
+    }
     process->state = DEAD;
     process->status.size = 0;
     process->status.pid = -1;

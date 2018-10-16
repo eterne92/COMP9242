@@ -36,13 +36,13 @@ static void wake_up(int pid)
                                         || p->waiting_pid == -1)) {
             p->waiting_pid = -99;
             printf("wake up process %d\n", p->status.pid);
-            syscall_reply(p->reply, 0, 0);
+            syscall_reply(p, 0, 0);
         }
     }
 }
 
 
-void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
+void syscall_reply(proc *process, seL4_Word ret, seL4_Word err)
 {
     seL4_MessageInfo_t reply_msg;
     reply_msg = seL4_MessageInfo_new(0, 0, 0, 2);
@@ -50,11 +50,12 @@ void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word err)
     seL4_SetMR(0, ret);
     seL4_SetMR(1, err);
     /* Send the reply to the saved reply capability. */
-    seL4_Send(reply, reply_msg);
+    seL4_Send(process->reply, reply_msg);
     /* Free the slot we allocated for the reply - it is now empty, as the reply
          * capability was consumed by the send. */
-    cspace_delete(global_cspace, reply);
-    cspace_free_slot(global_cspace, reply);
+    cspace_delete(global_cspace, process->reply);
+    cspace_free_slot(global_cspace, process->reply);
+    process->reply = seL4_CapNull;
 }
 
 
@@ -224,7 +225,7 @@ void handle_syscall(seL4_Word badge, int num_args)
     }
 
     case SOS_SYS_MY_ID: {
-        syscall_reply(cur_proc->reply, cur_proc->status.pid, 0);
+        syscall_reply(cur_proc, cur_proc->status.pid, 0);
         break;
     }
 
@@ -325,7 +326,7 @@ void *_sys_handle_page_fault(proc *cur_proc)
         }
         return NULL;
     }
-    syscall_reply(cur_proc->reply, 0, 0);
+    syscall_reply(cur_proc, 0, 0);
     return NULL;
 }
 
@@ -352,7 +353,7 @@ void _sys_brk(proc *cur_proc)
         int tmp = newbrk - region->vaddr;
         if (tmp > (4096 * 2 * PAGE_SIZE_4K)) {
             assert(false);
-            syscall_reply(cur_proc->reply, 0, 0);
+            syscall_reply(cur_proc, 0, 0);
             return;
         } else {
             region->size = newbrk - region->vaddr;
@@ -360,7 +361,7 @@ void _sys_brk(proc *cur_proc)
 
     }
     seL4_Word ret = region->vaddr + region->size;
-    syscall_reply(cur_proc->reply, ret, 0);
+    syscall_reply(cur_proc, ret, 0);
 }
 
 void _sys_mmap(proc *cur_proc)
@@ -390,9 +391,9 @@ void _sys_mmap(proc *cur_proc)
         region = region->next;
     }
     if (ret) {
-        syscall_reply(cur_proc->reply, ret->vaddr, 0);
+        syscall_reply(cur_proc, ret->vaddr, 0);
     } else {
-        syscall_reply(cur_proc->reply, 0, 0);
+        syscall_reply(cur_proc, 0, 0);
     }
 }
 
@@ -416,7 +417,7 @@ void _sys_munmap(proc *cur_proc)
     } else {
         ret = 0;
     }
-    syscall_reply(cur_proc->reply, ret, 0);
+    syscall_reply(cur_proc, ret, 0);
 }
 
 void *_sys_create_process(proc *cur_proc)
@@ -428,21 +429,21 @@ void *_sys_create_process(proc *cur_proc)
 
     int path_length = copystr(cur_proc, (char *)path, app_name, N_NAME, COPYIN);
     if (path_length == -1) {
-        syscall_reply(cur_proc->reply, -1, -1);
+        syscall_reply(cur_proc, -1, -1);
         return NULL;
     }
 
     bool success = start_process(app_name, ipc_ep, &ret_pid);
     if (!success) {
         if (ret_pid == -1) {
-            syscall_reply(cur_proc->reply, -1, -1);
+            syscall_reply(cur_proc, -1, -1);
             return NULL;
         } else {
             kill_process(ret_pid);
         }
     }
     printf("ret_pid is %d\n", ret_pid);
-    syscall_reply(cur_proc->reply, ret_pid, 0);
+    syscall_reply(cur_proc, ret_pid, 0);
     printf("returned\n");
     return NULL;
 }
@@ -459,13 +460,13 @@ void *_sys_kill_process(proc *cur_proc)
     proc *process;
     int pid = seL4_GetMR(1);
     if (pid < 0 || pid > PROCESS_ARRAY_SIZE - 1) {
-        syscall_reply(cur_proc->reply, 0, 0);
+        syscall_reply(cur_proc, 0, 0);
         return NULL;
     }
 
     process = get_process(pid);
     if (process->state == DEAD) {
-        syscall_reply(cur_proc->reply, 0, 0);
+        syscall_reply(cur_proc, 0, 0);
         return NULL;
     }
 
@@ -475,7 +476,7 @@ void *_sys_kill_process(proc *cur_proc)
     printf("wakeup done\n");
     if (cur_proc->state == ACTIVE) {
         printf("send wakeup reply\n");
-        syscall_reply(cur_proc->reply, 0, 0);
+        syscall_reply(cur_proc, 0, 0);
     }
     return NULL;
 }
@@ -502,9 +503,9 @@ void *_sys_process_status(proc *cur_proc)
                        sizeof(sos_process_t) * index, READ);
 
     if (ret == -1) {
-        syscall_reply(cur_proc->reply, 0, -1);
+        syscall_reply(cur_proc, 0, -1);
         return NULL;
     }
-    syscall_reply(cur_proc->reply, index, 0);
+    syscall_reply(cur_proc, index, 0);
     return NULL;
 }

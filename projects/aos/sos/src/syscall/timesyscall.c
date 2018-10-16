@@ -13,24 +13,21 @@ void set_boottime(void)
 
 void _sos_sys_time_stamp(proc *cur_proc)
 {
-    seL4_CPtr reply = cur_proc->reply;
     seL4_Word t = timestamp_us(timestamp_get_freq());
-
-    syscall_reply(reply, t - boottime, 0);
+    syscall_reply(cur_proc, t - boottime, 0);
 }
 
 static void sleep_callback(uint64_t id, void *data)
 {
     (void)id;
-    seL4_CPtr reply = (seL4_CPtr)data;
-    syscall_reply(reply, 0, 0);
+    proc *process = (proc *)data;
+    syscall_reply(process, 0, 0);
 }
 
 void _sos_sys_usleep(proc *cur_proc)
 {
     int msec = (int)seL4_GetMR(1) * 1000;
-    seL4_CPtr reply = reply;
-    register_timer(msec, sleep_callback, (void *)reply, F, ONE_SHOT);
+    register_timer(msec, sleep_callback, (void *)cur_proc, F, ONE_SHOT);
 }
 
 unsigned get_now_since_boot(void)

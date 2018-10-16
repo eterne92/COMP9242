@@ -114,13 +114,13 @@ void *_sys_open(proc *cur_proc)
     // seL4_Word mode = seL4_GetMR(3);
     if ((openflags & allflags) != openflags) {
         /* unknown flags were set */
-        syscall_reply(cur_proc->reply, ret, -1);
+        syscall_reply(cur_proc, ret, -1);
         return NULL;
     }
     char str[NAME_MAX + 1];
     int path_length = copystr(cur_proc, (char *)path, str, NAME_MAX + 1, COPYIN);
     if (path_length == -1) {
-        syscall_reply(cur_proc->reply, ret, -1);
+        syscall_reply(cur_proc, ret, -1);
         return NULL;
     }
 
@@ -128,11 +128,11 @@ void *_sys_open(proc *cur_proc)
     ret = _sys_do_open(cur_proc, str, openflags, -1);
 
     if (ret < 0) {
-        syscall_reply(cur_proc->reply, ret, -1);
+        syscall_reply(cur_proc, ret, -1);
         return NULL;
     }
 
-    syscall_reply(cur_proc->reply, ret, 0);
+    syscall_reply(cur_proc, ret, 0);
     return NULL;
 }
 
@@ -149,12 +149,12 @@ void *_sys_read(proc *cur_proc)
         result = _sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_READ,
                                 O_WRONLY, &ret);
         if (result) {
-            syscall_reply(cur_proc->reply, 0, EFAULT);
+            syscall_reply(cur_proc, 0, EFAULT);
         } else {
-            syscall_reply(cur_proc->reply, ret, 0);
+            syscall_reply(cur_proc, ret, 0);
         }
     } else {
-        syscall_reply(cur_proc->reply, 0, EFAULT);
+        syscall_reply(cur_proc, 0, EFAULT);
     }
     return NULL;
 }
@@ -172,12 +172,12 @@ void *_sys_write(proc *cur_proc)
         result = _sys_readwrite(cur_proc, (int)fd, (void *)vaddr, length, UIO_WRITE,
                                 O_RDONLY, &ret);
         if (result) {
-            syscall_reply(cur_proc->reply, 0, EFAULT);
+            syscall_reply(cur_proc, 0, EFAULT);
         } else {
-            syscall_reply(cur_proc->reply, ret, 0);
+            syscall_reply(cur_proc, ret, 0);
         }
     } else {
-        syscall_reply(cur_proc->reply, 0, EFAULT);
+        syscall_reply(cur_proc, 0, EFAULT);
     }
     return NULL;
 }
@@ -193,7 +193,7 @@ void *_sys_stat(proc *cur_proc)
     int path_length = copystr(cur_proc, (char *)path, str, NAME_MAX + 1, COPYIN);
     if (path_length == -1) {
         ret = -1;
-        syscall_reply(cur_proc->reply, ret, 0);
+        syscall_reply(cur_proc, ret, 0);
         return NULL;
     }
     struct vnode *vn;
@@ -204,7 +204,7 @@ void *_sys_stat(proc *cur_proc)
     result = vfs_lookup(str, &vn);
     if (result) {
         ret = -1;
-        syscall_reply(cur_proc->reply, ret, 0);
+        syscall_reply(cur_proc, ret, 0);
         return NULL;
     }
     VOP_GETTYPE(vn, &result);
@@ -235,7 +235,7 @@ void *_sys_close(proc *cur_proc)
 
     /* check if the file's in range before calling placeat */
     if (!filetable_okfd(cur_proc->openfile_table, fd)) {
-        syscall_reply(cur_proc->reply, -1, EBADF);
+        syscall_reply(cur_proc, -1, EBADF);
         return NULL;
     }
     /* place null in the filetable and get the file previously there */
@@ -243,12 +243,12 @@ void *_sys_close(proc *cur_proc)
 
     if (file == NULL) {
         /* oops, it wasn't open, that's an error */
-        syscall_reply(cur_proc->reply, -1, EBADF);
+        syscall_reply(cur_proc, -1, EBADF);
         return NULL;
     }
     /* drop the reference */
     openfile_decref(file);
-    syscall_reply(cur_proc->reply, 0, 0);
+    syscall_reply(cur_proc, 0, 0);
     return NULL;
 }
 
@@ -268,9 +268,9 @@ void *_sys_getdirent(proc *cur_proc)
         uio_uinit(&my_uio, path, nbytes, pos, UIO_READ, cur_proc);
         ret = VOP_GETDIRENTRY(vn, &my_uio);
         err = !ret ? 0 : EFAULT;
-        syscall_reply(cur_proc->reply, ret, err);
+        syscall_reply(cur_proc, ret, err);
     } else {
-        syscall_reply(cur_proc->reply, -1, EFAULT);
+        syscall_reply(cur_proc, -1, EFAULT);
     }
     return NULL;
 }

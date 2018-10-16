@@ -131,7 +131,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
     struct Elf64_Header *fileHdr = (struct Elf64_Header *) elf_file;
     struct Elf64_Shdr sections[fileHdr->e_shentsize];
     struct uio k_uio;
-    uio_kinit(&k_uio, sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize,
+    uio_kinit(&k_uio, (seL4_Word)sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize,
               fileHdr->e_shoff, UIO_READ);
     VOP_READ(elf_vn, &k_uio);
 
@@ -139,7 +139,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 
     size_t string_table_offset = sections[fileHdr->e_shstrndx].sh_offset;
     char str[4096];
-    uio_kinit(&k_uio, str, 4096, string_table_offset, UIO_READ);
+    uio_kinit(&k_uio, (seL4_Word)str, 4096, string_table_offset, UIO_READ);
 
     VOP_READ(elf_vn, &k_uio);
     size_t sysinfo_offset;
@@ -154,7 +154,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 
     printf("%p\n", sysinfo_offset);
     uintptr_t sysinfo;
-    uio_kinit(&k_uio, &sysinfo, sizeof(uintptr_t), sysinfo_offset, UIO_READ);
+    uio_kinit(&k_uio, (seL4_Word)&sysinfo, sizeof(uintptr_t), sysinfo_offset, UIO_READ);
     VOP_READ(elf_vn, &k_uio);
 
     printf("read done\n");
@@ -233,7 +233,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     printf("%p\n", elf_vn);
 
     struct uio k_uio;
-    uio_kinit(&k_uio, elf_base, 4096, 0, UIO_READ);
+    uio_kinit(&k_uio, (seL4_Word)elf_base, 4096, 0, UIO_READ);
     ret = VOP_READ(elf_vn, &k_uio);
     if (ret) {
         return ret;
@@ -342,7 +342,6 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* parse the cpio image */
     // ZF_LOGI("\nStarting \"%s\"...\n", app_name);
     unsigned long elf_size;
-    char *cpio_elf_base = cpio_get_file(_cpio_archive, app_name, &elf_size);
     if (elf_base == NULL) {
         ZF_LOGE("Unable to locate cpio header for %s", app_name);
         return false;
@@ -399,7 +398,7 @@ void kill_process(int pid)
     process->state = INACTIVE;
     // abort syscall
     if (resumable(process->c)) {
-        resume(process->c, 1);
+        resume(process->c, (void *)1);
     }
     printf("try suspend\n");
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
@@ -440,11 +439,10 @@ void kill_process(int pid)
     if (process->cspace.bootstrap)
         cspace_destroy(&process->cspace);
     
-    // if (process->reply != seL4_CapNull) {
-    //     printf("destroy reply capability\n");
-    //     cspace_delete(global_cspace, process->reply);
-    //     cspace_free_slot(global_cspace, process->reply);
-    // }
+    if (process->reply != seL4_CapNull) {
+        cspace_delete(global_cspace, process->reply);
+        cspace_free_slot(global_cspace, process->reply);
+    }
     process->state = DEAD;
     process->status.size = 0;
     process->status.pid = -1;

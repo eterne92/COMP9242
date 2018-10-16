@@ -40,12 +40,14 @@ typedef struct proc proc;
 #define SOS_SYSCALL_MUNMAP          200
 
 
+struct proc;
+
 void create_coroutine(coro c);
 void run_coroutine(void *arg);
 NORETURN void syscall_loop(seL4_CPtr ep);
 void handle_syscall(seL4_Word badge, int num_args);
 
-void syscall_reply(seL4_CPtr reply, seL4_Word ret, seL4_Word);
+void syscall_reply(struct proc *process, seL4_Word ret, seL4_Word);
 
 void set_boottime(void);
 

@@ -115,23 +115,31 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
             if (frame == 0) {
                 /* it's a vm fault without page */
                 // allocate a frame
-                frame = frame_alloc(NULL);
+                int frame = frame_alloc(NULL);
                 if (frame <= 0) {
+                    printf("not enough mem\n");
                     return -1;
                 }
                 // map it
                 err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
                 // update process_status->size
+                if(err != 0){
+                    printf("at no frame err is %d, frame is %ld\n", err, frame);
+                }
                 ++cur_proc->status.size;
             } else if ((frame & PRESENT) && (frame & UNMAPPED))  {
                 /* the page is still there and is not swapped*/
                 frame = frame & OFFSET;
                 err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+                if(err != 0){
+                    printf("at remap err is %d\n", err);
+                }
 
             } else if ((frame & PRESENT) && (frame & UNMAPPED) == false) {
                 // write on read-only page segmentation fault
+                printf("write on read only\n");
                 return seL4_RangeError;
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
@@ -142,15 +150,18 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 }
                 err = load_page(offset, frame * PAGE_SIZE_4K + FRAME_BASE);
                 if (err) {
+                    printf("load page fail\n");
                     frame_free(frame);
                     return err;
                 }
                 err = sos_map_frame(global_cspace, frame, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
+                if(err != 0){
+                    printf("at load err is %d\n", err);
+                }
             } else {
-                /* it's a vm fault with permmision */
-                /* for now it's segment fault */
-                /* later it will be copy on write */
+                printf("shouldn't be here, pagefault\n");
+                assert(false);
                 return seL4_RangeError;
             }
             return err;
@@ -158,6 +169,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
         region = region->next;
     }
     /* failed */
+    printf("no region\n");
     return seL4_RangeError;
 }
 

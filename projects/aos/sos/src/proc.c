@@ -23,8 +23,6 @@
 
 static proc process_array[PROCESS_ARRAY_SIZE];
 
-static proc *cur_proc;
-
 static int available_pid = 0;
 static int kill_lock = 0;
 
@@ -46,16 +44,6 @@ static int get_next_available_pid(void)
 
     return pid;
 }
-
-// void set_cur_proc(proc *p)
-// {
-//     cur_proc = p;
-// }
-
-// proc *get_cur_proc(void)
-// {
-//     return cur_proc;
-// }
 
 proc *get_process(int pid)
 {
@@ -172,77 +160,6 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
     printf("read done\n");
 
     /* find the vsyscall table */
-    if (sysinfo == 0) {
-        ZF_LOGE("could not find syscall table for c library");
-        return 0;
-    }
-
-    int index = -2;
-
-    /* null terminate the aux vectors */
-    index = stack_write(local_stack_top, index, 0);
-    index = stack_write(local_stack_top, index, 0);
-
-    /* write the aux vectors */
-    index = stack_write(local_stack_top, index, PAGE_SIZE_4K);
-    index = stack_write(local_stack_top, index, AT_PAGESZ);
-
-    index = stack_write(local_stack_top, index, sysinfo);
-    index = stack_write(local_stack_top, index, AT_SYSINFO);
-
-    /* null terminate the environment pointers */
-    index = stack_write(local_stack_top, index, 0);
-
-    /* we don't have any env pointers - skip */
-
-    /* null terminate the argument pointers */
-    index = stack_write(local_stack_top, index, 0);
-
-    /* no argpointers - skip */
-
-    /* set argc to 0 */
-    stack_write(local_stack_top, index, 0);
-
-    /* adjust the initial stack top */
-    stack_top += (index * sizeof(seL4_Word));
-
-    /* the stack *must* remain aligned to a double word boundary,
-     * as GCC assumes this, and horrible bugs occur if this is wrong */
-    assert(index % 2 == 0);
-    assert(stack_top % (sizeof(seL4_Word) * 2) == 0);
-
-    return stack_top;
-}
-
-/* set up System V ABI compliant stack, so that the process can
- * start up and initialise the C library */
-static uintptr_t cpio_init_process_stack(int pid, cspace_t *cspace,
-        char *elf_file)
-{
-    /* Create a stack frame */
-    seL4_Error err;
-    proc *process = &process_array[pid];
-    int frame = frame_alloc(NULL);
-    err = sos_map_frame(cspace, frame, process,
-                        USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
-                        seL4_ARM_Default_VMAttributes);
-
-    if (err != seL4_NoError) {
-        ZF_LOGE("Failed to allocate stack");
-        return 0;
-    }
-
-    /* virtual addresses in the target process' address space */
-    uintptr_t stack_top = USERSTACKTOP;
-    uintptr_t stack_bottom = stack_top - PAGE_SIZE_4K;
-    /* virtual addresses in the SOS's address space */
-    int offset = get_frame_from_vaddr(process->pt, stack_bottom) * PAGE_SIZE_4K;
-    uintptr_t local_stack_bottom = (uintptr_t)(offset + FRAME_BASE);
-    void *local_stack_top = (void *)(local_stack_bottom + PAGE_SIZE_4K);
-
-    /* find the vsyscall table */
-    uintptr_t sysinfo = *((uintptr_t *)elf_getSectionNamed(elf_file, "__vsyscall",
-                          NULL));
     if (sysinfo == 0) {
         ZF_LOGE("could not find syscall table for c library");
         return 0;
@@ -434,12 +351,10 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* set up the stack */
     as_define_stack(process->as);
     seL4_Word sp = init_process_stack(pid, global_cspace, elf_base, elf_vn);
-    // seL4_Word sp = cpio_init_process_stack(pid, global_cspace, cpio_elf_base);
 
     /* load the elf image from the cpio file */
     err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
                    elf_vn);
-    // err = cpio_elf_load(global_cspace, seL4_CapInitThreadVSpace, process, cpio_elf_base, elf_vn);
     printf("elf load finished\n");
     if (err) {
         ZF_LOGE("Failed to load elf image");
@@ -525,11 +440,11 @@ void kill_process(int pid)
     if (process->cspace.bootstrap)
         cspace_destroy(&process->cspace);
     
-    if (process->reply != seL4_CapNull) {
-        printf("destroy reply capability\n")
-        cspace_delete(global_cspace, process->reply);
-        cspace_free_slot(global_cspace, process->reply);
-    }
+    // if (process->reply != seL4_CapNull) {
+    //     printf("destroy reply capability\n");
+    //     cspace_delete(global_cspace, process->reply);
+    //     cspace_free_slot(global_cspace, process->reply);
+    // }
     process->state = DEAD;
     process->status.size = 0;
     process->status.pid = -1;

@@ -34,6 +34,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
             ut = ut_alloc_4k_untyped(NULL);
         } else {
             // not enough memory
+            printf("really no mem\n");
             return NULL;
         }
     }
@@ -49,6 +50,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
     seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type,
                                            seL4_PageBits);
     if (err != seL4_NoError) {
+        printf("alloc retype failed\n");
         ut_free(ut, seL4_PageBits);
         cspace_free_slot(root_cspace, *cptr);
         return NULL;

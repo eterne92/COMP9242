@@ -247,6 +247,9 @@ void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
 {
     page_table_t *pt = (page_table_t *)get_n_level_table((seL4_Word)table, vaddr,
                        4);
+    if(pt == NULL){
+        printf("%p\n", vaddr);
+    }
     assert(pt);
     int offset = get_offset(vaddr, 4);
     if (unmap) {

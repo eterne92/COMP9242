@@ -76,7 +76,7 @@ void _sys_brk(proc *cur_proc);
 
 void _sys_mmap(proc *cur_proc);
 
-void _sys_munmap(proc *cur_proc);
+void *_sys_munmap(proc *cur_proc);
 
 void *_sys_handle_page_fault(proc *cur_proc);
 

@@ -26,17 +26,18 @@ size_t sos_read(void *vData, size_t count)
     return 0;
 }
 
-static int threshold = 3500;
+static int threshold = 35;
+const int bufsize = 1024 * 1024;
 
 void recursive_test(int i)
 {
     if (i >= threshold) return;
-    char *p = (char *)malloc(sizeof(char) * 8192);
+    char *p = (char *)malloc(sizeof(char) * bufsize);
    // assert(p);
-    memset(p, 'H', sizeof(char) * 8192);
+    memset(p, 'H', sizeof(char) * bufsize);
     recursive_test(i + 1);
     //assert(p);
-    for(int i = 0;i < 8192;i++){
+    for(int i = 0;i < bufsize;i++){
         assert(p[i] == 'H');
     }
     free(p);

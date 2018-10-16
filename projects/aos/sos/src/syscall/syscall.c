@@ -199,9 +199,13 @@ void handle_syscall(seL4_Word badge, int num_args)
         _sys_mmap(cur_proc);
         break;
 
-    case SOS_SYSCALL_MUNMAP:
-        _sys_munmap(cur_proc);
+    case SOS_SYSCALL_MUNMAP: {
+        coro c = coroutine((coro_t)_sys_munmap);
+        cur_proc->c = c;
+        resume(c, cur_proc);
+        create_coroutine(c);
         break;
+    }
 
     case SOS_SYS_PROCESS_CREATE: {
         coro c = coroutine((coro_t)_sys_create_process);
@@ -382,9 +386,9 @@ void _sys_mmap(proc *cur_proc)
     region = cur_proc->as->regions;
     as_region *ret = NULL;
     while (region->next != NULL) {
-        seL4_Word base = region->vaddr + region->size;
+        seL4_Word base = ((region->vaddr + region->size) & PAGE_FRAME) + 4096;
         seL4_Word top = region->next->vaddr;
-        if (top - base > size) {
+        if (base + size < top) {
             ret = as_define_region(cur_proc->as, base, size, RG_R | RG_W);
             break;
         }
@@ -397,7 +401,7 @@ void _sys_mmap(proc *cur_proc)
     }
 }
 
-void _sys_munmap(proc *cur_proc)
+void *_sys_munmap(proc *cur_proc)
 {
     printf("munmap called\n");
     seL4_Word ret;
@@ -413,11 +417,13 @@ void _sys_munmap(proc *cur_proc)
         region = region->next;
     }
     if (region) {
-        ret = region->vaddr;
+        ret = base;
     } else {
         ret = 0;
     }
     syscall_reply(cur_proc, ret, 0);
+    printf("munmap done\n");
+    return NULL;
 }
 
 void *_sys_create_process(proc *cur_proc)

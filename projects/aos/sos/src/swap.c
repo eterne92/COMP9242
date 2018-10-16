@@ -202,7 +202,9 @@ void clean_up_swapping(unsigned offset)
     }
     swap_lock = 1;
     uio_kinit(&k_uio, (seL4_Word)&header, sizeof(unsigned), offset, UIO_WRITE);
+    printf("try write\n");
     result = VOP_WRITE(swap_file, &k_uio);
+    printf("try write done\n");
     header = offset / PAGE_SIZE_4K;
     swap_lock = 0;
     // printf("clean up swapping file offset is %u\n", offset);

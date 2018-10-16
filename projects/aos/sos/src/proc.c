@@ -420,20 +420,20 @@ void kill_process(int pid)
     }
 
     if (process->vspace_ut) {
-        ut_free(process->vspace_ut, seL4_PGDBits);
         if (process->vspace != seL4_CapNull) {
             cspace_delete(global_cspace, process->vspace);
             cspace_free_slot(global_cspace, process->vspace);
         }
+        ut_free(process->vspace_ut, seL4_PGDBits);
     }
 
     printf("try destroy tcb\n");
     if (process->tcb_ut) {
-        ut_free(process->tcb_ut, seL4_TCBBits);
         if (process->tcb != seL4_CapNull) {
             cspace_delete(global_cspace, process->tcb);
             cspace_free_slot(global_cspace, process->tcb);
         }
+        ut_free(process->tcb_ut, seL4_TCBBits);
     }
 
     if (process->cspace.bootstrap)

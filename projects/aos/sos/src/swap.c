@@ -128,6 +128,8 @@ seL4_Error try_swap_out(void)
                     }
                 }
 
+                int prev_header = header;
+                int prev_tail = tail;
                 // printf("###try read\n");
                 if (header == tail) {
                     tail++;
@@ -141,6 +143,15 @@ seL4_Error try_swap_out(void)
                         return seL4_IllegalOperation;
                     }
                     header = tmp;
+                }
+
+                clock_bit = FRAME_GET_BIT(clock_hand, CLOCK); 
+                if(clock_bit){
+                    printf("racing issue\n");
+                    header = prev_header;
+                    tail = prev_tail;
+                    clock_hand++;
+                    continue;
                 }
 
                 // update the present bit & offset
@@ -159,6 +170,8 @@ seL4_Error try_swap_out(void)
                 }
                 // printf("###write done\n");
                 // free the frame
+
+
                 frame_free(clock_hand);
                 err = seL4_NoError;
                 clock_hand++;

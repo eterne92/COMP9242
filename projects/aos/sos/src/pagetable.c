@@ -144,7 +144,7 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
             } else if (!(frame & PRESENT)) {
                 // page is in swapping file
                 seL4_Word offset = frame & OFFSET;
-                frame = frame_alloc(NULL);
+                int frame = frame_alloc(NULL);
                 if (frame <= 0) {
                     return -1;
                 }

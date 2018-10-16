@@ -11,6 +11,7 @@
 #include <syscalls.h>
 /* Your OS header file */
 #include <sos.h>
+#include <time.h>
 
 size_t sos_write(void *vData, size_t count)
 {
@@ -44,10 +45,13 @@ int main(int argc, char const *argv[])
     // printf("%d\n", *p);
     // *p = 5;
     //printf("hello world!\n");
-    int pid = sos_process_create("test_2");
-    printf("I am No.%d test_2\n", pid);
-    pid = sos_process_create("test_2");
-    printf("I am No.%d test_2\n", pid);
-    sos_process_wait(-1);
+    int cnt = 6;
+    int pid;
+    srand(sos_sys_time_stamp());
+    for(int i = 0;i < cnt;i++){
+        sleep(rand() % 3 + 1);
+        pid = sos_process_create("tt");
+        printf("%d is created\n", pid);
+    }
     return 0;
 }

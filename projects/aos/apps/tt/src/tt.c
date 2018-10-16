@@ -36,7 +36,9 @@ void recursive_test(int i)
     memset(p, 'H', sizeof(char) * 8192);
     recursive_test(i + 1);
     //assert(p);
-    memset(p, 0, sizeof(char) * 8192);
+    for(int i = 0;i < 8192;i++){
+        assert(p[i] == 'H');
+    }
     free(p);
     return;
 }
@@ -63,8 +65,8 @@ int main(int argc, char const *argv[])
 {
     sosapi_init_syscall_table();
 
-    // int pid = sos_my_id();
-    // printf("I am %d\n", pid);
+    int pid = sos_my_id();
+    printf("I am %d\n", pid);
     // int child = -1;
     // child = sos_process_create("helloworld");
     // printf("%d child created %d\n", pid, child);
@@ -81,6 +83,7 @@ int main(int argc, char const *argv[])
     // printf("bye world!\n");
     // printf("start calling recursive test\n");
     recursive_test(1);
+    printf("test pass %d\n", pid);
     // // int v = recursive_test2(35);
     //loop_leak_test(2500);
     // int count = 2000;
@@ -91,6 +94,6 @@ int main(int argc, char const *argv[])
     // }
     // printf("recursive function call finished!\n enter infinite loop\n");
     // printf("%d\n", v);
-    while(true);
+    // while(true);
     return 0;
 }

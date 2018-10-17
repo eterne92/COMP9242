@@ -89,17 +89,17 @@ seL4_Word get_sos_virtual_address(page_table_t *table, seL4_Word vaddr);
  * load page from swapping file
  * @param offset            the offset of the swapping file where page resides
  * @param vaddr             virtual address that triggered page fault (user level)
- * @param sos_frame_vaddr   kernel address of the newly allocated frame to load 
+ * @param sos_frame_vaddr   kernel address of the newly allocated frame to load
  *                          the content from swapping file
  * return 0 on success
  */
 seL4_Error load_page(proc *process, seL4_Word vaddr, seL4_Word sos_frame_vaddr);
 
 void update_page_status(page_table_t *table, seL4_Word vaddr, bool present,
-                        bool unmap,
-                        seL4_Word file_offset);
+                        bool unmap, seL4_Word file_offset);
 
 void initialize_swapping_file(void);
+
 seL4_Error try_swap_out(void);
 
 void page_table_destroy(page_table_t *table);

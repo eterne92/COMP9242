@@ -131,11 +131,10 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
     struct Elf64_Header *fileHdr = (struct Elf64_Header *) elf_file;
     struct Elf64_Shdr sections[fileHdr->e_shentsize];
     struct uio k_uio;
-    uio_kinit(&k_uio, (seL4_Word)sections, sizeof(Elf64_Shdr) * fileHdr->e_shentsize,
+    uio_kinit(&k_uio, (seL4_Word)sections,
+              sizeof(Elf64_Shdr) * fileHdr->e_shentsize,
               fileHdr->e_shoff, UIO_READ);
     VOP_READ(elf_vn, &k_uio);
-
-    printf("%d shstrndx\n", fileHdr->e_shstrndx);
 
     size_t string_table_offset = sections[fileHdr->e_shstrndx].sh_offset;
     char str[4096];
@@ -146,18 +145,17 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 
     for (int i = 0; i < fileHdr->e_shentsize; i++) {
         if (strcmp("__vsyscall", (char *) str + sections[i].sh_name) == 0) {
-            printf("__vsyscall find %d\n", i);
             sysinfo_offset = sections[i].sh_offset;
             break;
         }
     }
 
-    //printf("%p\n", sysinfo_offset);
     uintptr_t sysinfo;
-    uio_kinit(&k_uio, (seL4_Word)&sysinfo, sizeof(uintptr_t), sysinfo_offset, UIO_READ);
+    uio_kinit(&k_uio, (seL4_Word)&sysinfo, sizeof(uintptr_t), sysinfo_offset,
+              UIO_READ);
     VOP_READ(elf_vn, &k_uio);
 
-    printf("read done\n");
+    // printf("read done\n");
 
     /* find the vsyscall table */
     if (sysinfo == 0) {
@@ -220,7 +218,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     process->status.size = 0;
 
 
-    printf("load elf\n");
+    // printf("load elf\n");
 
     char elf_base[4096];
     struct vnode *elf_vn;
@@ -230,7 +228,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
         return false;
     }
 
-    printf("%p\n", elf_vn);
+    // printf("%p\n", elf_vn);
 
     struct uio k_uio;
     uio_kinit(&k_uio, (seL4_Word)elf_base, 4096, 0, UIO_READ);
@@ -354,7 +352,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     /* load the elf image from the cpio file */
     err = elf_load(global_cspace, seL4_CapInitThreadVSpace, process, elf_base,
                    elf_vn);
-    printf("elf load finished\n");
+    // printf("elf load finished\n");
     if (err) {
         ZF_LOGE("Failed to load elf image");
         return false;
@@ -400,17 +398,16 @@ void kill_process(int pid)
     if (resumable(process->c)) {
         resume(process->c, (void *)1);
     }
-    printf("try suspend\n");
+    // printf("try suspend\n");
     if (process->tcb != seL4_CapNull) seL4_TCB_Suspend(process->tcb);
 
-    printf("try destroy regions\n");
+    // printf("try destroy regions\n");
     if (process->as) destroy_regions(process->as, process);
 
-    printf("try destroy pt\n");
+    // printf("try destroy pt\n");
     if (process->pt) destroy_page_table(process->pt);
 
-
-    printf("try destroy ft\n");
+    // printf("try destroy ft\n");
     if (process->openfile_table) filetable_destroy(process->openfile_table);
 
     if (process->user_endpoint != seL4_CapNull) {
@@ -427,7 +424,7 @@ void kill_process(int pid)
         ut_free(process->vspace_ut, seL4_PGDBits);
     }
 
-    printf("try destroy tcb\n");
+    // printf("try destroy tcb\n");
     if (process->tcb_ut) {
         if (process->tcb != seL4_CapNull) {
             cspace_delete(global_cspace, process->tcb);
@@ -438,7 +435,7 @@ void kill_process(int pid)
 
     if (process->cspace.bootstrap)
         cspace_destroy(&process->cspace);
-    
+
     if (process->reply != seL4_CapNull) {
         cspace_delete(global_cspace, process->reply);
         cspace_free_slot(global_cspace, process->reply);
@@ -451,5 +448,5 @@ void kill_process(int pid)
     process->c = 0;
     process->reply = seL4_CapNull;
     kill_lock = 0;
-    printf("all done\n");
+    // printf("all done\n");
 }

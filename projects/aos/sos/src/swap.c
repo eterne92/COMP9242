@@ -137,8 +137,8 @@ seL4_Error try_swap_out(void)
 
                 // set the victim's status to unpresent
                 // here file_offset -1 is a placeholder
-                // and should never be used otherwise it  
-                // will trigger a nfs fault 
+                // and should never be used otherwise it
+                // will trigger a nfs fault
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
                                    true, -1);
 
@@ -156,7 +156,7 @@ seL4_Error try_swap_out(void)
                     header = tmp;
                 }
 
-                // clock_bit = FRAME_GET_BIT(clock_hand, CLOCK); 
+                // clock_bit = FRAME_GET_BIT(clock_hand, CLOCK);
                 // if (clock_bit) {
                 //     // should never come here
                 //     assert(false);
@@ -169,9 +169,7 @@ seL4_Error try_swap_out(void)
 
                 // update the present bit & offset
                 // printf("###try update\n");
-                if (frame_table.frames[clock_hand].vaddr == 0) {
-                    printf("process is %d\n", process->status.pid);
-                }
+
                 update_page_status(process->pt, frame_table.frames[clock_hand].vaddr, false,
                                    true, file_offset + 1);
                 // write out the page into disk
@@ -215,9 +213,9 @@ void clean_up_swapping(unsigned offset)
     }
     swap_lock = 1;
     uio_kinit(&k_uio, (seL4_Word)&header, sizeof(unsigned), offset, UIO_WRITE);
-    printf("try write\n");
+    // printf("try write\n");
     result = VOP_WRITE(swap_file, &k_uio);
-    printf("try write done\n");
+    // printf("try write done\n");
     header = offset / PAGE_SIZE_4K;
     swap_lock = 0;
     // printf("clean up swapping file offset is %u\n", offset);

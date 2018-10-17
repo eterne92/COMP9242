@@ -83,7 +83,7 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
 
     //printf("first %p, last %p\n", (void *)first_vaddr, (void *)last_vaddr);
 
-    printf("try clean up\n");
+    // printf("try clean up\n");
     for (seL4_Word i = first_vaddr; i <= last_vaddr; i += PAGE_SIZE_4K) {
         // printf("destroy %p\n", i);
         seL4_Word frame = _get_frame_from_vaddr(cur_proc->pt, i);
@@ -91,9 +91,9 @@ void as_destroy_region(addrspace *as, as_region *region, proc *cur_proc)
         if (frame == 0) {
             continue;
         } else if (!(frame & PRESENT)) {
-            printf("clean swap\n");
+            // printf("clean swap\n");
             clean_up_swapping(frame & OFFSET);
-            printf("clean swap done\n");
+            // printf("clean swap done\n");
         } else if (frame != 0 && slot != 0) {
             frame = (int) frame;
             int clock_bit = FRAME_GET_BIT(frame, CLOCK);

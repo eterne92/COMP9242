@@ -137,15 +137,15 @@ int elf_load(cspace_t *cspace, seL4_CPtr loader_vspace, proc *cur_proc,
         /* Copy it across into the vspace. */
         ZF_LOGD(" * Loading segment %p-->%p\n", (void *)vaddr,
                 (void *)(vaddr + segment_size));
-        printf(" * Loading segment %p-->%p\n", (void *)vaddr,
-               (void *)(vaddr + segment_size));
+        // printf(" * Loading segment %p-->%p\n", (void *)vaddr,
+        (void *)(vaddr + segment_size));
         // printf("offset is %u\n", pm_offset);
         //printf("try load\n");
         int err = load_segment_into_vspace(cspace, cur_proc,
                                            pm_offset, segment_size, file_size, vaddr,
                                            get_sel4_rights_from_elf(flags), elf_vn);
         if (err) {
-            ZF_LOGE("Elf loading failed!");
+        ZF_LOGE("Elf loading failed!");
             return -1;
         }
     }

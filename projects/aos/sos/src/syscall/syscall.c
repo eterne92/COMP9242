@@ -323,7 +323,7 @@ void *_sys_handle_page_fault(proc *cur_proc)
         int pid = cur_proc->status.pid;
         printf("process is %d    vaddr is %p\n", pid, (void *)vaddr);
         ZF_LOGE("Segment fault");
-        if(cur_proc->state == ACTIVE){
+        if (cur_proc->state == ACTIVE) {
             kill_process(pid);
             printf("pid %d been killed by it self\n", pid);
             wake_up(pid);
@@ -409,7 +409,8 @@ void *_sys_munmap(proc *cur_proc)
     seL4_Word base = seL4_GetMR(1);
     while (region) {
         if (region->vaddr == base) {
-            printf("region->vaddr is %p -> %p\n", region->vaddr, region->vaddr + region->size);
+            printf("region->vaddr is %p -> %p\n", region->vaddr,
+                   region->vaddr + region->size);
             printf("region->next is %p\n", region->next->vaddr);
             as_destroy_region(cur_proc->as, region, cur_proc);
             break;

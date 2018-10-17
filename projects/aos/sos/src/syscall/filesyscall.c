@@ -89,7 +89,7 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
         printf("place %p at %d\n", file, at);
         struct openfile *tmp;
         filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
-        if(tmp)
+        if (tmp)
             openfile_decref(tmp);
     }
     printf("got fd is %d\n", fd);

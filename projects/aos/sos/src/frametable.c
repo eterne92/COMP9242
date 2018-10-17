@@ -34,7 +34,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
             ut = ut_alloc_4k_untyped(NULL);
         } else {
             // not enough memory
-            printf("really no mem\n");
+            // printf("really no mem\n");
             return NULL;
         }
     }
@@ -50,7 +50,7 @@ static ut_t *alloc_retype(seL4_CPtr *cptr, seL4_Word type)
     seL4_Error err = cspace_untyped_retype(root_cspace, ut->cap, *cptr, type,
                                            seL4_PageBits);
     if (err != seL4_NoError) {
-        printf("alloc retype failed\n");
+        // printf("alloc retype failed\n");
         ut_free(ut, seL4_PageBits);
         cspace_free_slot(root_cspace, *cptr);
         return NULL;
@@ -88,7 +88,7 @@ void initialize_frame_table(cspace_t *cspace)
         FRAME_SET_BIT(i, PIN);
         vaddr += PAGE_SIZE_4K;
     }
-    printf("initial frametable done part I\n");
+    // printf("initial frametable done part I\n");
     printf("there is %lu frames\nframetable n_pages %lu\n", n_frames, n_pages);
     first_available_frame = n_pages;
     for (size_t i = n_pages; i < n_frames; ++i) {
@@ -102,7 +102,7 @@ void initialize_frame_table(cspace_t *cspace)
     /* we are using water mark, so there is no free frame at first */
     // frame_table.free = -1;
     frame_table.max = n_frames - n_pages + 1;
-    printf("initial frametable done part II\n");
+    // printf("initial frametable done part II\n");
     return;
 }
 

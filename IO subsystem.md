@@ -4,6 +4,8 @@
 
 To provide a uniform way to access both console and the file system, we incorporate this abstraction layer into our SOS. The VFS layer defines a bunch of operations through which the client manipulate the underlying components. We borrow most of the VFS code from OS161.
 
+// add more details about vfs
+
 ```c
 struct uio;    /* kernel or userspace I/O buffer (uio.h) */
 struct device; /* abstract structure for a device (dev.h) */
@@ -59,4 +61,16 @@ When dealing with writing huge amounts of data to console, we use coroutine to m
 
 ### File System
 
-The file system is actually a wrapper of the underlying NFS API. The only problem here is that the network library only supports asynchronous NFS function calls. To deal with that, we choose to use coroutine as our execution model and wrap most of the file syscalls in coroutine since using coroutine will eliminate many annoying concurrency issue and is simpler to implement. 
+The file system is actually a wrapper of the underlying NFS API. The only problem here is that the network library only supports asynchronous NFS function calls. To deal with that, we choose to use coroutine as our execution model and wrap most of the file syscalls in coroutine since using coroutine will eliminate most annoying concurrency issues and is simpler to implement. For read and write syscall, in order to make sure that SOS is responsive, we take the same approach as console I/O: read / write one page a time and yield back to syscall loop. Besides, when multiple process operates on the same file, we have to ensure atomicity of that operation. Since our execution model is coroutine and everything is under our control, an static int variable is enough to serve as a lock to protect the critical section in nfs_read and nfs_write.
+
+Each process control block contains an open file table that keeps track of all the files opened by that process. A file can be opened by multiple processes and each of them will have an entry in their own open file table to keep track of the file offset and the mode. However, the underlying vnode will be the same across all these entries. The refcount in the entry is left to implement the posxi fork semantics although  we do not implement fork in SOS.  
+
+```c
+struct openfile {
+    struct vnode *of_vnode;
+    int of_accmode; /* from open: O_RDONLY, O_WRONLY, or O_RDWR */
+    off_t of_offset;
+    int of_refcount;
+};
+```
+

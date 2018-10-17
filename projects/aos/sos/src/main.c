@@ -203,7 +203,7 @@ void *_start_process(char *app_name)
     return (void *)pid;
 }
 
-void start_first_process(char *app_name, seL4_CPtr ep)
+void start_first_process(char *app_name)
 {
     coro c = coroutine((coro_t)_start_process);
     resume(c, app_name);
@@ -318,22 +318,13 @@ NORETURN void *main_continued(UNUSED void *arg)
 
     /* Initialise libserial */
     vfs_bootstrap();
+    init_pcb();
 
     // frametable_test();
     /* Start the user application */
     printf("Start first process\n");
     // pid_t pid;
-    start_first_process(TTY_NAME, ipc_ep);
-    // ZF_LOGF_IF(!success, "Failed to start first process");
-
-    // proc *cur_proc = get_process(pid);
-    // set_cur_proc(cur_proc);
-
-    // struct as_region *region = cur_proc->as->regions;
-    // while(region != NULL){
-    //     printf("region start %p, size %ld\n", (void *)region->vaddr, region->size);
-    //     region = region->next;
-    // }
+    start_first_process(TTY_NAME);
 
     printf("\nSOS entering syscall loop\n");
     syscall_loop(ipc_ep);

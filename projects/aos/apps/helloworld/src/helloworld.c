@@ -45,11 +45,10 @@ int main(int argc, char const *argv[])
     // printf("%d\n", *p);
     // *p = 5;
     //printf("hello world!\n");
-    int cnt = 6;
+    int cnt = 3;
     int pid;
     srand(sos_sys_time_stamp());
     for(int i = 0;i < cnt;i++){
-        sleep(rand() % 3 + 1);
         pid = sos_process_create("tt");
         printf("%d is created\n", pid);
     }

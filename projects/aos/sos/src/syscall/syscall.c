@@ -35,7 +35,6 @@ static void wake_up(int pid)
         if (p && p->state == ACTIVE && (p->waiting_pid == pid
                                         || p->waiting_pid == -1)) {
             p->waiting_pid = -99;
-            printf("wake up process %d\n", p->status.pid);
             syscall_reply(p, 0, 0);
         }
     }

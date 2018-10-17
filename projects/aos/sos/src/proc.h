@@ -56,6 +56,8 @@ extern char _cpio_archive[];
 
 void set_cur_proc(proc *p);
 
+void init_pcb(void);
+
 proc *get_cur_proc(void);
 
 proc *get_process(int pid);

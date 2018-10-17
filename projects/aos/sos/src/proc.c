@@ -26,6 +26,13 @@ static proc process_array[PROCESS_ARRAY_SIZE];
 static int available_pid = 0;
 static int kill_lock = 0;
 
+void init_pcb(void){
+    for(int i = 0;i < PROCESS_ARRAY_SIZE; i++){
+        process_array[i].state = DEAD;
+        process_array[i].status.pid = i - PROCESS_ARRAY_SIZE;
+    }
+}
+
 static int get_next_available_pid(void)
 {
     int pid = -1;
@@ -42,7 +49,7 @@ static int get_next_available_pid(void)
         return -1;
     }
 
-    return pid;
+    return process_array[pid].status.pid + PROCESS_ARRAY_SIZE;
 }
 
 proc *get_process(int pid)
@@ -108,7 +115,7 @@ static uintptr_t init_process_stack(int pid, cspace_t *cspace, char *elf_file,
 {
     /* Create a stack frame */
     seL4_Error err;
-    proc *process = &process_array[pid];
+    proc *process = get_process(pid); 
     int frame = frame_alloc(NULL);
     err = sos_map_frame(cspace, frame, process,
                         USERSTACKTOP - PAGE_SIZE_4K, seL4_ReadWrite,
@@ -213,7 +220,7 @@ bool start_process(char *app_name, seL4_CPtr ep, int *ret_pid)
     *ret_pid = pid;
     if (pid == -1)
         return false;
-    proc *process = &process_array[pid];
+    proc *process = get_process(pid);
     process->status.pid = pid;
     process->status.size = 0;
 
@@ -391,9 +398,14 @@ void kill_process(int pid)
     while (kill_lock) yield(NULL);
     kill_lock = 1;
     proc *process = get_process(pid);
-    if (!process) return;
+
+    if (!process || process->status.pid != pid){
+        kill_lock = 0;
+        return;
+    }
 
     process->state = INACTIVE;
+
     // abort syscall
     if (resumable(process->c)) {
         resume(process->c, (void *)1);
@@ -442,7 +454,7 @@ void kill_process(int pid)
     }
     process->state = DEAD;
     process->status.size = 0;
-    process->status.pid = -1;
+    // process->status.pid = -1;
     process->status.stime = 0;
     process->waiting_pid = -99;
     process->c = 0;

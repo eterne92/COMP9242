@@ -399,7 +399,7 @@ void _sys_mmap(proc *cur_proc)
     } else {
         syscall_reply(cur_proc, 0, 0);
     }
-}tmp
+}
 
 void *_sys_munmap(proc *cur_proc)
 {

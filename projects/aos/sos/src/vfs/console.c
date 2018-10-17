@@ -61,6 +61,7 @@ typedef  void *(*coro_t)(void *);
  */
 static struct con_softc console;
 static struct con_softc *the_console = &console;
+static int console_lock = 0;
 
 /*
  * VFS interface functions
@@ -90,6 +91,11 @@ static void *putchar_to_user(void)
         /* shouldn't handle this call */
         return NULL;
     }
+    while(console_lock == 1){
+        yield(NULL);
+    }
+    console_lock = 1;
+
     int idx = uio->length - uio->uio_resid;
     char c;
     seL4_Word sos_vaddr = 0;
@@ -101,6 +107,8 @@ static void *putchar_to_user(void)
                 err = handle_page_fault(the_console->proc, uio->vaddr + idx, 0);
                 if (err) {
                     // not enough memory
+                    assert(0);
+                    console_lock = 0;
                     return NULL;
                 }
                 sos_vaddr = get_sos_virtual_address(the_console->proc->pt, uio->vaddr + idx);
@@ -117,13 +125,16 @@ static void *putchar_to_user(void)
         if (uio->uio_resid == 0) {
             // finish reading
             the_console->uio = NULL;
+            console_lock = 0;
             return NULL;
         } else if (c == '\n') {
             the_console->uio = NULL;
+            console_lock = 0;
             return NULL;
         }
         ++idx;
     }
+    console_lock = 0;
     return NULL;
 }
 

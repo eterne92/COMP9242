@@ -355,7 +355,6 @@ void _sys_brk(proc *cur_proc)
     } else {
         unsigned tmp = newbrk - region->vaddr;
         if (tmp > (4096 * 2 * PAGE_SIZE_4K)) {
-            assert(false);
             syscall_reply(cur_proc, 0, 0);
             return;
         } else {

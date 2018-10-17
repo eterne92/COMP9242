@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sel4/sel4.h>
 #include <picoro/picoro.h>
+#include "backtrace.h"
 
 static struct vnode *swap_file = NULL;
 static unsigned header = 0;
@@ -43,9 +44,10 @@ seL4_Error load_page(proc *process, seL4_Word vaddr, seL4_Word sos_frame_vaddr)
     swap_lock = 1;
     offset = _get_frame_from_vaddr(process->pt, vaddr);
     // printf("load page start\n");
-    // printf("%d, vaddr %p\n", offset, vaddr);
     offset &= OFFSET;
     --offset; // offset is 1 based in pagetable but 0 based in file
+    // print_backtrace();
+    // assert(false);
     uio_kinit(&k_uio, sos_frame_vaddr, PAGE_SIZE_4K, offset, UIO_READ);
     result = VOP_READ(swap_file, &k_uio);
     if (result) {

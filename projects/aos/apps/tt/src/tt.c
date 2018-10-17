@@ -26,7 +26,7 @@ size_t sos_read(void *vData, size_t count)
     return 0;
 }
 
-static int threshold = 35;
+static int threshold = 20;
 const int bufsize = 1024 * 1024;
 
 void recursive_test(int i)

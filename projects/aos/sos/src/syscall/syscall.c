@@ -354,7 +354,7 @@ void _sys_brk(proc *cur_proc)
     } else if (newbrk < region->size + region->vaddr) {
         /* shouldn't shrink heap */
     } else {
-        int tmp = newbrk - region->vaddr;
+        unsigned tmp = newbrk - region->vaddr;
         if (tmp > (4096 * 2 * PAGE_SIZE_4K)) {
             assert(false);
             syscall_reply(cur_proc, 0, 0);
@@ -399,7 +399,7 @@ void _sys_mmap(proc *cur_proc)
     } else {
         syscall_reply(cur_proc, 0, 0);
     }
-}
+}tmp
 
 void *_sys_munmap(proc *cur_proc)
 {
@@ -409,9 +409,8 @@ void *_sys_munmap(proc *cur_proc)
     seL4_Word base = seL4_GetMR(1);
     while (region) {
         if (region->vaddr == base) {
-            printf("region->vaddr is %p -> %p\n", region->vaddr,
-                   region->vaddr + region->size);
-            printf("region->next is %p\n", region->next->vaddr);
+            // printf("region->vaddr is %p -> %p\n", region->vaddr, region->vaddr + region->size);
+            // printf("region->next is %p\n", region->next->vaddr);
             as_destroy_region(cur_proc->as, region, cur_proc);
             break;
         }
@@ -457,7 +456,6 @@ void *_sys_create_process(proc *cur_proc)
 
 void _sys_process_wait(proc *cur_proc)
 {
-    proc *process;
     int pid = seL4_GetMR(1);
     cur_proc->waiting_pid = pid;
 }

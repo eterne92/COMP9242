@@ -1,7 +1,3 @@
 ## Execution Model
 
 The underlying seL4 micro-kernel provides an even-based framework through which user level process could interact with it. Whenever a user level process sending a messagae through IPC endpoint to the seL4 kenel, it will be blocked until the kernel reply the message. Therefore, the process is synchronous and there is no concurrent issue if we do not add multi-thread into SOS. To keep things simple, we choose to use coroutine, keeping the event driven paradigm untouched and by doing so, we eliminate most concurrent issues if not all. For those loing runing time syscalls such as read, write, etc, we wrap them using coroutine and divide each operation into multiple phases and after each phase finish, it will yield and give control back to the SOS to handle other requests. This will ensure the responsiveness of the SOS.
-
-### Coroutine management
-
-A linked list is used to manage all the coroutine and provide basic fairness among all the processes.

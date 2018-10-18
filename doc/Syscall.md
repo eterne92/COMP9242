@@ -4,29 +4,17 @@ All the syscall implemeted in SOS
 
 ```C
 int sos_sys_open(const char *path, fmode_t mode);
-
 int sos_sys_close(int file);
-
 int sos_sys_read(int file, char *buf, size_t nbyte);
-
 int sos_sys_write(int file, const char *buf, size_t nbyte);
-
 int sos_getdirent(int pos, char *name, size_t nbyte);
-
 int sos_stat(const char *path, sos_stat_t *buf);
-
 pid_t sos_process_create(const char *path);
-
 int sos_process_delete(pid_t pid);
-
 pid_t sos_my_id(void);
-
 int sos_process_status(sos_process_t *processes, unsigned max);
-
 pid_t sos_process_wait(pid_t pid);
-
 int64_t sos_sys_time_stamp(void);
-
 void sos_sys_usleep(int msec);
 
 ```
@@ -41,3 +29,39 @@ typedef struct coroutines {
 ```
 
 For passing argument in syscall, we take two approaches. One is passing arguments through IPC messages. The other is through UIO. For those arguemnts having reference semantics, we use UIO to transfer between user level and kernel level. For those having value semantics, IPC is sufficient. 
+
+SOS will dispatch the syscall depending on syscall number retrieved from IPC.
+
+```c
+void handle_syscall(seL4_Word badge, int num_args)
+{
+    proc *cur_proc = get_process(badge);
+    seL4_CPtr reply = cspace_alloc_slot(global_cspace);
+    seL4_Word syscall_number = seL4_GetMR(0);
+    seL4_Error err = cspace_save_reply_cap(global_cspace, reply);
+    ZF_LOGF_IFERR(err, "Failed to save reply");
+    /* Process system call */
+    cur_proc->reply = reply;
+    switch (syscall_number) 
+    case SOS_SYS_OPEN: 
+    case SOS_SYS_READ: 
+    case SOS_SYS_WRITE: 
+    case SOS_SYS_STAT: 
+    case SOS_SYS_CLOSE: 
+    case SOS_SYS_GET_DIRDENTS: 
+    case SOS_SYS_USLEEP:
+    case SOS_SYS_TIMESTAMP:
+    case SOS_SYSCALLBRK:
+    case SOS_SYSCALL_MMAP:
+    case SOS_SYSCALL_MUNMAP: 
+    case SOS_SYS_PROCESS_CREATE: 
+    case SOS_SYS_PROCESS_WAIT: 
+    case SOS_SYS_PROCESS_DELETE: 
+    case SOS_SYS_MY_ID: 
+    case SOS_SYS_PROCESS_STATUS:
+    default:
+        /* don't reply to an unknown syscall */
+    }
+}
+```
+

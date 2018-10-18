@@ -27,7 +27,7 @@ typedef struct proc {
 
 The memory map of a process:
 
-
+![](vm_layout.png)
 
 **We restrict stack size to 16MB and heap size to 32MB.** Stack grows downwards from 0x7FFFFFC00000 to its max size and IPC buffer grows upwards from 0x7FFFFFC00000 to 0x800000000000. Heap grows upwards from 0x700000000000 to its max size.
 

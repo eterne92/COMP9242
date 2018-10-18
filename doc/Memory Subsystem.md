@@ -4,6 +4,8 @@
 
 One of the most important part of the memory subsystem is the frame table. It keeps track of allocations of all the available physical frames. In SOS, however, things are a little bit different since SOS is in essence a user level process and have no access to physical memory. Instead, what SOS keeps track of is an abstraction object called ut provided by the underlying seL4 microkernel. Since seL4 features a capability programming paradigm, the capability of ut should be keeped along with ut as well. To make later memory copying work easier, we decided to map all the frames into SOS's virtual address space. After looking at the memory map, we choose to map our frame table at the fixed virtual address 0xA000000000. Because the actual size of the physical memory could be retrieved during bootstrap, it is safe to allocate a fixed size of memory to place the frame table. Since malloc is not fully functional in SOS, we just allocate physical frame directly from seL4 to store our frame table and map that frame into SOS's virtual address space at 0xA000000000, where is high enough not to interfere with other regions since 64 bit address space is way larger than the actual pyhsical memory size.
 
+![](frametable.png)
+
 The structure of our frame table:
 
 ```c
@@ -30,7 +32,7 @@ To avoid linear time search the next free frame, we keep the first available fra
 
 In order to support swaping, it is necessary to keep track of the owner of the frame and the virtual address within the owner's virtual address space. Since not all frames can be swapped out, we add a pin bit in the flag. If the pin bit is set, then the frame will not be swapped out and by default, the pin bit is set when allocating and will be reset if the frame is mapped to a user process's address space. Such design will make things more simpler because frames allocated to store OS level metadata like frame table, page table, etc will never be swapped out and no further action needs to be taken. There is also a clock bit in the flag, which is used to implement seconde chance replacement algorithm. Each time swapping occurs, it will iterate through all the frames, clear the clock bit and unmap the frame. In the page fault handle, the clock bit will be set whenever the user process mapping that frame. 
 
-// insert flag image (indicating clock bit, pin bit)
+![](flags.png)
 
 
 
@@ -50,10 +52,9 @@ All these hardware page table are maintained by the underlying seL4 and our SOS 
 * Shadow Page Directory (Shadow PD)
 * Shadow Page Table (Shadow PT)
 
-The most challenging part of the shadow page table is that aarch64 is a 64 bit architecture but the page size is stil 4K. Since now the address will consume 8 bytes instead of 4 bytes, the nice multi-level page table with a page each level does not work any more. The reason is that each level of the page table use 9 bits of the virtual address which means there should be 512 entries in each level and the size of each entry could be 8 bytes only but the virtual address itself will use up all the 8 byte and there is no room to store physical frame. What makes the situation even tricker is that malloc is not fully functional in SOS and we have to find other ways to deal with that. There is no other choice but resort to our frame allocator to request memory. However, this approach requires us to do  housekeeping works carefully. Since what we get from the frame allocator is a ut object and a capability(slot in global cspace) of that ut object. We have to keep track of all those stuff otherwise, we will leak something and run into troubles after SOS running for a long time. To store all these objects, we need 3 frames for the first 3 level and 2 frames for the 4th level. 
+The most challenging part of the shadow page table is that aarch64 is a 64 bit architecture but the page size is stil 4K. Since now the address will consume 8 bytes instead of 4 bytes, the nice multi-level page table with a page each level does not work any more. The reason is that each level of the page table use 9 bits of the virtual address which means there should be 512 entries in each level and the size of each entry could be 8 bytes only but the virtual address itself will use up all the 8 byte and there is no room to store physical frame. What makes the situation even tricker is that malloc is not fully functional in SOS and we have to find other ways to deal with that. There is no other choice but resort to our frame allocator to request memory. However, this approach requires us to do  housekeeping works carefully. Since what we get from the frame allocator is a ut object and a capability(slot in global cspace) of that ut object. We have to keep track of all those stuff otherwise, we will leak something and run into troubles after SOS running for a long time. To store all these objects, we need 3 frames for the first 3 level and 2 frames for the 4th level. These 3 frames is linked by the next pointer in frame_table_obj, so that we can get the 2nd and 3rd frame using the 1st frame_table_obj.
 
-// insert the image of our page table
-
+![](pagetable.png)
 
 
 ``` c

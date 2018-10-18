@@ -71,8 +71,6 @@ static int con_eachopen(struct device *dev, int openflags)
 {
     (void)dev;
     int how = openflags & O_ACCMODE;
-    printf("how : %d\n", how);
-    printf("proc is %p\n", console.proc);
     // only one process could open console in read mode
     if (how == O_RDONLY || how == O_RDWR) {
         if (console.proc == NULL) {
@@ -171,7 +169,6 @@ static int con_io(struct device *dev, struct uio *uio)
         // putchar_to_user(uio);
         the_console->uio = uio;
         the_console->proc = uio->proc;
-        printf("read came\n");
         putchar_to_user();
         while (the_console->uio != NULL) {
             yield(NULL);

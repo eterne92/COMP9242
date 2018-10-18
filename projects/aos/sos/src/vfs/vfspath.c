@@ -61,7 +61,6 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
     default:
         return EINVAL;
     }
-    printf("got path %s\n", path);
 
     if (openflags & O_CREAT) {
         char name[NAME_MAX + 1];
@@ -73,17 +72,14 @@ int vfs_open(char *path, int openflags, mode_t mode, struct vnode **ret)
             return result;
         }
 
-        printf("%p, %s, %d, %d, %p\n", dir, path, excl, mode, &vn);
         result = VOP_CREAT(dir, path, excl, mode, &vn);
 
     } else {
         result = vfs_lookup(path, &vn);
     }
 
-    printf("got vn now, with vn as %p result is %d\n", vn, result);
     /* try create for write */
     if (result && canwrite && !(openflags & O_CREAT)) {
-        printf("try create\n");
         openflags = openflags | O_CREAT;
         char name[NAME_MAX + 1];
         struct vnode *dir;

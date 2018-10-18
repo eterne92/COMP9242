@@ -56,7 +56,6 @@ void change_bootfs(struct vnode *newvn)
 
     oldvn = bootfs_vnode;
     bootfs_vnode = newvn;
-    printf("boot_vnode is %p\n", bootfs_vnode);
 
     if (oldvn != NULL) {
         VOP_DECREF(oldvn);
@@ -139,10 +138,8 @@ static int getdevice(char *path, char **subpath, struct vnode **startvn)
         while (bootfs_vnode == NULL) {
             yield(NULL);
         }
-        printf("we are nfs yeha!\n");
         *startvn = bootfs_vnode;
         *subpath = path;
-        printf("got startvn as %p\n", *startvn);
         return 0;
     } else if (result != 0) {
         return result;
@@ -172,7 +169,6 @@ int vfs_lookparent(char *path, struct vnode **retval,
 
 
     *retval = startvn;
-    printf("start vn in lookparent %p\n", startvn);
 
     return result;
 }

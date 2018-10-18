@@ -305,7 +305,7 @@ NORETURN void *main_continued(UNUSED void *arg)
                                        PAGE_SIZE_4K);
 
     /* Initialise the network hardware. */
-    printf("Network init\n");
+    // printf("Network init\n");
     network_init(global_cspace,
                  badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_IRQ),
                  badge_irq_ntfn(ntfn, IRQ_BADGE_NETWORK_TICK),
@@ -322,11 +322,11 @@ NORETURN void *main_continued(UNUSED void *arg)
 
     // frametable_test();
     /* Start the user application */
-    printf("Start first process\n");
+    // printf("Start first process\n");
     // pid_t pid;
     start_first_process(TTY_NAME);
 
-    printf("\nSOS entering syscall loop\n");
+    // printf("\nSOS entering syscall loop\n");
     syscall_loop(ipc_ep);
 }
 /*
@@ -351,7 +351,7 @@ int main(void)
 
     debug_print_bootinfo(boot_info);
 
-    printf("\nSOS Starting...\n");
+    // printf("\nSOS Starting...\n");
 
     set_boottime();
 
@@ -369,7 +369,7 @@ int main(void)
     update_vputchar(uart_putchar);
 
     /* test print */
-    printf("SOS Started!\n");
+    // printf("SOS Started!\n");
 
     /* allocate a bigger stack and switch to it -- we'll also have a guard page, which makes it much
      * easier to detect stack overruns */

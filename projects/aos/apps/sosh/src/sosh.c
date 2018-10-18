@@ -383,7 +383,6 @@ int main(void)
 
     in = open("console", O_RDONLY);
     assert(in >= 0);
-    printf("in is %d\n", in);
 
     bp = buf;
     done = 0;

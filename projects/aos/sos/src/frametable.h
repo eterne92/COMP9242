@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define FRAME_BASE 0xA000000000
+#define MAX_MEM (8 * 1024 * 1024)
 
 #define PIN 3
 #define CLOCK 4

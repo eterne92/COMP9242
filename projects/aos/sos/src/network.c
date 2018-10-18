@@ -131,7 +131,7 @@ void nfslib_poll()
     }
 
     if (nfs_service(nfs, pfd.revents) < 0) {
-        printf("nfs_service failed\n");
+        // printf("nfs_service failed\n");
     }
 }
 

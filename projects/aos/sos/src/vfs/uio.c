@@ -68,7 +68,6 @@ int mem_move(proc *proc, seL4_Word u_vaddr, seL4_Word k_vaddr, size_t len,
     bool valid = validate_virtual_address(proc->as, u_vaddr, len, oper);
     /* not valid */
     if (!valid) {
-        printf("not valid\n");
         return -1;
     }
     size_t n = PAGE_SIZE_4K - (u_vaddr & PAGE_MASK_4K);
@@ -80,7 +79,6 @@ int mem_move(proc *proc, seL4_Word u_vaddr, seL4_Word k_vaddr, size_t len,
         if (!vaddr) {
             err = handle_page_fault(proc, u_vaddr, 0);
             if (err != seL4_NoError) {
-                printf("page fault\n");
                 return -1;
             }
             vaddr = get_sos_virtual_address(proc->pt, u_vaddr);

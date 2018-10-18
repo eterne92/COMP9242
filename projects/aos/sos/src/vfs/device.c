@@ -345,8 +345,6 @@ dev_create_vnode(struct device *dev)
 
     result = vnode_init(v, &dev_vnode_ops, NULL, dev);
     if (result != 0) {
-        printf("While creating vnode for device: vnode_init: %s\n",
-               strerror(result));
     }
 
     return v;

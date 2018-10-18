@@ -108,14 +108,10 @@ void vnode_decref(struct vnode *vn)
         return;
     }
 
-    printf("try real destroy\n");
     if (destroy) {
         result = VOP_RECLAIM(vn);
-        printf("reclaim done\n");
         if (result != 0 && result != EBUSY) {
             // XXX: lame.
-            printf("vfs: Warning: VOP_RECLAIM: %s\n",
-                   strerror(result));
         }
     }
 }
@@ -126,46 +122,47 @@ void vnode_decref(struct vnode *vn)
  */
 void vnode_check(struct vnode *v, const char *opstr)
 {
+    // actually do nothing but debugging issue
     /* not safe, and not really needed to check constant fields */
     /*vfs_biglock_acquire();*/
 
-    if (v == NULL) {
-        printf("vnode_check: vop_%s: null vnode\n", opstr);
-    }
-    if (v == (void *)0xdeadbeef) {
-        printf("vnode_check: vop_%s: deadbeef vnode\n", opstr);
-    }
+    // if (v == NULL) {
+    //     // printf("vnode_check: vop_%s: null vnode\n", opstr);
+    // }
+    // if (v == (void *)0xdeadbeef) {
+    //     // printf("vnode_check: vop_%s: deadbeef vnode\n", opstr);
+    // }
 
-    if (v->vn_ops == NULL) {
-        printf("vnode_check: vop_%s: null ops pointer\n", opstr);
-    }
-    if (v->vn_ops == (void *)0xdeadbeef) {
-        printf("vnode_check: vop_%s: deadbeef ops pointer\n", opstr);
-    }
+    // if (v->vn_ops == NULL) {
+    //     // printf("vnode_check: vop_%s: null ops pointer\n", opstr);
+    // }
+    // if (v->vn_ops == (void *)0xdeadbeef) {
+    //     // printf("vnode_check: vop_%s: deadbeef ops pointer\n", opstr);
+    // }
 
-    if (v->vn_ops->vop_magic != VOP_MAGIC) {
-        printf("vnode_check: vop_%s: ops with bad magic number %lx\n",
-               opstr, v->vn_ops->vop_magic);
-    }
+    // if (v->vn_ops->vop_magic != VOP_MAGIC) {
+    //     // printf("vnode_check: vop_%s: ops with bad magic number %lx\n",
+    //         //    opstr, v->vn_ops->vop_magic);
+    // }
 
-    // Device vnodes have null fs pointers.
-    //if (v->vn_fs == NULL) {
-    //  printf("vnode_check: vop_%s: null fs pointer\n", opstr);
-    //}
-    if (v->vn_fs == (void *)0xdeadbeef) {
-        printf("vnode_check: vop_%s: deadbeef fs pointer\n", opstr);
-    }
+    // // Device vnodes have null fs pointers.
+    // //if (v->vn_fs == NULL) {
+    // //  printf("vnode_check: vop_%s: null fs pointer\n", opstr);
+    // //}
+    // if (v->vn_fs == (void *)0xdeadbeef) {
+    //     // printf("vnode_check: vop_%s: deadbeef fs pointer\n", opstr);
+    // }
 
 
-    if (v->vn_refcount < 0) {
-        printf("vnode_check: vop_%s: negative refcount %d\n", opstr,
-               v->vn_refcount);
-    } else if (v->vn_refcount == 0) {
-        printf("vnode_check: vop_%s: zero refcount\n", opstr);
-    } else if (v->vn_refcount > 0x100000) {
-        printf("vnode_check: vop_%s: warning: large refcount %d\n",
-               opstr, v->vn_refcount);
-    }
+    // if (v->vn_refcount < 0) {
+    //     // printf("vnode_check: vop_%s: negative refcount %d\n", opstr,
+    //     //        v->vn_refcount);
+    // } else if (v->vn_refcount == 0) {
+    //     // printf("vnode_check: vop_%s: zero refcount\n", opstr);
+    // } else if (v->vn_refcount > 0x100000) {
+    //     // printf("vnode_check: vop_%s: warning: large refcount %d\n",
+    //     //        opstr, v->vn_refcount);
+    // }
 
     /*vfs_biglock_release();*/
 }

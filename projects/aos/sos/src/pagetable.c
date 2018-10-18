@@ -147,14 +147,10 @@ seL4_Error handle_page_fault(proc *cur_proc, seL4_Word vaddr,
                 if (err) {
                     // printf("load page fail\n");
                     frame_free(frame_handle);
-                    print_backtrace();
                     return err;
                 }
                 err = sos_map_frame(global_cspace, frame_handle, cur_proc,
                                     vaddr, seL4_CapRights_new(execute, read, write), seL4_ARM_Default_VMAttributes);
-                if(err != 0){
-                    printf("%d curproc\n", cur_proc->status.pid);
-                }
             } else {
                 return seL4_RangeError;
             }

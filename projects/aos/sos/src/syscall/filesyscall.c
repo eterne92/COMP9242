@@ -78,7 +78,6 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
     int fd;
     int ret;
     struct openfile *file;
-    printf("got name as %s\n", path);
     ret = openfile_open(path, openflags, 0, &file);
     if (ret) {
         return -1;
@@ -86,13 +85,11 @@ int _sys_do_open(proc *cur_proc, char *path, seL4_Word openflags, int at)
     if (at == -1) {
         ret = filetable_place(cur_proc->openfile_table, file, &fd);
     } else {
-        printf("place %p at %d\n", file, at);
         struct openfile *tmp;
         filetable_placeat(cur_proc->openfile_table, file, at, &tmp);
         if (tmp)
             openfile_decref(tmp);
     }
-    printf("got fd is %d\n", fd);
     if (ret) {
         openfile_decref(file);
         return -1;
@@ -184,7 +181,6 @@ void *_sys_write(proc *cur_proc)
 
 void *_sys_stat(proc *cur_proc)
 {
-    printf("in stat\n");
     struct stat st;
     mode_t result;
     int ret;
@@ -197,7 +193,6 @@ void *_sys_stat(proc *cur_proc)
         return NULL;
     }
     struct vnode *vn;
-    printf("got str is %s\n", str);
     if (strcmp("..", str) == 0) {
         str[1] = 0;
     }
@@ -211,7 +206,6 @@ void *_sys_stat(proc *cur_proc)
     ret = VOP_STAT(vn, &st);
     seL4_MessageInfo_t reply_msg = seL4_MessageInfo_new(0, 0, 0, 7);
     /* Set the first (and only) word in the message to 0 */
-    printf("stat ret is %ld\n", st.st_size);
     seL4_SetMR(0, ret);
     seL4_SetMR(1, errno);
     seL4_SetMR(2, result);
@@ -229,7 +223,6 @@ void *_sys_stat(proc *cur_proc)
 
 void *_sys_close(proc *cur_proc)
 {
-    printf("in close\n");
     seL4_Word fd = seL4_GetMR(1);
     struct openfile *file;
 

@@ -66,6 +66,10 @@ void initialize_frame_table(cspace_t *cspace)
     frame_table.frames = (frame_table_obj *)FRAME_BASE;
     // the number of pages of all untyped memeory
     size_t n_frames = ut_size() / PAGE_SIZE_4K;
+    if(n_frames > MAX_MEM / PAGE_SIZE_4K){
+        n_frames = MAX_MEM / PAGE_SIZE_4K;
+    }
+
     frame_table.length = (int)n_frames;
     // the number of pages consumed by frame table
     size_t n_pages = (n_frames * sizeof(frame_table_obj) + PAGE_SIZE_4K - 1) /
@@ -89,7 +93,7 @@ void initialize_frame_table(cspace_t *cspace)
         vaddr += PAGE_SIZE_4K;
     }
     // printf("initial frametable done part I\n");
-    printf("there is %lu frames\nframetable n_pages %lu\n", n_frames, n_pages);
+    // printf("there is %lu frames\nframetable n_pages %lu\n", n_frames, n_pages);
     first_available_frame = n_pages;
     for (size_t i = n_pages; i < n_frames; ++i) {
         frame_table.frames[i].ut = NULL;
@@ -109,7 +113,19 @@ void initialize_frame_table(cspace_t *cspace)
 int frame_alloc(seL4_Word *vaddr)
 {
     seL4_Word _vaddr;
-    int page = frame_table.free;
+    int page = frame_table.untyped;
+
+    if(page * PAGE_SIZE_4K >= MAX_MEM - 4096){
+        // hit memory max
+        try_swap_out();
+        page = frame_table.untyped;
+        if(page * PAGE_SIZE_4K >= MAX_MEM - 4096){
+            // still hit memory max means we run out of memory for user
+            return -1;
+        }
+    }
+
+    // watermark is disabled
     // if (page > 0) {
     //     /* we got a free frame, just use it */
     //     _vaddr = page * PAGE_SIZE_4K + FRAME_BASE;
@@ -127,6 +143,7 @@ int frame_alloc(seL4_Word *vaddr)
     //     }
     //     return page;
     // }
+
     /* otherwise we need to get one from untyped mem */
     seL4_CPtr frame_cap;
     _vaddr = 0;

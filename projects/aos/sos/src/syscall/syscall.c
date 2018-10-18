@@ -108,7 +108,6 @@ void handle_syscall(seL4_Word badge, int num_args)
 {
     (void)num_args;
     proc *cur_proc = get_process(badge);
-    // printf("cur_proc is %p, proc is %p\n", cur_proc, process_array);
     /* allocate a slot for the reply tty_test_processcap */
     seL4_CPtr reply = cspace_alloc_slot(global_cspace);
     /* get the first word of the message, which in the SOS protocol is the number
@@ -126,8 +125,6 @@ void handle_syscall(seL4_Word badge, int num_args)
     ZF_LOGF_IFERR(err, "Failed to save reply");
     /* Process system call */
     cur_proc->reply = reply;
-    // printf("SYSCALL NO.%d IS CALLED, for process %d\n", syscall_number,
-    //        (cur_proc - process_array));
     switch (syscall_number) {
     // case SOS_SYSCALL0:
     //     ZF_LOGV("syscall: thread example made syscall 0!\n");
@@ -223,7 +220,6 @@ void handle_syscall(seL4_Word badge, int num_args)
         cur_proc->c = 0;
         resume(c, cur_proc);
         create_coroutine(c);
-        printf("kill done\n");
         break;
     }
 
@@ -294,17 +290,7 @@ NORETURN void syscall_loop(seL4_CPtr ep)
                 resume(c, cur_proc);
                 create_coroutine(c);
             } else {
-                printf("not page fault\n");
-                char c[3];
-                c[0] = badge / 10 - '0';
-                c[1] = badge % 10 - '0';
-                c[2] = 0;
-                /* some kind of fault */
-                debug_print_fault(message, c);
-                /* dump registers too */
-                debug_dump_registers(cur_proc->tcb);
-
-                ZF_LOGF("The SOS skeleton does not know how to handle faults!");
+                /* do nothing */
             }
         }
         run_coroutine(NULL);
@@ -320,11 +306,8 @@ void *_sys_handle_page_fault(proc *cur_proc)
     if (err) {
         /* we will deal with this later */
         int pid = cur_proc->status.pid;
-        printf("process is %d    vaddr is %p\n", pid, (void *)vaddr);
-        ZF_LOGE("Segment fault");
         if (cur_proc->state == ACTIVE) {
             kill_process(pid);
-            printf("pid %d been killed by it self\n", pid);
             wake_up(pid);
         }
         return NULL;
@@ -344,7 +327,6 @@ void _sys_brk(proc *cur_proc)
         if (err != 0) {
             int pid = cur_proc->status.pid;
             kill_process(pid);
-            printf("pid %d been killed by it self\n", pid);
             wake_up(pid);
         }
     }
@@ -368,7 +350,6 @@ void _sys_brk(proc *cur_proc)
 
 void _sys_mmap(proc *cur_proc)
 {
-    printf("enter _sys_mmap -> mmap called\n");
     seL4_Error err;
     as_region *region;
     if (cur_proc->as->heap == NULL) {
@@ -401,14 +382,11 @@ void _sys_mmap(proc *cur_proc)
 
 void *_sys_munmap(proc *cur_proc)
 {
-    printf("munmap called\n");
     seL4_Word ret;
     as_region *region = cur_proc->as->regions;
     seL4_Word base = seL4_GetMR(1);
     while (region) {
         if (region->vaddr == base) {
-            // printf("region->vaddr is %p -> %p\n", region->vaddr, region->vaddr + region->size);
-            // printf("region->next is %p\n", region->next->vaddr);
             as_destroy_region(cur_proc->as, region, cur_proc);
             break;
         }
@@ -420,13 +398,11 @@ void *_sys_munmap(proc *cur_proc)
         ret = 0;
     }
     syscall_reply(cur_proc, ret, 0);
-    printf("munmap done\n");
     return NULL;
 }
 
 void *_sys_create_process(proc *cur_proc)
 {
-    printf("in create process\n");
     seL4_Word path = seL4_GetMR(1);
     char app_name[N_NAME];
     int ret_pid;
@@ -446,9 +422,7 @@ void *_sys_create_process(proc *cur_proc)
             kill_process(ret_pid);
         }
     }
-    printf("ret_pid is %d\n", ret_pid);
     syscall_reply(cur_proc, ret_pid, 0);
-    printf("returned\n");
     return NULL;
 }
 
@@ -474,11 +448,8 @@ void *_sys_kill_process(proc *cur_proc)
     }
 
     kill_process(pid);
-    printf("$$$$$$$$$swapping header is %d\n", get_header());
     wake_up(pid);
-    printf("wakeup done\n");
     if (cur_proc->state == ACTIVE) {
-        printf("send wakeup reply\n");
         syscall_reply(cur_proc, 0, 0);
     }
     return NULL;

@@ -64,7 +64,7 @@ static void nfs_open_creat_cb(int status, UNUSED struct nfs_context *nfs,
                               void *data,
                               void *private_data)
 {
-    printf("nfs try open\n");
+    // printf("nfs try open\n");
     struct nfs_cb *cb = private_data;
     cb->status = status;
     cb->handle = !status ? data : NULL;
@@ -527,7 +527,7 @@ static int _nfs_creat(struct vnode *root, const char *name, bool excl,
     int result;
 
     result = nfs_loadvnode(root, name, true, &newguy);
-    printf("nfs_load done\n");
+    // printf("nfs_load done\n");
     if (result != 0) {
         return result;
     }
@@ -867,7 +867,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
         }
     }
 
-    printf("not found vnode\n");
+    // printf("not found vnode\n");
 
     /* Didn't have one; create it */
     /* async open file */
@@ -876,7 +876,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
     cb.status = 0;
 
     if (creat) {
-        printf("%p, %s, %p\n", nf->context, name, &cb);
+        // printf("%p, %s, %p\n", nf->context, name, &cb);
         result = nfs_creat_async(nf->context, name, 0666, nfs_open_creat_cb, &cb);
     } else {
         result = nfs_open_async(nf->context, name, O_RDWR, nfs_open_creat_cb, &cb);
@@ -890,7 +890,7 @@ int nfs_loadvnode(struct vnode *root, const char *name, bool creat,
         yield(NULL);
     }
 
-    printf("nfs open done\n");
+    // printf("nfs open done\n");
 
     /* something wrong with open callback */
     if (cb.status != 0) {
@@ -991,7 +991,7 @@ void nfs_mount_cb(int status, struct nfs_context *nfs, void *data,
         ZF_LOGF("mount/mnt call failed with \"%s\"\n", (char *)data);
     }
 
-    printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
+    // printf("Mounted nfs dir %s\n", SOS_NFS_DIR);
     struct vnode *vn;
     vn = nfs_bootstrap(nfs);
     change_bootfs(vn);
@@ -1004,14 +1004,14 @@ struct vnode *nfs_bootstrap(struct nfs_context *context)
 {
     nfs_vn = (struct nfs_vnode *)malloc(sizeof(struct nfs_vnode));
     if (!nfs_vn) {
-        printf("Out of Memory!");
+        // printf("Out of Memory!");
         assert(false);
         return NULL;
     }
     struct nfs_fs *fs = (struct nfs_fs *)malloc(sizeof(fs));
     if (!fs) {
         free(nfs_vn);
-        printf("Out of Memory!");
+        // printf("Out of Memory!");
         assert(false);
         return NULL;
     }
@@ -1019,7 +1019,7 @@ struct vnode *nfs_bootstrap(struct nfs_context *context)
     if (!fs->nfs_vnodes) {
         free(nfs_vn);
         free(fs);
-        printf("Out of Memory!");
+        // printf("Out of Memory!");
         assert(false);
         return NULL;
     }
